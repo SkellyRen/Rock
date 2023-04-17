@@ -7591,26 +7591,54 @@ const accountPickerGallery = defineComponent({
     },
     setup() {
         return {
-            value: ref(null),
+            value: ref([
+                {
+                    "value": "952a36db-939d-4d15-a46d-f2c2a6f72df7",
+                    "text": "CodeGen Account 1583 (552)"
+                },
+                {
+                    "value": "90f76d36-92a6-4f62-aa39-aab1d1b1601c",
+                    "text": "CodeGen Account 1334 (520)"
+                },
+                {
+                    "value": "05ae04cb-f284-44ee-9567-da67c18b07e0",
+                    "text": "CodeGen Account 1751 (342)"
+                },
+                {
+                    "value": "b108b402-2499-41f7-9134-29d580e424cd",
+                    "text": "CodeGen Account 1632 (820)"
+                }
+            ]),
             isFlat: ref(false),
+            activeOnly: ref(false),
+            displayPublic: ref(false),
+            multiple: ref(true),
             importCode: getSfcControlImportPath("accountPicker"),
             exampleCode: `<AccountPicker label="Financial Account" v-model="value" />`
         };
     },
     template: `
 <GalleryAndResult
-    :value="{value, groupType}"
+    :value="value"
     :importCode="importCode"
     :exampleCode="exampleCode"
-    hasMultipleValues
     enableReflection >
 
-    <AccountPicker label="Financial Account" v-model="value" :mode="isFlat ? 'flat' : 'tree'" />
+    <AccountPicker label="Financial Account" v-model="value" :mode="isFlat ? 'flat' : 'tree'" :activeOnly="activeOnly" :displayPublicName="displayPublic" :multiple="multiple" />
 
     <template #settings>
         <div class="row">
             <div class="col-md-4">
                 <CheckBox label="Flat View" v-model="isFlat" />
+            </div>
+            <div class="col-md-4">
+                <CheckBox label="Active Only" v-model="activeOnly" />
+            </div>
+            <div class="col-md-4">
+                <CheckBox label="Display Public Names" v-model="displayPublic" />
+            </div>
+            <div class="col-md-4">
+                <CheckBox label="Select Multiple" v-model="multiple" />
             </div>
         </div>
         <p class="text-semibold font-italic">Not all settings are demonstrated in this gallery.</p>

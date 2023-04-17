@@ -2,19 +2,18 @@
 <template>
     <ContentDropDownPicker
                            v-bind="formFieldProps"
-                           :modelValue="pickerValue"
+                           :modelValue="internalValues"
                            iconCssClass="fa fa-building-o"
-                           :showClear="!!pickerValue"
+                           :showClear="showClear"
                            @primaryButtonClicked="select"
                            @secondaryButtonClicked="cancel"
                            @clearButtonClicked="clear"
-                           pickerContentBoxHeight="auto"
-                           disablePickerContentBoxScroll
                            disableAutoCloseOnPrimaryAction
+                           pickerContentBoxHeight="380px"
                            v-model:showPopup="showPopup">
 
         <template #innerLabel>
-            <span class="selected-names" v-html="pickerLabel"></span>
+            <span class="selected-names">{{ selectedNames }}</span>
         </template>
 
         <template #pickerContentHeader>
@@ -31,7 +30,13 @@
 
         <div v-show="mode == 'flat'">HELLO</div>
 
-        <TreeList v-show="mode == 'tree'" v-model="pickerValue" multiple :items="items" :provider="provider" @update:items="onUpdateItems" autoExpand />
+        <TreeList v-show="mode != 'flat'"
+                  v-model="internalValues"
+                  :multiple="multiple"
+                  v-model:items="treeItems"
+                  @treeitem-expanded="getChildItems"
+                  autoExpand
+                  showChildCount />
 
         <template #primaryButtonLabel>
             <Loading :isLoading="isLoading">Select</Loading>
@@ -53,104 +58,429 @@
 </template>
 
 <script setup lang="ts">
-    import { PropType, ref, watch } from "vue";
+    import { computed, PropType, ref, watch } from "vue";
     import { standardRockFormFieldProps, updateRefValue, useStandardRockFormFieldProps } from "@Obsidian/Utility/component";
     import ContentDropDownPicker from "./contentDropDownPicker.obs";
-    import AddressControl from "./addressControl.obs";
-    import { AddressControlBag } from "@Obsidian/ViewModels/Controls/addressControlBag";
-    import { FormError } from "@Obsidian/Utility/form";
-    import RockValidation from "./rockValidation";
-    import { validateAddress } from "@Obsidian/Utility/address";
     import Loading from "./loading";
     import TextBox from "./textBox";
+    import TreeList from "./treeList";
+    import { ListItemBag } from "@Obsidian/ViewModels/Utility/listItemBag";
+    import { TreeItemBag } from "@Obsidian/ViewModels/Utility/treeItemBag";
+    import { useSecurityGrantToken } from "@Obsidian/Utility/block";
+    import { useHttp } from "@Obsidian/Utility/http";
+    import { Guid } from "@Obsidian/Types";
+    import { emptyGuid } from "@Obsidian/Utility/guid";
+    import { AccountPickerGetChildrenOptionsBag } from "@Obsidian/ViewModels/Rest/Controls/accountPickerGetChildrenOptionsBag";
+    import { AccountPickerGetParentGuidsOptionsBag } from "@Obsidian/ViewModels/Rest/Controls/accountPickerGetParentGuidsOptionsBag";
+
+
+
 
     const props = defineProps({
         ...standardRockFormFieldProps,
 
         modelValue: {
-            type: Object as PropType<AddressControlBag>,
+            type: Object as PropType<ListItemBag>,
             required: true
         },
 
         mode: {
             type: String as PropType<"tree" | "flat">,
             default: "tree"
+        },
+
+        multiple: {
+            type: Boolean,
+            default: false
+        },
+
+        displayPublicName: {
+            type: Boolean,
+            default: false
+        },
+
+        activeOnly: {
+            type: Boolean,
+            default: false
+        },
+
+        showChildCount: {
+            type: Boolean,
+            default: false
         }
     });
 
     const emit = defineEmits<{
-        (e: "update:modelValue", value: AddressControlBag): void
+        (e: "update:modelValue", value: ListItemBag | ListItemBag[] | null): void
     }>();
 
-    // #region Values
+    // #region Values and Computed Values
 
-    // Address Control
-    const controlValue = ref({ ...props.modelValue });
+    /** Used as base values to calculate other values */
+    const valuesAsArray = computed(() => forceToArray(props.modelValue, true));
+    const valuesAsArrayMultiple = computed(() => forceToArray(props.modelValue, props.multiple));
 
-    // This Picker
-    const pickerValue = ref({ ...props.modelValue });
-    const pickerLabel = ref("");
-    const errors = ref<FormError[]>([]);
-    const isLoading = ref(false);
+    /**
+     * Our internal list of selected values. This must be kept seperate because we don't actually
+     * emit the new values until the user clicks the select button.
+     */
+    const internalValues = ref(valuesAsArrayMultiple.value.map(v => v.value ?? ""));
+
+    /** All of the items to show in the tree view */
+    const treeItems = ref<TreeItemBag[]>([]);
+
+    /** Will contain the value true if the popup tree list should be shown. */
     const showPopup = ref(false);
+
+    /** Determines if the clear button should be shown. */
+    const showClear = computed((): boolean => {
+        return valuesAsArrayMultiple.value.length > 0;
+    });
+
+    const isLoading = ref(false);
+    const securityGrantToken = useSecurityGrantToken();
+
+    /** The names of the currently selected items. */
+    const selectedNames = computed((): string => {
+        return valuesAsArray.value.map(v => v.text).join(", ");
+    });
+
+    /** The Guids of the selected items */
+    const selectedGuids = computed((): string[] => {
+        return valuesAsArray.value.map(v => v.value as string);
+    });
+
+    /** A flat array of items from the tree. This is used to quickly filter to just the selected items. */
+    const flatItems = computed<TreeItemBag[]>(() => {
+        return flatten(treeItems.value ?? [], i => i.children ?? []);
+    });
+
+    const showInactiveCheckbox = computed(() => !props.activeOnly);
+    const includeInactive = ref(false);
+    const allowSelectAll = ref(false);
+    const http = useHttp();
 
     const searchValue = ref("");
 
     const formFieldProps = useStandardRockFormFieldProps(props);
 
-    const items = null;
-    const provider = function () { /* */ };
-    const onUpdateItems = () => { /* */ };
-
     // #endregion
 
     // #region Event Handlers
 
-    async function select(): Promise<void> {
-        isLoading.value = true;
-        const response = await validateAddress({ ...controlValue.value });
-
-        if (response.isSuccess && response.data) {
-            if (response.data.isValid) {
-                errors.value = [];
-                pickerValue.value = { ...response.data.address } as AddressControlBag;
-                controlValue.value = { ...response.data.address } as AddressControlBag;
-                pickerLabel.value = response.data.addressString ?? "";
-                showPopup.value = false;
-            }
-            else {
-                errors.value = [{ name: "Invalid", text: response.data.errorMessage ?? "Please enter a valid address." }];
-            }
-        }
-        else {
-            console.error(response.errorMessage ?? "Unknown error while validating address.");
-            errors.value = [{ name: "Server", text: response.errorMessage ?? "An unknown error occurred. Please try again." }];
-        }
-        isLoading.value = false;
+    function select(): void {
+        updateModelValue();
+        showPopup.value = false;
     }
 
     function cancel(): void {
-        // Reset the map values to the picker values when selection is cancelled
-        controlValue.value = pickerValue.value;
+        showPopup.value = false;
     }
 
     function clear(): void {
-        pickerValue.value = {};
-        pickerLabel.value = "";
+        internalValues.value = [];
+        updateModelValue();
+        showPopup.value = false;
+    }
+
+    function selectAll(): void {
+        // TODO
     }
 
     // #endregion
 
     // #region Watchers
 
-    watch(() => props.modelValue, () => {
-        updateRefValue(controlValue, { ...props.modelValue });
-        updateRefValue(pickerValue, { ...props.modelValue });
+    // Watch for changes to the selected values from the parent control and
+    // update our internal values to match.
+    watch([() => props.modelValue, () => props.multiple], (oldValues, newValues) => {
+        updateRefValue(internalValues, valuesAsArrayMultiple.value.map(v => v.value ?? ""));
+
+        // If the "multiple" property changed, force update the model value.
+        if (newValues[1] !== oldValues[1]) {
+            updateModelValue();
+        }
     });
 
-    watch(pickerValue, () => {
-        emit("update:modelValue", pickerValue.value);
+    // When any of the criteria for which data to fetch changes, refetch the tree
+    watch(() => [props.activeOnly, props.displayPublicName], () => {
+        getRootItems(true);
     });
 
-        // #endregion
+    // When we select new values, make sure they're in the tree
+    watch(selectedGuids, (): void => {
+        getRootItems(false);
+    });
+
+    // #endregion
+
+
+
+
+
+
+
+
+
+
+    //#region Tree Item Control
+
+    /**
+     * Gets the child items of the given parent (or root if no parent given) from the server.
+     *
+     * @param parentGuid The parent item whose children are retrieved.
+     * @param refetch If false, don't fetch data we already have, otherwise fetch and overwrite our data
+     */
+    async function getItems(parentNode: TreeItemBag | null, refetch: boolean): Promise<void> {
+        if (
+            // We're told to refetch the root nodes
+            (refetch && !parentNode) ||
+            // We're getting root items and don't have any root items
+            (!parentNode && (!treeItems.value || treeItems.value.length == 0))
+        ) {
+            treeItems.value = [
+                {
+                    isActive: true,
+                    iconCssClass: "fa fa-spinner fa-spin",
+                    isFolder: false,
+                    hasChildren: false
+                }
+            ];
+            treeItems.value = await fetchItems();
+        }
+        else if (
+            // We're told to refetch child nodes
+            (refetch && parentNode) ||
+            // We're getting child nodes that don't already exist
+            (parentNode && (!parentNode.children || parentNode.children.length == 0))
+        ) {
+            parentNode.children = [
+                {
+                    isActive: true,
+                    iconCssClass: "fa fa-spinner fa-spin",
+                    isFolder: false,
+                    hasChildren: false
+                }
+            ];
+            parentNode.children = await fetchItems(parentNode.value);
+        }
+
+        // If we're getting the root elements and we have a selected page, we also want to grab
+        // all the parent pages so we can pre-load the entire hierarchy to the selected page
+        if (!parentNode && selectedGuids.value?.length > 0) {
+            getHierarchyToSelectedItems(refetch);
+        }
+    }
+
+    /**
+     * Does the actual heavy work of fetching items from the server.
+     */
+    async function fetchItems(parentGuid?: Guid | null): Promise<TreeItemBag[]> {
+        const options: Partial<AccountPickerGetChildrenOptionsBag> = {
+            parentGuid: parentGuid ?? emptyGuid,
+            displayPublicName: props.displayPublicName ?? false,
+            includeInactive: !props.activeOnly && includeInactive.value,
+            securityGrantToken: securityGrantToken.value
+        };
+        const url = "/api/v2/Controls/AccountPickerGetChildren";
+        const response = await http.post<TreeItemBag[]>(url, undefined, options);
+
+        if (response.isSuccess && response.data) {
+            return response.data;
+        }
+        else {
+            console.error("Error fetching items from server", response.errorMessage);
+            return [];
+        }
+    }
+
+    /**
+     * Fill in pages to the depth of the selected page
+     *
+     * @param rootLayer The bottom layer of pages that we'll build depth upon
+     *
+     * @return The augmented `rootLayer` with the child pages
+     */
+    async function getHierarchyToSelectedItems(refetch: boolean): Promise<void> {
+        let parentGuids: Guid[] = [];
+
+        if (refetch) {
+            // Fetch the whole tree we need regardless of what we already have fetched
+            parentGuids = await getParentList(selectedGuids.value);
+        }
+        else {
+            // Figure out which selected items we don't already have
+            const unFetchedSelectedGuids = selectedGuids.value.filter(guid => {
+                // Return true if we didn't find a node with that Guid
+                return !flatItems.value.find(i => i.value == guid);
+            });
+
+            if (unFetchedSelectedGuids.length > 0) {
+                parentGuids = await getParentList(unFetchedSelectedGuids);
+
+                // Filter out the parents we already have the child data for
+                parentGuids = parentGuids.filter(guid => {
+                    // Return true if we don't already have this parent node
+                    return !flatItems.value.find(i => i.value == guid && i.children?.length);
+                });
+            }
+        }
+
+        if (parentGuids.length == 0) {
+            // Selected accounts have no parents or we already have all the parent data, so we're done.
+            return;
+        }
+
+        const childLists = await Promise.all(parentGuids.map(guid => fetchItems(guid)));
+
+        parentGuids.forEach((parentGuid, i) => {
+            const parentPage: TreeItemBag | undefined = flatItems.value.find(i => i.value == parentGuid);
+            if (parentPage) {
+                parentPage.children = childLists[i];
+            }
+        });
+    }
+
+    /**
+     * Get the hierarchical list of parent pages of the selectedGuid
+     *
+     * @returns A list of GUIDs of the parent pages
+     */
+    async function getParentList(guids): Promise<Guid[]> {
+        const options: AccountPickerGetParentGuidsOptionsBag = {
+            guids: guids,
+            securityGrantToken: securityGrantToken.value
+        };
+        const url = "/api/v2/Controls/AccountPickerGetParentGuids";
+        const response = await http.post<Guid[]>(url, undefined, options);
+
+        if (response.isSuccess && response.data) {
+            return response.data;
+        }
+        else {
+            console.error("Error", response.errorMessage);
+            return [];
+        }
+    }
+
+
+    /**
+     * @inheritdoc
+     */
+    async function getRootItems(refetch = false): Promise<void> {
+        getItems(null, refetch);
+    }
+
+    /**
+     * @inheritdoc
+     */
+    async function getChildItems(item: TreeItemBag, refetch = false): Promise<void> {
+        getItems(item, refetch);
+    }
+
+    // #endregion
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    /** Updates the model value from our internal value. */
+    function updateModelValue(): void {
+        if (!internalValues.value || internalValues.value.length == 0) {
+            emit("update:modelValue", props.multiple ? [] : null);
+        }
+        else if (props.multiple) {
+            const newModelValue = flatItems.value
+                .filter(i => i.value && internalValues.value.includes(i.value))
+                .map(i => ({ value: i.value, text: i.text }));
+
+            emit("update:modelValue", newModelValue);
+        }
+        else {
+            const guid = internalValues.value[0];
+            if (guid) {
+                const value = flatItems.value.find(i => i.value == guid);
+                emit("update:modelValue", value ? { value: value.value, text: value.text } : null);
+            }
+            else {
+                emit("update:modelValue", null);
+            }
+        }
+    }
+
+    /**
+     * Helper function to flatten an array of items that contains child items
+     * of the same type.
+     *
+     * @param source The source array of items to the flattened.
+     * @param childrenSource A callback function that retrieves the child items.
+     *
+     * @returns An array of all items and descendants.
+     */
+    function flatten<T>(source: T[], childrenSource: (value: T) => T[]): T[] {
+        let stack = [...source];
+        const flatArray: T[] = [];
+
+        for (let i = 0; i < stack.length; i++) {
+            const item = stack[i];
+
+            flatArray.push(item);
+
+            stack = stack.concat(childrenSource(item));
+        }
+
+        return flatArray;
+    }
+
+    /**
+     * Convert a single item to an array of one item. If the value is already an
+     * array then it is just returned as is.
+     *
+     * @param value The value from the parent component.
+     *
+     * @returns The value trimmed down to just the actual selection value.
+     */
+    function forceToArray(value: ListItemBag | ListItemBag[] | undefined | null, multiple: boolean): ListItemBag[] {
+        if (value === undefined || value === null) {
+            return [];
+        }
+        else if (Array.isArray(value)) {
+            if (!multiple && value.length > 1) {
+                return [value[0]];
+            }
+            else {
+                return value;
+            }
+        }
+        else {
+            return [value];
+        }
+    }
+
+    /**
+     * Get the hierarchical list of parent pages of the selectedGuid
+     *
+     * @returns A list of GUIDs of the parent pages
+     */
+    async function getAllowSelectAll(): Promise<void> {
+        const response = await http.post<boolean>("/api/v2/Controls/AccountPickerGetAllowSelectAll");
+
+        if (response.isSuccess && response.data != null) {
+            allowSelectAll.value = response.data;
+        }
+    }
+
+    getAllowSelectAll();
+    getRootItems();
 </script>

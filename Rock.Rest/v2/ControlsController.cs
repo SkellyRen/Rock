@@ -98,49 +98,136 @@ namespace Rock.Rest.v2
                     .ToList();
 
                 var accountTreeViewItems = accountList
-                    .Select( a => new AccountTreeViewItem
+                    .Select( a => new TreeItemBag
                     {
-                        Id = a.Id.ToString(),
-                        Name = HttpUtility.HtmlEncode( options.DisplayPublicName ? a.PublicName : a.Name ),
-                        GlCode = a.GlCode,
+                        Value = a.Guid.ToString(),
+                        Text = HttpUtility.HtmlEncode( options.DisplayPublicName ? a.PublicName : a.Name ),
                         IsActive = a.IsActive,
-                        ParentId = a.ParentAccountId.GetValueOrDefault( 0 ).ToString(),
+                        IconCssClass = "fa fa-file-o"
                     } ).ToList();
-
-                accountTreeViewItems = financialAccountService.GetTreeviewPaths( accountTreeViewItems, accountList );
 
                 var resultIds = accountList.Select( f => f.Id ).ToList();
 
                 var childQry = financialAccountService.Queryable().AsNoTracking()
-                    .Where( f => f.ParentAccountId.HasValue && resultIds.Contains( f.ParentAccountId.Value ) );
+                    .Where( f =>
+                    f.ParentAccountId.HasValue && resultIds.Contains( f.ParentAccountId.Value )
+                    );
 
                 if ( !options.IncludeInactive )
                 {
                     childQry = childQry.Where( f => f.IsActive == true );
                 }
 
-                var childrenList = childQry.Select( f => f.ParentAccountId.Value )
+                var childrenList = childQry.Select( f => f.ParentAccount.Guid.ToString() )
                     .ToList();
 
                 foreach ( var accountTreeViewItem in accountTreeViewItems )
                 {
-                    int accountId = int.Parse( accountTreeViewItem.Id );
-                    int childrenCount = ( childrenList?.Count( v => v == accountId ) ).GetValueOrDefault( 0 );
+                    int childrenCount = ( childrenList?.Count( v => v == accountTreeViewItem.Value ) ).GetValueOrDefault( 0 );
 
                     accountTreeViewItem.HasChildren = childrenCount > 0;
+                    accountTreeViewItem.IsFolder = childrenCount > 0;
 
                     if ( accountTreeViewItem.HasChildren )
                     {
-                        accountTreeViewItem.CountInfo = childrenCount;
-
-                        accountTreeViewItem.ParentId = id.ToString();
+                        accountTreeViewItem.ChildCount = childrenCount;
                     }
-
-                    accountTreeViewItem.IconCssClass = "fa fa-file-o";
-                    accountTreeViewItem.TotalCount = totalCount;
                 }
 
-                return Ok(accountTreeViewItems.AsQueryable());
+                return Ok(accountTreeViewItems);
+            }
+        }
+
+        /// <summary>
+        /// Gets the accounts that can be displayed in the account picker.
+        /// </summary>
+        /// <param name="options">The options that describe which items to load.</param>
+        /// <returns>A List of <see cref="TreeItemBag"/> objects that represent the accounts.</returns>
+        [HttpPost]
+        [System.Web.Http.Route( "AccountPickerGetParentGuids" )]
+        [Authenticate]
+        [Rock.SystemGuid.RestActionGuid( "007512c6-0147-4683-a3fe-3fdd1da275c2" )]
+        public IHttpActionResult AccountPickerGetParentGuids( [FromBody] AccountPickerGetParentGuidsOptionsBag options )
+        {
+            var results = new HashSet<Guid>();
+
+            foreach ( var guid in options.Guids )
+            {
+                var result = FinancialAccountCache.Get( guid )?
+                    .GetAncestorFinancialAccounts()?
+                    .OrderBy( a => 0 )?
+                    .Reverse()?
+                    .Select( a => a.Guid );
+
+                foreach( var resultGuid in result)
+                {
+                    results.Add( resultGuid );
+                }
+            }
+
+            return Ok(results);
+        }
+
+        /// <summary>
+        /// Gets the accounts that match the given search terms.
+        /// </summary>
+        /// <param name="options">The options that describe which items to load.</param>
+        /// <returns>A List of <see cref="ListItemBag"/> objects that represent the accounts that match the search.</returns>
+        [HttpPost]
+        [System.Web.Http.Route( "AccountPickerGetSearchedAccounts" )]
+        [Authenticate]
+        [Rock.SystemGuid.RestActionGuid( "007512c6-0147-4683-a3fe-3fdd1da275c2" )]
+        public IHttpActionResult AccountPickerGetSearchedAccounts( [FromBody] AccountPickerGetSearchedAccountsOptionsBag options )
+        {
+            IQueryable<FinancialAccount> qry;
+
+            if ( options.SearchTerm.IsNullOrWhiteSpace() )
+            {
+                return BadRequest("Search Term is required");
+            }
+
+            using ( var rockContext = new RockContext() )
+            {
+                var financialAccountService = new FinancialAccountService( rockContext );
+                qry = financialAccountService.GetAccountsBySearchTerm( options.SearchTerm );
+
+                if ( !options.IncludeInactive )
+                {
+                    qry = qry.Where( f => f.IsActive == true );
+                }
+
+                var accountList = qry
+                    .OrderBy( f => f.Order )
+                    .ThenBy( f => f.Name )
+                    .ToList()
+                    .Select( a => new ListItemBag
+                    {
+                        Value = a.Guid.ToString(),
+                        Text = HttpUtility.HtmlEncode( options.DisplayPublicName ? a.PublicName : a.Name ),
+                        Category = financialAccountService.GetDelimitedAccountHierarchy( a, FinancialAccountService.AccountHierarchyDirection.CurrentAccountToParent )
+                    } )
+                    .ToList();
+
+                return Ok( accountList );
+            }
+        }
+
+        /// <summary>
+        /// Gets whether or not to allow account picker to Select All based on how many accounts exist
+        /// </summary>
+        /// <returns>True if there are few enough accounts</returns>
+        [HttpPost]
+        [System.Web.Http.Route( "AccountPickerGetAllowSelectAll" )]
+        [Authenticate]
+        [Rock.SystemGuid.RestActionGuid( "4a13b6ea-3031-48c2-9cdb-be183ccad9a2" )]
+        public IHttpActionResult AccountPickerGetAllowSelectAll( )
+        {
+            using ( var rockContext = new RockContext() )
+            {
+                var financialAccountService = new FinancialAccountService( rockContext );
+                var count = financialAccountService.Queryable().Count();
+
+                return Ok( count < 1000 );
             }
         }
 
