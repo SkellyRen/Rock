@@ -86,7 +86,7 @@ export const EditComponent = defineComponent({
         const options = computed((): ListItemBag[] => {
             const providedOptions: ListItemBag[] = valueOptions.value.map(v => {
                 return {
-                    text: displayDescription.value ? v.description : v.text,
+                    text: displayDescription.value ? (v.description || v.text) : v.text,
                     value: v.value
                 };
             });
@@ -154,7 +154,7 @@ export const EditComponent = defineComponent({
     },
 
     template: `
-<DropDownList v-if="!isMultiple" v-model="internalValue" v-bind="configAttributes" :items="options" :showBlankItem="!isRequired" />
+<DropDownList v-if="!isMultiple || configAttributes.enhanceForLongLists" v-model="internalValue" v-bind="configAttributes" :items="options" :showBlankItem="!isRequired" />
 <CheckBoxList v-else v-model="internalValues" :items="optionsMultiple" horizontal :repeatColumns="repeatColumns" />
 `
 });
@@ -284,7 +284,7 @@ export const ConfigurationComponent = defineComponent({
 
         /**
          * Emits the updateConfigurationValue if the value has actually changed.
-         * 
+         *
          * @param key The key that was possibly modified.
          * @param value The new value.
          */
@@ -331,6 +331,7 @@ export const ConfigurationComponent = defineComponent({
             allowMultipleValues,
             definedTypeValue,
             definedTypeOptions,
+            definedTypeItems,
             definedValueOptions,
             displayDescriptions,
             enhanceForLongLists,
