@@ -111,4 +111,7 @@ export type PrayerRequestBag = {
 
     /** Gets or sets the text/content of the request. */
     text?: string | null;
+
+    /** Gets the Full Name of the request. */
+    fullName?: string | null;
 };
