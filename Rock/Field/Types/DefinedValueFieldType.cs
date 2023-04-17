@@ -102,7 +102,7 @@ namespace Rock.Field.Types
                     .Select( v => new ListItemBag
                     {
                         Value = v.Guid.ToString(),
-                        Text = (displayDescription && v.Description.IsNotNullOrWhiteSpace()) ? v.Description : v.Value
+                        Text = v.Value
                     } )
                     .ToList();
 
