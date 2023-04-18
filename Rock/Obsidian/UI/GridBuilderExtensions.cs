@@ -17,10 +17,12 @@
 
 using System;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 
 using Rock.Attribute;
 using Rock.Blocks;
 using Rock.Model;
+using Rock.Net;
 using Rock.ViewModels.Core.Grid;
 using Rock.Web.Cache;
 using Rock.Web.UI;
@@ -142,99 +144,151 @@ namespace Rock.Obsidian.UI
             // Add all the action URLs for the current site.
             builder.AddDefinitionAction( definition =>
             {
-                var communicationUrl = "/Communication/{CommunicationId}";
-                SiteCache site;
-
-                if ( block.BlockCache.Page != null )
-                {
-                    site = SiteCache.Get( block.BlockCache.Page.SiteId );
-                }
-                else if ( block.BlockCache.Layout != null )
-                {
-                    site = block.BlockCache.Layout.Site;
-                }
-                else
-                {
-                    site = block.BlockCache.Site;
-                }
-
-                if ( site != null )
-                {
-                    var pageRef = site.CommunicationPageReference;
-
-                    if ( pageRef.PageId > 0 )
-                    {
-                        var communicationPage = PageCache.Get( pageRef.PageId );
-
-                        if ( communicationPage.IsAuthorized( Security.Authorization.VIEW, block.RequestContext.CurrentPerson ) )
-                        {
-                            pageRef.Parameters.AddOrReplace( "CommunicationId", "{CommunicationId}" );
-                            communicationUrl = pageRef.BuildUrl();
-                        }
-                        else
-                        {
-                            communicationUrl = null;
-                        }
-                    }
-                }
+                string communicationUrl = GetCommunicationRoute( block );
 
                 if ( communicationUrl.IsNotNullOrWhiteSpace() )
                 {
                     definition.ActionUrls.AddOrIgnore( GridActionUrlKey.Communicate, communicationUrl );
                 }
 
-                // TODO: Find a way to get the page for the route and determine
-                // if the current person can view the page.
-                definition.ActionUrls.AddOrIgnore( GridActionUrlKey.MergePerson, "/PersonMerge/{EntitySetId}" );
-                definition.ActionUrls.AddOrIgnore( GridActionUrlKey.MergeBusiness, "/BusinessMerge/{EntitySetId}" );
-                definition.ActionUrls.AddOrIgnore( GridActionUrlKey.BulkUpdate, "/BulkUpdate/{EntitySetId}" );
-                definition.ActionUrls.AddOrIgnore( GridActionUrlKey.LaunchWorkflow, "/LaunchWorkflows/{EntitySetId}" );
-                definition.ActionUrls.AddOrIgnore( GridActionUrlKey.MergeTemplate, "/MergeTemplate/{EntitySetId}" );
+                if ( IsAuthorizedForRoute( block.RequestContext, "/PersonMerge/{EntitySetId}" ) )
+                {
+                    definition.ActionUrls.AddOrIgnore( GridActionUrlKey.MergePerson, "/PersonMerge/{EntitySetId}" );
+                }
+
+                if ( IsAuthorizedForRoute( block.RequestContext, "/BusinessMerge/{EntitySetId}" ) )
+                {
+                    definition.ActionUrls.AddOrIgnore( GridActionUrlKey.MergeBusiness, "/BusinessMerge/{EntitySetId}" );
+                }
+
+                if ( IsAuthorizedForRoute( block.RequestContext, "/BulkUpdate/{EntitySetId}" ) )
+                {
+                    definition.ActionUrls.AddOrIgnore( GridActionUrlKey.BulkUpdate, "/BulkUpdate/{EntitySetId}" );
+                }
+
+                if ( IsAuthorizedForRoute( block.RequestContext, "/LaunchWorkflows/{EntitySetId}" ) )
+                {
+                    definition.ActionUrls.AddOrIgnore( GridActionUrlKey.LaunchWorkflow, "/LaunchWorkflows/{EntitySetId}" );
+                }
+
+                if ( IsAuthorizedForRoute( block.RequestContext, "/MergeTemplate/{EntitySetId}" ) )
+                {
+                    definition.ActionUrls.AddOrIgnore( GridActionUrlKey.MergeTemplate, "/MergeTemplate/{EntitySetId}" );
+                }
             } );
 
             return builder;
         }
 
-        //private static bool IsAuthorizedForRoute( string route, Person currentPerson )
-        //{
-        //    try
-        //    {
-        //        // cast the page as a Rock Page
-        //        var rockPage = Page as RockPage;
-        //        if ( rockPage != null )
-        //        {
-        //            // If the route contains a parameter
-        //            if ( route.Contains( "{0}" ) )
-        //            {
-        //                // replace it with a fake param
-        //                route = string.Format( route, 1 );
-        //            }
+        /// <summary>
+        /// Gets the route to use when sending a new communication.
+        /// </summary>
+        /// <param name="block">The block instance building the grid.</param>
+        /// <returns>A string that contains the route to use or <c>null</c>.</returns>
+        private static string GetCommunicationRoute( IRockBlockType block )
+        {
+            SiteCache site;
 
-        //            // Get a uri
-        //            Uri uri = new Uri( rockPage.ResolveRockUrlIncludeRoot( route ) );
-        //            if ( uri != null )
-        //            {
-        //                // Find a page ref based on the uri
-        //                var pageRef = new Rock.Web.PageReference( uri, Page.Request.ApplicationPath );
-        //                if ( pageRef.IsValid )
-        //                {
-        //                    // if a valid pageref was found, check the security of the page
-        //                    var page = PageCache.Get( pageRef.PageId );
-        //                    if ( page != null )
-        //                    {
-        //                        return page.IsAuthorized( Rock.Security.Authorization.VIEW, rockPage.CurrentPerson );
-        //                    }
-        //                }
-        //            }
-        //        }
-        //    }
-        //    catch ( Exception ex )
-        //    {
-        //        Rock.Model.ExceptionLogService.LogException( ex, Context );
-        //        // Log and move on...
-        //    }
+            if ( block.BlockCache.Page != null )
+            {
+                site = SiteCache.Get( block.BlockCache.Page.SiteId );
+            }
+            else if ( block.BlockCache.Layout != null )
+            {
+                site = block.BlockCache.Layout.Site;
+            }
+            else
+            {
+                site = block.BlockCache.Site;
+            }
 
-        //    return false;
-        //}
+            if ( site != null )
+            {
+                var pageRef = site.CommunicationPageReference;
+
+                if ( pageRef.PageId > 0 )
+                {
+                    var communicationPage = PageCache.Get( pageRef.PageId );
+
+                    if ( communicationPage.IsAuthorized( Security.Authorization.VIEW, block.RequestContext.CurrentPerson ) )
+                    {
+                        pageRef.Parameters.AddOrReplace( "CommunicationId", "{CommunicationId}" );
+                        return pageRef.BuildUrl();
+                    }
+                }
+            }
+            else if ( IsAuthorizedForRoute( block.RequestContext, "/Communication/{CommunicationId}" ) )
+            {
+                return "/Communication/{CommunicationId}";
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Resolves the rock URL and includes the original scheme and domain
+        /// from the request.
+        /// </summary>
+        /// <param name="context">The context of the current request.</param>
+        /// <param name="url">The URL to ben resolved.</param>
+        /// <returns>A new string resolved to the proper domain.</returns>
+        private static string ResolveRockUrlIncludeRoot( RockRequestContext context, string url )
+        {
+            var virtualPath = context.ResolveRockUrl( url );
+
+            if ( context.RootUrlPath.IsNotNullOrWhiteSpace() )
+            {
+                return $"{context.RootUrlPath}{virtualPath}";
+            }
+
+            return GlobalAttributesCache.Get().GetValue( "PublicApplicationRoot" ) + virtualPath.RemoveLeadingForwardslash();
+        }
+
+        /// <summary>
+        /// Determines whether the person making the request has access to
+        /// the page identified by the route.
+        /// </summary>
+        /// <param name="context">The context of the current request.</param>
+        /// <param name="route">The route to be checked.</param>
+        /// <returns><c>true</c> if the route was found and the requesting person is authorized; otherwise, <c>false</c>.</returns>
+        private static bool IsAuthorizedForRoute( RockRequestContext context, string route )
+        {
+            try
+            {
+                // Replace any parameters in the route with fake values.
+                route = new Regex( "{[^}]+}" ).Replace( route, "1" );
+
+                // Resolve the route based on the current request.
+                route = ResolveRockUrlIncludeRoot( context, route );
+
+                // Try to parse the URL, if we can't then assume they can't
+                // access the page.
+                if ( !Uri.TryCreate( route, UriKind.Absolute, out var uri ) )
+                {
+                    return false;
+                }
+
+                // Find a page ref based on the uri.
+                var pageRef = new Rock.Web.PageReference( uri, "/" );
+
+                if ( pageRef.IsValid )
+                {
+                    // If a valid pageref was found, check the security of the page
+                    var page = PageCache.Get( pageRef.PageId );
+
+                    if ( page != null )
+                    {
+                        return page.IsAuthorized( Rock.Security.Authorization.VIEW, context.CurrentPerson );
+                    }
+                }
+            }
+            catch ( Exception ex )
+            {
+                Rock.Model.ExceptionLogService.LogException( ex );
+                // Log and move on...
+            }
+
+            return false;
+        }
     }
 }
