@@ -1,7 +1,6 @@
 <!-- Copyright by the Spark Development Network; Licensed under the Rock Community License -->
 <template>
-    <ContentDropDownPicker
-                           v-bind="formFieldProps"
+    <ContentDropDownPicker v-bind="formFieldProps"
                            :modelValue="internalValues"
                            iconCssClass="fa fa-building-o"
                            :showClear="showClear"
@@ -21,7 +20,7 @@
                 <TextBox v-model="searchValue" size="small">
                     <template #inputGroupAppend>
                         <span class="input-group-btn">
-                            <button class="btn btn-default"><i class="fa fa-search"></i></button>
+                            <button class="btn btn-default" @click.prevent="search"><i class="fa fa-search"></i></button>
                         </span>
                     </template>
                 </TextBox>
@@ -30,7 +29,21 @@
 
         <div v-show="mode == 'flat'">HELLO</div>
 
-        <TreeList v-show="mode != 'flat'"
+        <div v-show="mode == 'search'" class="treeview">
+            <Loading :isLoading="isLoading">
+                <div class="search-item js-search-item" :class="multiple ? 'checkbox' : 'radio'" v-for="option of searchItems" :key="option.value as string">
+                    <label>
+                        <input :type="multiple ? 'checkbox' : 'radio'" data-id="6" class="checkbox js-chk-search">
+                        <span class="label-text">
+                            <span class="text-color d-block">{{ option.text }}</span>
+                            <span class="text-muted text-sm">{{ option.category || "Top Level" }}</span>
+                        </span>
+                    </label>
+                </div>
+            </Loading>
+        </div>
+
+        <TreeList v-show="mode == 'tree'"
                   v-model="internalValues"
                   :multiple="multiple"
                   v-model:items="treeItems"
@@ -72,9 +85,7 @@
     import { emptyGuid } from "@Obsidian/Utility/guid";
     import { AccountPickerGetChildrenOptionsBag } from "@Obsidian/ViewModels/Rest/Controls/accountPickerGetChildrenOptionsBag";
     import { AccountPickerGetParentGuidsOptionsBag } from "@Obsidian/ViewModels/Rest/Controls/accountPickerGetParentGuidsOptionsBag";
-
-
-
+    import { AccountPickerGetSearchedAccountsOptionsBag } from "@Obsidian/ViewModels/Rest/Controls/accountPickerGetSearchedAccountsOptionsBag";
 
     const props = defineProps({
         ...standardRockFormFieldProps,
@@ -82,11 +93,6 @@
         modelValue: {
             type: Object as PropType<ListItemBag>,
             required: true
-        },
-
-        mode: {
-            type: String as PropType<"tree" | "flat">,
-            default: "tree"
         },
 
         multiple: {
@@ -126,20 +132,6 @@
      */
     const internalValues = ref(valuesAsArrayMultiple.value.map(v => v.value ?? ""));
 
-    /** All of the items to show in the tree view */
-    const treeItems = ref<TreeItemBag[]>([]);
-
-    /** Will contain the value true if the popup tree list should be shown. */
-    const showPopup = ref(false);
-
-    /** Determines if the clear button should be shown. */
-    const showClear = computed((): boolean => {
-        return valuesAsArrayMultiple.value.length > 0;
-    });
-
-    const isLoading = ref(false);
-    const securityGrantToken = useSecurityGrantToken();
-
     /** The names of the currently selected items. */
     const selectedNames = computed((): string => {
         return valuesAsArray.value.map(v => v.text).join(", ");
@@ -150,21 +142,66 @@
         return valuesAsArray.value.map(v => v.value as string);
     });
 
-    /** A flat array of items from the tree. This is used to quickly filter to just the selected items. */
-    const flatItems = computed<TreeItemBag[]>(() => {
-        return flatten(treeItems.value ?? [], i => i.children ?? []);
+    // Watch for changes to the selected values from the parent control and
+    // update our internal values to match.
+    watch([() => props.modelValue, () => props.multiple], (oldValues, newValues) => {
+        updateRefValue(internalValues, valuesAsArrayMultiple.value.map(v => v.value ?? ""));
+
+        // If the "multiple" property changed, force update the model value.
+        if (newValues[1] !== oldValues[1]) {
+            updateModelValue();
+        }
+    });
+
+    /** Updates the model value from our internal value. */
+    function updateModelValue(): void {
+        if (!internalValues.value || internalValues.value.length == 0) {
+            emit("update:modelValue", props.multiple ? [] : null);
+        }
+        else if (props.multiple) {
+            const newModelValue = flatItems.value
+                .filter(i => i.value && internalValues.value.includes(i.value))
+                .map(i => ({ value: i.value, text: i.text }));
+
+            emit("update:modelValue", newModelValue);
+        }
+        else {
+            const guid = internalValues.value[0];
+            if (guid) {
+                const value = flatItems.value.find(i => i.value == guid);
+                emit("update:modelValue", value ? { value: value.value, text: value.text } : null);
+            }
+            else {
+                emit("update:modelValue", null);
+            }
+        }
+    }
+
+    // #endregion
+
+
+    // #region Overall Picker
+
+    /** Will contain the value true if the popup tree list should be shown. */
+    const showPopup = ref(false);
+
+    /** Determines if the clear button should be shown. */
+    const showClear = computed((): boolean => {
+        return valuesAsArrayMultiple.value.length > 0;
     });
 
     const showInactiveCheckbox = computed(() => !props.activeOnly);
     const includeInactive = ref(false);
+    const mode = ref<"search" | "flat" | "tree">("tree");
     const allowSelectAll = ref(false);
-    const http = useHttp();
-
-    const searchValue = ref("");
-
     const formFieldProps = useStandardRockFormFieldProps(props);
 
+    const isLoading = ref(false);
+    const securityGrantToken = useSecurityGrantToken();
+    const http = useHttp();
+
     // #endregion
+
 
     // #region Event Handlers
 
@@ -189,41 +226,16 @@
 
     // #endregion
 
-    // #region Watchers
 
-    // Watch for changes to the selected values from the parent control and
-    // update our internal values to match.
-    watch([() => props.modelValue, () => props.multiple], (oldValues, newValues) => {
-        updateRefValue(internalValues, valuesAsArrayMultiple.value.map(v => v.value ?? ""));
+    // #region Tree View
 
-        // If the "multiple" property changed, force update the model value.
-        if (newValues[1] !== oldValues[1]) {
-            updateModelValue();
-        }
+    /** All of the items to show in the tree view */
+    const treeItems = ref<TreeItemBag[]>([]);
+
+    /** A flat array of items from the tree. This is used to quickly filter to just the selected items. */
+    const flatItems = computed<TreeItemBag[]>(() => {
+        return flatten(treeItems.value ?? [], i => i.children ?? []);
     });
-
-    // When any of the criteria for which data to fetch changes, refetch the tree
-    watch(() => [props.activeOnly, props.displayPublicName], () => {
-        getRootItems(true);
-    });
-
-    // When we select new values, make sure they're in the tree
-    watch(selectedGuids, (): void => {
-        getRootItems(false);
-    });
-
-    // #endregion
-
-
-
-
-
-
-
-
-
-
-    //#region Tree Item Control
 
     /**
      * Gets the child items of the given parent (or root if no parent given) from the server.
@@ -246,7 +258,12 @@
                     hasChildren: false
                 }
             ];
-            treeItems.value = await fetchItems();
+            try {
+                treeItems.value = await fetchItems();
+            }
+            catch (e) {
+                treeItems.value = [];
+            }
         }
         else if (
             // We're told to refetch child nodes
@@ -262,7 +279,12 @@
                     hasChildren: false
                 }
             ];
-            parentNode.children = await fetchItems(parentNode.value);
+            try {
+                parentNode.children = await fetchItems(parentNode.value);
+            }
+            catch (e) {
+                parentNode.children = null;
+            }
         }
 
         // If we're getting the root elements and we have a selected page, we also want to grab
@@ -296,10 +318,6 @@
 
     /**
      * Fill in pages to the depth of the selected page
-     *
-     * @param rootLayer The bottom layer of pages that we'll build depth upon
-     *
-     * @return The augmented `rootLayer` with the child pages
      */
     async function getHierarchyToSelectedItems(refetch: boolean): Promise<void> {
         let parentGuids: Guid[] = [];
@@ -363,61 +381,68 @@
         }
     }
 
-
     /**
-     * @inheritdoc
+     * Get the tree items at the root level
      */
     async function getRootItems(refetch = false): Promise<void> {
         getItems(null, refetch);
     }
 
     /**
-     * @inheritdoc
+     * Get the tree items that are children of the given item
      */
     async function getChildItems(item: TreeItemBag, refetch = false): Promise<void> {
         getItems(item, refetch);
     }
 
+    // When any of the criteria for which data to fetch changes, refetch the tree
+    watch(() => [props.activeOnly, props.displayPublicName], () => {
+        getRootItems(true);
+    });
+
+    // When we select new values, make sure they're in the tree
+    watch(selectedGuids, (): void => {
+        getRootItems(false);
+    });
+
     // #endregion
 
 
+    // #region Search View
 
+    const searchValue = ref("");
+    const searchItems = ref<ListItemBag[]>([]);
+    const searchItemsJson = computed(() => JSON.stringify(searchItems.value, null, 4));
 
+    /**
+     * Get the hierarchical list of parent pages of the selectedGuid
+     *
+     * @returns A list of GUIDs of the parent pages
+     */
+    async function search(): Promise<void> {
+        isLoading.value = true;
+        mode.value = "search";
+        const options: AccountPickerGetSearchedAccountsOptionsBag = {
+            searchTerm: searchValue.value,
+            displayPublicName: props.displayPublicName ?? false,
+            includeInactive: !props.activeOnly && includeInactive.value,
+            securityGrantToken: securityGrantToken.value
+        };
 
+        try {
+            const response = await http.post<ListItemBag[]>("/api/v2/Controls/AccountPickerGetSearchedAccounts", undefined, options);
 
-
-
-
-
-
-
-
-
-
-
-    /** Updates the model value from our internal value. */
-    function updateModelValue(): void {
-        if (!internalValues.value || internalValues.value.length == 0) {
-            emit("update:modelValue", props.multiple ? [] : null);
-        }
-        else if (props.multiple) {
-            const newModelValue = flatItems.value
-                .filter(i => i.value && internalValues.value.includes(i.value))
-                .map(i => ({ value: i.value, text: i.text }));
-
-            emit("update:modelValue", newModelValue);
-        }
-        else {
-            const guid = internalValues.value[0];
-            if (guid) {
-                const value = flatItems.value.find(i => i.value == guid);
-                emit("update:modelValue", value ? { value: value.value, text: value.text } : null);
+            if (response.isSuccess && response.data != null) {
+                searchItems.value = response.data;
             }
-            else {
-                emit("update:modelValue", null);
-            }
+        }
+        finally {
+            isLoading.value = false;
         }
     }
+
+    // #endregion
+
 
     /**
      * Helper function to flatten an array of items that contains child items
