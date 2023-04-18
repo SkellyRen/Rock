@@ -238,7 +238,6 @@ table.table-obsidian th.grid-error > .alert {
     import { useInvokeBlockAction } from "@Obsidian/Utility/block";
     import { makeUrlRedirectSafe } from "@Obsidian/Utility/url";
     import { EntityType } from "@Obsidian/SystemGuids/entityType";
-    import { ListItemBag } from "@Obsidian/ViewModels/Utility/listItemBag";
     import { alert } from "@Obsidian/Utility/dialogs";
 
     /*
@@ -388,7 +387,7 @@ table.table-obsidian th.grid-error > .alert {
          * personKeyField or communicationRecipientPersonKeyFields properties
          * have been set.
          */
-         showCommunicate: {
+        showCommunicate: {
             type: Boolean as PropType<boolean | undefined>,
             default: undefined
         },
@@ -413,9 +412,14 @@ table.table-obsidian th.grid-error > .alert {
             required: false
         },
 
+        /**
+         * Any fields that should be included when sending a communication. If
+         * a column name matches the field name then the formatted value of
+         * the column will be used. Otherwise the raw field value will be used.
+         */
         communicationMergeFields: {
             type: Array as PropType<string[]>,
-            required: false
+            default: ["expirationDateTime|Expires"]//required: false
         },
 
         /**
@@ -572,7 +576,7 @@ table.table-obsidian th.grid-error > .alert {
         // Add the action for Merge Records.
         if (showMergeTemplate.value) {
             actions.push({
-                handler: async () => await onMergeTemplate(),
+                handler: onMergeTemplate,
                 iconCssClass: "fa fa-files-o fa-fw",
                 tooltip: "Merge Records into Merge Template"
             });
@@ -581,7 +585,7 @@ table.table-obsidian th.grid-error > .alert {
         // Add the action for Launch Workflow.
         if (showLaunchWorkflow.value) {
             actions.push({
-                handler: async () => await onLaunchWorkflow(),
+                handler: onLaunchWorkflow,
                 iconCssClass: "fa fa-cog fa-fw",
                 tooltip: "Launch Workflow"
             });
@@ -590,7 +594,7 @@ table.table-obsidian th.grid-error > .alert {
         // Add the action for Bulk Update.
         if (showBulkUpdate.value) {
             actions.push({
-                handler: async () => await onBulkUpdate(),
+                handler: onBulkUpdate,
                 iconCssClass: "fa fa-truck fa-fw",
                 tooltip: "Bulk Update"
             });
@@ -599,7 +603,7 @@ table.table-obsidian th.grid-error > .alert {
         // Add the action for Merge Person Records.
         if (showMergePerson.value) {
             actions.push({
-                handler: async () => await onPersonMerge(),
+                handler: onPersonMerge,
                 iconCssClass: "fa fa-users fa-fw",
                 tooltip: "Merge Person Records"
             });
@@ -608,7 +612,7 @@ table.table-obsidian th.grid-error > .alert {
         // Add the action for Merge Business Records.
         if (showMergeBusiness.value) {
             actions.push({
-                handler: async () => await onPersonMerge(),
+                handler: onPersonMerge,
                 iconCssClass: "fa fa-sign-in-alt fa-fw",
                 tooltip: "Merge Business Records"
             });
@@ -617,7 +621,7 @@ table.table-obsidian th.grid-error > .alert {
         // Add the action for Communicate.
         if (showCommunicate.value) {
             actions.push({
-                handler: async () => await onCommunicate(),
+                handler: onCommunicate,
                 iconCssClass: "fa fa-comment fa-fw",
                 tooltip: "Communicate"
             });
@@ -755,20 +759,19 @@ table.table-obsidian th.grid-error > .alert {
             return;
         }
 
-        let mergeColumns: ListItemBag[] | undefined;
-
         if (props.mergeTemplateAsPerson && personKeyField.value) {
             await createEntitySetAndRedirect([personKeyField.value], url, undefined);
         }
         else {
             // Find all columns that aren't special columns and include them in
             // the additional merge fields.
-            mergeColumns = gridState.columns
-                .filter(c => !c.name.startsWith("__"))
-                .map(c => ({
-                    value: c.name,
-                    text: `${c.name[0].toUpperCase()}${c.name.substring(1)}`
-                }));
+            const mergeColumns: Record<string, string> = {};
+            const dataColumns = gridState.columns
+                .filter(c => !c.name.startsWith("__"));
+
+            for (const column of dataColumns) {
+                mergeColumns[column.name] = `${column.name[0].toUpperCase()}${column.name.substring(1)}`;
+            }
 
             const options: EntitySetOptions = {
                 mergeColumns
@@ -802,33 +805,65 @@ table.table-obsidian th.grid-error > .alert {
         if (keyFields.length === 0 || !url) {
             return;
         }
-        if (!props.keyField || !url) {
-            return;
-        }
 
         const options: EntitySetOptions = {
             additionalMergeFieldsFactory: undefined,
             purpose: "communication"
         };
 
+        options.mergeColumns = {};
+        options.mergeFields = {};
+        const mergeFields: string[] = [];
+
+        if (props.communicationMergeFields) {
+            for (const mf of props.communicationMergeFields) {
+
+                const parts = mf.split("|")
+                    .map(f => f.replace(/\./g, "_"))
+                    .filter(f => f !== "");
+
+                if (gridState.columns.some(c => c.name === parts[0])) {
+                    options.mergeColumns[parts[0]] = parts.length >= 2 ? parts[1] : parts[0];
+                }
+                else {
+                    options.mergeFields[parts[0]] = parts.length >= 2 ? parts[1] : parts[0];
+                }
+
+                mergeFields.push(parts.length >= 2 ? parts[1] : parts[0]);
+            }
+        }
+
         const entitySet = getEntitySetBag(gridState, keyFields, options);
 
         const communicationBag: GridCommunicationBag = {
-            recipients: entitySet.items
+            recipients: entitySet.items,
+            fromUrl: window.location.href
         };
 
-        // Get the unique values.
-        const communicationMergeFields = ["GroupId", "GroupType_Name"];
-        const mergeFields = communicationMergeFields.filter((v, i, a) => a.indexOf(v) === i);
-
         if (props.communicationRecipientPersonKeyFields) {
-            communicationBag.additionalMergeFields = [`AdditionalMergeFields|${mergeFields.join("^")}`];
+            communicationBag.mergeFields = [`AdditionalMergeFields|${mergeFields.join("^")}`];
         }
         else {
-            communicationBag.additionalMergeFields = mergeFields;
+            communicationBag.mergeFields = mergeFields;
         }
 
-        console.log(communicationBag);
+        await createCommunicationAndRedirect(communicationBag, url);
+    }
+
+    async function createCommunicationAndRedirect(communicationBag: GridCommunicationBag, url: string): Promise<void> {
+        const args = {
+            communication: communicationBag
+        };
+
+        const result = await invokeBlockAction<Guid>("CreateGridCommunication", args);
+
+        if (!result.isSuccess || !result.data) {
+            return await alert(result.errorMessage || "Unable to create entity set.");
+        }
+
+        const finalUrl = makeUrlRedirectSafe(url.replace("{CommunicationId}", `${result.data}`));
+
+        window.location.href = finalUrl;
     }
 
     async function createEntitySetAndRedirect(keyFields: string[], url: string, options: EntitySetOptions | undefined): Promise<void> {
@@ -837,7 +872,7 @@ table.table-obsidian th.grid-error > .alert {
             entitySet
         };
 
-        const result = await invokeBlockAction<Guid>("CreateEntitySet", args);
+        const result = await invokeBlockAction<Guid>("CreateGridEntitySet", args);
 
         if (!result.isSuccess || !result.data) {
             return await alert(result.errorMessage || "Unable to create entity set.");

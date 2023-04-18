@@ -17,7 +17,6 @@
 
 import { Component, PropType, Ref, ShallowRef } from "vue";
 import { Guid } from "..";
-import { ListItemBag } from "@Obsidian/ViewModels/Utility/listItemBag";
 
 /** The purpose of the entity set. This activates special logic. */
 export type EntitySetPurpose = "communication" | "export";
@@ -32,16 +31,21 @@ export type EntitySetOptions = {
      */
     entityTypeGuid?: Guid;
 
-    /** Any additional fields that should be placed in the item merge fields. */
-    mergeFields?: string[];
+    /**
+     * Any additional fields that should be placed in the item merge fields.
+     * The values are copied over as-is with no conversion. The key represents
+     * the source field from the grid row and the value represents the name
+     * of the merge field to store the value in.
+     */
+    mergeFields?: Record<string, string>;
 
     /**
-     * Any column whose values should be placed in the item merge fields.
-     * The list item bag value is the name of the column. The text value is
-     * the name of the merge field property to store the value into. The
+     * Any columns whose values should be placed in the item merge fields.
+     * The key represents the source field from the grid row and the value
+     * represents the name of the merge field to store the value in. The
      * formatted value of the column is used.
      */
-    mergeColumns?: ListItemBag[];
+    mergeColumns?: Record<string, string>;
 
     /**
      * A function that will be called to provide additional custom merge

@@ -52,7 +52,7 @@ type GridEntitySetBag = {
 };
 
 export type GridCommunicationBag = {
-    additionalMergeFields?: string[];
+    mergeFields?: string[];
 
     fromUrl?: string;
 
@@ -107,8 +107,8 @@ export function getEntitySetBag(grid: IGridState, keyFields: string[], options?:
             else if (typeof keyValue === "string" && keyValue !== "") {
                 // For compatibility with legacy grid, check if we can split
                 // the string on the normal seperators.
-
                 const keyValues = keyValue.replace(/[\s|,;]+/, ",").split(",");
+
                 for (const kv of keyValues) {
                     if (kv !== "" && !entityKeyValues.includes(kv)) {
                         entityKeyValues.push(kv);
@@ -123,23 +123,25 @@ export function getEntitySetBag(grid: IGridState, keyFields: string[], options?:
         }
 
         // Get any additional merge values requested.
-        for (const mergeKey of (options?.mergeFields ?? [])) {
-            mergeValues[mergeKey] = toRaw(row[mergeKey]);
+        if (options?.mergeFields) {
+            for (const mergeKey of Object.keys(options.mergeFields)) {
+                mergeValues[options.mergeFields[mergeKey]] = toRaw(row[mergeKey]);
+            }
         }
 
         // Get any additional merge column values requested.
         if (options?.mergeColumns) {
-            for (const mergeItem of options.mergeColumns) {
-                const column = grid.columns.find(c => c.name === mergeItem.value);
+            for (const mergeKey of Object.keys(options.mergeColumns)) {
+                const column = grid.columns.find(c => c.name === mergeKey);
 
-                if (column && mergeItem.text) {
+                if (column) {
                     const cellProps = {
                         column,
                         row,
                         grid
                     };
 
-                    mergeValues[mergeItem.text] = extractText(column.format, cellProps);
+                    mergeValues[options.mergeColumns[mergeKey]] = extractText(column.format, cellProps);
                 }
             }
         }
@@ -162,7 +164,7 @@ export function getEntitySetBag(grid: IGridState, keyFields: string[], options?:
                 item = {
                     entityKey: entityKey,
                     order: itemOrder++,
-                    additionalMergeValues: {...mergeValues}
+                    additionalMergeValues: { ...mergeValues }
                 };
 
                 entitySetBag.items.push(item);
@@ -189,7 +191,7 @@ export function getEntitySetBag(grid: IGridState, keyFields: string[], options?:
                     rows = item.additionalMergeValues["AdditionalFields"] = [];
                 }
 
-                rows.push({...mergeValues});
+                rows.push({ ...mergeValues });
             }
         }
     }

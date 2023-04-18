@@ -137,12 +137,12 @@ namespace Rock.Obsidian.UI
         /// <param name="builder">The <see cref="GridBuilder{T}"/> to add the field to.</param>
         /// <param name="block">The block that is displaying this grid.</param>
         /// <returns>A reference to the original <see cref="GridBuilder{T}"/> object that can be used to chain calls.</returns>
-        public static GridBuilder<T> UseWithBlock<T>( this GridBuilder<T> builder, IRockBlockType block )
+        public static GridBuilder<T> WithBlock<T>( this GridBuilder<T> builder, IRockBlockType block )
         {
             // Add all the action URLs for the current site.
             builder.AddDefinitionAction( definition =>
             {
-                var communicationUrl = "/Communication/{EntitySetId}";
+                var communicationUrl = "/Communication/{CommunicationId}";
                 SiteCache site;
 
                 if ( block.BlockCache.Page != null )
@@ -168,7 +168,7 @@ namespace Rock.Obsidian.UI
 
                         if ( communicationPage.IsAuthorized( Security.Authorization.VIEW, block.RequestContext.CurrentPerson ) )
                         {
-                            pageRef.Parameters.AddOrReplace( "CommunicationId", "{EntitySetId}" );
+                            pageRef.Parameters.AddOrReplace( "CommunicationId", "{CommunicationId}" );
                             communicationUrl = pageRef.BuildUrl();
                         }
                         else
