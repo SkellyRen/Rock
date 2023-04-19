@@ -41,7 +41,7 @@ namespace Rock.Field.Types
         #region Configuration
 
         private const string GROUP_TYPE_PURPOSE_VALUE_GUID = "groupTypePurposeValueGuid";
-        private const string SELECTABLE_GROUP_TYPES = "selectableGroupTypes";
+        private const string GROUP_TYPES_PURPOSES = "groupTypePurposes";
         private const string VALUES = "values";
 
         /// <inheritdoc/>
@@ -57,13 +57,15 @@ namespace Rock.Field.Types
                 };
                 var publicEditConfigurationValues = base.GetPublicConfigurationValues( privateConfigurationValues, usage, value );
                 var groupTypePurposeValueGuid = privateConfigurationValues.GetValueOrNull( GROUP_TYPE_PURPOSE_VALUE_GUID )?.AsGuid();
+                publicEditConfigurationValues[GROUP_TYPES_PURPOSES] = definedValueClientService
+                        .GetDefinedValuesAsListItems( SystemGuid.DefinedType.GROUPTYPE_PURPOSE.AsGuid(),
+                            new ClientService.Core.DefinedValue.Options.DefinedValueOptions { UseDescription = true, IncludeInactive = true } )
+                        .ToCamelCaseJson( false, true );
                 if ( groupTypePurposeValueGuid != Guid.Empty )
                 {
                     publicEditConfigurationValues[VALUES] = GroupTypeCache.All()
                         .Where( g => g.GroupTypePurposeValue?.Guid == groupTypePurposeValueGuid )
                         .ToListItemBagList()
-                        .ToCamelCaseJson( false, true );
-                    publicEditConfigurationValues[SELECTABLE_GROUP_TYPES] = definedValueClientService.GetDefinedValuesAsListItems( SystemGuid.DefinedType.GROUPTYPE_PURPOSE.AsGuid() )
                         .ToCamelCaseJson( false, true );
                 }
                 else

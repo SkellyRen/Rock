@@ -22,7 +22,7 @@ import { ListItemBag } from "@Obsidian/ViewModels/Utility/listItemBag";
 
 const enum ConfigurationValueKey {
     GroupTypePurposeValueGuid = "groupTypePurposeValueGuid",
-    SelectableGroupTypes = "selectableGroupTypes",
+    GroupTypePurposes = "groupTypePurposes",
     Values = "values"
 }
 
@@ -115,7 +115,7 @@ export const ConfigurationComponent = defineComponent({
 
         const options = computed((): ListItemBag[] => {
             try {
-                return JSON.parse(props.modelValue[ConfigurationValueKey.SelectableGroupTypes] ?? "[]") as ListItemBag[];
+                return JSON.parse(props.modelValue[ConfigurationValueKey.GroupTypePurposes] ?? "[]") as ListItemBag[];
             }
             catch {
                 return [];
@@ -133,18 +133,9 @@ export const ConfigurationComponent = defineComponent({
         const maybeUpdateConfiguration = (key: string, value: string): void => {
             if (maybeUpdateModelValue()) {
                 emit("updateConfigurationValue", key, value);
-            }
-        };
-
-        // Watch for changes in properties that require new configuration
-        // properties to be retrieved from the server.
-        // THIS IS JUST A PLACEHOLDER FOR COPYING TO NEW FIELDS THAT MIGHT NEED IT.
-        // THIS FIELD DOES NOT NEED THIS
-        watch([], () => {
-            if (maybeUpdateModelValue()) {
                 emit("updateConfiguration");
             }
-        });
+        };
 
         // Watch for changes in properties that only require a local UI update.
         watch(groupTypePurposeValueGuid, () => maybeUpdateConfiguration(ConfigurationValueKey.GroupTypePurposeValueGuid, groupTypePurposeValueGuid.value));
