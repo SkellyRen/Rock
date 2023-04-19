@@ -239,6 +239,9 @@ table.table-obsidian th.grid-error > .alert {
     import { makeUrlRedirectSafe } from "@Obsidian/Utility/url";
     import { EntityType } from "@Obsidian/SystemGuids/entityType";
     import { alert } from "@Obsidian/Utility/dialogs";
+    import type writeXlsxFile from "@Obsidian/Libs/write-excel-file";
+    import { Cell } from "@Obsidian/Libs/write-excel-file";
+    import { WorkBook } from "@Obsidian/Libs/xlsx";
 
     /*
      * 8/17/2022 - DSH
@@ -408,8 +411,8 @@ table.table-obsidian th.grid-error > .alert {
          * state might change.
          */
         showExport: {
-            type: Boolean as PropType<boolean>,
-            required: false
+            type: Boolean as PropType<boolean | undefined>,
+            default: undefined
         },
 
         /**
@@ -579,6 +582,15 @@ table.table-obsidian th.grid-error > .alert {
                 handler: onMergeTemplate,
                 iconCssClass: "fa fa-files-o fa-fw",
                 tooltip: "Merge Records into Merge Template"
+            });
+        }
+
+        // Add the action for Export to Excel.
+        if (showExport.value) {
+            actions.push({
+                handler: onExport,
+                iconCssClass: "fa fa-table fa-fw",
+                tooltip: "Export to Excel"
             });
         }
 
@@ -779,6 +791,55 @@ table.table-obsidian th.grid-error > .alert {
 
             await createEntitySetAndRedirect([props.keyField], url, options);
         }
+    }
+
+    async function onExport(): Promise<void> {
+        // Find all columns that aren't special columns and include them in
+        // the additional merge fields.
+        const mergeColumns: Record<string, string> = {};
+        const dataColumns = gridState.columns
+            .filter(c => !c.name.startsWith("__"));
+
+        for (const column of dataColumns) {
+            mergeColumns[column.name] = `${column.name[0].toUpperCase()}${column.name.substring(1)}`;
+        }
+
+        const options: EntitySetOptions = {
+            mergeColumns
+        };
+
+        const entitySet = getEntitySetBag(gridState, [], options);
+
+        const data: unknown[][] = [];
+
+        // Build the header row.
+        const headerRow: string[] = [];
+        data.push(headerRow);
+
+        for (const key of Object.keys(mergeColumns)) {
+            const column = gridState.columns.find(c => c.name === key);
+
+            headerRow.push(column?.title ?? key);
+        }
+
+        // Build the data rows.
+        for (const item of (entitySet.items ?? [])) {
+            const row: unknown[] = [];
+
+            for (const key of Object.keys(mergeColumns)) {
+                const value = item.additionalMergeValues?.[mergeColumns[key]];
+
+                row.push(value);
+            }
+
+            data.push(row);
+        }
+
+        const xlsx = (await import("@Obsidian/Libs/xlsx"));
+        const worksheet = xlsx.utils.aoa_to_sheet(data);
+        const workbook = xlsx.utils.book_new();
+        xlsx.utils.book_append_sheet(workbook, worksheet, "Sheet 1");
+        xlsx.writeFile(workbook, "export.xlsx", { compression: true });
     }
 
     async function onLaunchWorkflow(): Promise<void> {
