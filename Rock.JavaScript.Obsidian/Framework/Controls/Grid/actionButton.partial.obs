@@ -8,13 +8,8 @@
 
 <script setup lang="ts">
     import { isPromise } from "@Obsidian/Utility/promiseUtils";
-    import { computed, PropType } from "vue";
+    import { computed, PropType, ref } from "vue";
     import { GridAction } from "@Obsidian/Types/Controls/grid";
-
-    type InternalGridAction = GridAction & {
-        // eslint-disable-next-line @typescript-eslint/naming-convention
-        __executing?: boolean
-    };
 
     const props = defineProps({
         action: {
@@ -22,6 +17,8 @@
             required: true
         }
     });
+
+    const isExecuting = ref(false);
 
     const actionTooltip = computed((): string | undefined => {
         return props.action.tooltip;
@@ -34,7 +31,7 @@
             classes += ` ${props.action.buttonCssClass}`;
         }
 
-        if ((props.action as InternalGridAction).__executing || props.action.disabled) {
+        if (isExecuting.value || props.action.disabled) {
             classes += " disabled";
         }
 
@@ -46,22 +43,18 @@
     });
 
     const onActionClick = async (): Promise<void> => {
-        const internalAction = props.action as InternalGridAction;
-
-        if (internalAction.handler && !internalAction.disabled && !internalAction.__executing) {
-            // This is a special case where we modify the original object.
-            // It is only used internally by the Grid so this is safe.
-            internalAction.__executing = true;
+        if (props.action.handler && !props.action.disabled && !isExecuting.value) {
+            isExecuting.value = true;
 
             try {
-                const result = internalAction.handler();
+                const result = props.action.handler();
 
                 if (isPromise(result)) {
                     await result;
                 }
             }
             finally {
-                internalAction.__executing = false;
+                isExecuting.value = false;
             }
         }
     };

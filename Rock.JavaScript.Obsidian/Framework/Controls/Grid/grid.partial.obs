@@ -239,9 +239,6 @@ table.table-obsidian th.grid-error > .alert {
     import { makeUrlRedirectSafe } from "@Obsidian/Utility/url";
     import { EntityType } from "@Obsidian/SystemGuids/entityType";
     import { alert } from "@Obsidian/Utility/dialogs";
-    import type writeXlsxFile from "@Obsidian/Libs/write-excel-file";
-    import { Cell } from "@Obsidian/Libs/write-excel-file";
-    import { WorkBook } from "@Obsidian/Libs/xlsx";
 
     /*
      * 8/17/2022 - DSH
@@ -808,7 +805,7 @@ table.table-obsidian th.grid-error > .alert {
             mergeColumns
         };
 
-        const entitySet = getEntitySetBag(gridState, [], options);
+        const entitySet = await getEntitySetBag(gridState, [], options);
 
         const data: unknown[][] = [];
 
@@ -835,6 +832,7 @@ table.table-obsidian th.grid-error > .alert {
             data.push(row);
         }
 
+        // Generate the excel file and initiate the download.
         const xlsx = (await import("@Obsidian/Libs/xlsx"));
         const worksheet = xlsx.utils.aoa_to_sheet(data);
         const workbook = xlsx.utils.book_new();
@@ -894,7 +892,7 @@ table.table-obsidian th.grid-error > .alert {
             }
         }
 
-        const entitySet = getEntitySetBag(gridState, keyFields, options);
+        const entitySet = await getEntitySetBag(gridState, keyFields, options);
 
         const communicationBag: GridCommunicationBag = {
             recipients: entitySet.items,
@@ -928,7 +926,7 @@ table.table-obsidian th.grid-error > .alert {
     }
 
     async function createEntitySetAndRedirect(keyFields: string[], url: string, options: EntitySetOptions | undefined): Promise<void> {
-        const entitySet = getEntitySetBag(gridState, keyFields, options);
+        const entitySet = await getEntitySetBag(gridState, keyFields, options);
         const args = {
             entitySet
         };

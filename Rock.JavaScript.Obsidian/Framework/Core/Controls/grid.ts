@@ -72,24 +72,23 @@ export type GridCommunicationBag = {
  *
  * @returns A new instance of {@link GridEntitySetBag} that contains the data.
  */
-export function getEntitySetBag(grid: IGridState, keyFields: string[], options?: EntitySetOptions): GridEntitySetBag {
+export async function getEntitySetBag(grid: IGridState, keyFields: string[], options?: EntitySetOptions): Promise<GridEntitySetBag> {
     const selectedKeys = grid.selectedKeys;
     const entitySetItemLookup: Record<string, GridEntitySetItemBag> = {};
     let itemOrder = 0;
     const entitySetBag: GridEntitySetBag = {
-        entityTypeKey: options?.entityTypeGuid ?? grid.entityTypeGuid
+        entityTypeKey: options?.entityTypeGuid ?? grid.entityTypeGuid,
+        items: []
     };
 
-    entitySetBag.items = [];
-
-    for (const row of grid.getSortedRows()) {
+    function processRow(row: Record<string, unknown>): void {
         const rowKey = grid.getRowKey(row);
 
         // If we have any selected keys but the row isn't one of them then
         // skip it.
         if (selectedKeys.length > 0) {
             if (!rowKey || !selectedKeys.includes(rowKey)) {
-                continue;
+                return;
             }
         }
 
@@ -167,7 +166,7 @@ export function getEntitySetBag(grid: IGridState, keyFields: string[], options?:
                     additionalMergeValues: { ...mergeValues }
                 };
 
-                entitySetBag.items.push(item);
+                entitySetBag.items?.push(item);
 
                 if (entityKey) {
                     entitySetItemLookup[entityKey] = item;
@@ -195,6 +194,10 @@ export function getEntitySetBag(grid: IGridState, keyFields: string[], options?:
             }
         }
     }
+
+    const worker = new BackgroundItemsWorker(grid.getSortedRows(), processRow);
+
+    await worker.run();
 
     return entitySetBag;
 }
@@ -1117,6 +1120,165 @@ export class GridRowCache implements IGridRowCache {
         }
 
         return this.cache.getOrAdd(rowKey, () => new GridCache()).addOrReplace<T>(key, value);
+    }
+}
+
+/**
+ * Helper class for running tasks in the background without tying up the UI
+ * thread. This will run on the UI thread, but in small chunks so that it does
+ * not lock the UI. This is about the best we can do, but works fairly well.
+ */
+abstract class BackgroundWorker {
+    /**
+     * The number of milliseconds between runs when the idle callback is
+     * not available.
+     */
+    private interval: number = 50;
+
+    /**
+     * The maximum number of milliseconds to run a single iteration if no
+     * duration is provided by the browser.
+     */
+    private intervalRunDuration: number = 50;
+
+    /** Determines if the worker has been started already. */
+    private started: boolean = false;
+
+    /** Determines if the worker has been requested to cancel. */
+    private cancelled: boolean = false;
+
+    /** The callback function to trigger the promise to resolve. */
+    private resolvePromise!: () => void;
+
+    /** The callback funciton to trigger the promise to reject with an error. */
+    private rejectPromise!: (error: Error) => void;
+
+    /**
+     * Starts the worker and begins processing in the background.
+     *
+     * @returns A promise that indicates when the worker has finished.
+     */
+    public run(): Promise<void> {
+        if (this.started) {
+            throw new Error("Can't start background worker that is already started.");
+        }
+
+        this.started = true;
+        this.queueNext();
+
+        return new Promise((resolve, reject) => {
+            this.resolvePromise = resolve;
+            this.rejectPromise = reject;
+        });
+    }
+
+    /**
+     * Requests that the worker cancel it's processing. This will not be
+     * immediate but will be acted upon at the next processing cycle.
+     */
+    public cancel(): void {
+        this.cancelled = true;
+    }
+
+    /**
+     * Queues up the next processing cycle. If requestIdleCallback is available
+     * then it will be used, otherwise we will fallback to setTimeout.
+     */
+    private queueNext(): void {
+        if (window.requestIdleCallback !== undefined) {
+            window.requestIdleCallback(deadline => this.processInternal(deadline), {
+                timeout: this.interval
+            });
+        }
+        else {
+            setTimeout(() => this.processInternal(undefined), this.interval);
+        }
+    }
+
+    /**
+     * Handles a single processing pass. This handles cancellation and tracking
+     * when this cycle should stop processing.
+     *
+     * @param deadline Special instructions from the browser on when to stop processing.
+     */
+    private processInternal(deadline: IdleDeadline | undefined): void {
+        if (this.cancelled) {
+            return this.rejectPromise(new Error("Cancellation requested."));
+        }
+
+        try {
+            let hasMore: boolean;
+
+            if (deadline && !deadline.didTimeout) {
+                hasMore = this.process(() => {
+                    return deadline.timeRemaining() <= 0;
+                });
+            }
+            else {
+                // 50ms seems to be the default max run time used by
+                // browsers with requestIdleCallback.
+                const timeoutAt = window.performance.now() + 50;
+                hasMore = this.process(() => window.performance.now() >= timeoutAt);
+            }
+
+            if (hasMore) {
+                this.queueNext();
+            }
+            else {
+                this.resolvePromise();
+            }
+        }
+        catch (error) {
+            this.rejectPromise(error instanceof Error ? error : new Error(String(error)));
+        }
+    }
+
+    /**
+     * Called periodically to process for a short period of time. Call the
+     * {@link didTimeout} function to determine if it is safe to continue.
+     *
+     * @param didTimeout A function that returns `true` when processing should be suspended.
+     *
+     * @returns A boolean that indicates if processing should continue. If there is no more data to process, then `false` should be returned.
+     */
+    protected abstract process(didTimeout: () => boolean): boolean;
+}
+
+/**
+ * A helper class to process a set of items in the background. A user-defined
+ * callback will be called for each item in the array, pausing between
+ * invocations whenever the time limit has been reached.
+ */
+class BackgroundItemsWorker<T> extends BackgroundWorker {
+    /** The worker function to call for each item. */
+    private workerFunction: (item: T) => void;
+
+    /** The array of items to be processed. */
+    private items: T[];
+
+    /** The index of the next item to be processed. */
+    private itemIndex: number = 0;
+
+    /**
+     * Creates a new worker that will process the set of {@link items} with
+     * the {@link workerFunction} callback.
+     *
+     * @param items The array of items to be processed.
+     * @param workerFunction The function to be called for each item in the array.
+     */
+    constructor(items: T[], workerFunction: ((item: T) => void)) {
+        super();
+
+        this.workerFunction = workerFunction;
+        this.items = items;
+    }
+
+    protected override process(didTimeout: () => boolean): boolean {
+        while (this.itemIndex < this.items.length && !didTimeout()) {
+            this.workerFunction(this.items[this.itemIndex++]);
+        }
+
+        return this.itemIndex < this.items.length;
     }
 }
 
