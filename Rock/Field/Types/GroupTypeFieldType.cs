@@ -59,12 +59,13 @@ namespace Rock.Field.Types
                 var groupTypePurposeValueGuid = privateConfigurationValues.GetValueOrNull( GROUP_TYPE_PURPOSE_VALUE_GUID )?.AsGuid();
                 publicEditConfigurationValues[GROUP_TYPES_PURPOSES] = definedValueClientService
                         .GetDefinedValuesAsListItems( SystemGuid.DefinedType.GROUPTYPE_PURPOSE.AsGuid(),
-                            new ClientService.Core.DefinedValue.Options.DefinedValueOptions { UseDescription = true, IncludeInactive = true } )
+                            new ClientService.Core.DefinedValue.Options.DefinedValueOptions { UseDescription = true } )
                         .ToCamelCaseJson( false, true );
                 if ( groupTypePurposeValueGuid != Guid.Empty )
                 {
                     publicEditConfigurationValues[VALUES] = GroupTypeCache.All()
                         .Where( g => g.GroupTypePurposeValue?.Guid == groupTypePurposeValueGuid )
+                        .OrderBy( g => g.Name )
                         .ToListItemBagList()
                         .ToCamelCaseJson( false, true );
                 }
@@ -72,6 +73,7 @@ namespace Rock.Field.Types
                 {
                     // show all the groups if there is no Group Type Purpose is set
                     publicEditConfigurationValues[VALUES] = GroupTypeCache.All()
+                        .OrderBy( g => g.Name )
                         .ToListItemBagList()
                         .ToCamelCaseJson( false, true );
                 }
