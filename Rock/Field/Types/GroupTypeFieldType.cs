@@ -41,10 +41,56 @@ namespace Rock.Field.Types
         #region Configuration
 
         private const string GROUP_TYPE_PURPOSE_VALUE_GUID = "groupTypePurposeValueGuid";
+        private const string SELECTABLE_GROUP_TYPES = "selectableGroupTypes";
+        private const string VALUES = "values";
+
+        /// <inheritdoc/>
+        public override Dictionary<string, string> GetPublicConfigurationValues( Dictionary<string, string> privateConfigurationValues, ConfigurationValueUsage usage, string value )
+        {
+            using ( var rockContext = new RockContext() )
+            {
+                // Disable security since we are intentionally returning items even
+                // if the person (whom we don't know) doesn't have access.
+                var definedValueClientService = new Rock.ClientService.Core.DefinedValue.DefinedValueClientService( rockContext, null )
+                {
+                    EnableSecurity = false
+                };
+                var publicEditConfigurationValues = base.GetPublicConfigurationValues( privateConfigurationValues, usage, value );
+                var groupTypePurposeValueGuid = privateConfigurationValues.GetValueOrNull( GROUP_TYPE_PURPOSE_VALUE_GUID )?.AsGuid();
+                if ( groupTypePurposeValueGuid != Guid.Empty )
+                {
+                    publicEditConfigurationValues[VALUES] = GroupTypeCache.All()
+                        .Where( g => g.GroupTypePurposeValue?.Guid == groupTypePurposeValueGuid )
+                        .ToListItemBagList()
+                        .ToCamelCaseJson( false, true );
+                    publicEditConfigurationValues[SELECTABLE_GROUP_TYPES] = definedValueClientService.GetDefinedValuesAsListItems( SystemGuid.DefinedType.GROUPTYPE_PURPOSE.AsGuid() )
+                        .ToCamelCaseJson( false, true );
+                }
+                else
+                {
+                    // show all the groups if there is no Group Type Purpose is set
+                    publicEditConfigurationValues[VALUES] = GroupTypeCache.All()
+                        .ToListItemBagList()
+                        .ToCamelCaseJson( false, true );
+                }
+                return publicEditConfigurationValues;
+            }
+        }
 
         #endregion
 
         #region Formatting
+
+        /// <inheritdoc/>
+        public override string GetPublicValue( string privateValue, Dictionary<string, string> privateConfigurationValues )
+        {
+            var groupTypeGuid = privateValue.AsGuid();
+            if ( groupTypeGuid == Guid.Empty )
+            {
+                return base.GetPublicValue( privateValue, privateConfigurationValues );
+            }
+            return GroupTypeCache.Get( groupTypeGuid ).Name;
+        }
 
         /// <inheritdoc/>
         public override string GetTextValue( string privateValue, Dictionary<string, string> privateConfigurationValues )
@@ -67,6 +113,12 @@ namespace Rock.Field.Types
         #endregion
 
         #region Edit Control
+
+        /// <inheritdoc/>
+        public override string GetPublicEditValue( string privateValue, Dictionary<string, string> privateConfigurationValues )
+        {
+            return privateValue;
+        }
 
         #endregion
 

@@ -14,15 +14,16 @@
 // limitations under the License.
 // </copyright>
 //
-import { defineComponent, ref, watch } from "vue";
+import { computed, defineComponent, ref, watch } from "vue";
 import { getFieldEditorProps, getFieldConfigurationProps } from "./utils";
 import DefinedValuePicker from "@Obsidian/Controls/definedValuePicker.obs";
-import GroupTypePicker from "@Obsidian/Controls/groupTypePicker.obs";
-import { DefinedType } from "@Obsidian/SystemGuids/definedType";
+import DropDownList from "@Obsidian/Controls/dropDownList";
 import { ListItemBag } from "@Obsidian/ViewModels/Utility/listItemBag";
 
 const enum ConfigurationValueKey {
-    GroupTypePurposeValueGuid = "groupTypePurposeValueGuid"
+    GroupTypePurposeValueGuid = "groupTypePurposeValueGuid",
+    SelectableGroupTypes = "selectableGroupTypes",
+    Values = "values"
 }
 
 export const EditComponent = defineComponent({
@@ -30,36 +31,46 @@ export const EditComponent = defineComponent({
     name: "GroupTypeField.Edit",
 
     components: {
-        GroupTypePicker
+        DropDownList
     },
 
     props: getFieldEditorProps(),
 
     data() {
-
         return {
-            internalValue: ""
+            internalValue: this.modelValue ?? ""
         };
     },
 
     computed: {
+        options(): ListItemBag[] {
+            try {
+                return JSON.parse(this.configurationValues[ConfigurationValueKey.Values] ?? "[]") as ListItemBag[];
+            }
+            catch {
+                return [];
+            }
+        }
     },
 
     watch: {
         internalValue() {
-            this.$emit("update:modelValue", this.internalValue?.["value"]);
+            this.$emit("update:modelValue", this.internalValue);
         }
     },
 
     template: `
-<GroupTypePicker v-model="internalValue" />
+<DropDownList v-model="internalValue" :items="options" />
 `
 });
 
 export const ConfigurationComponent = defineComponent({
     name: "GroupTypeField.Configuration",
 
-    components: { DefinedValuePicker },
+    components: {
+        DefinedValuePicker,
+        DropDownList
+    },
 
     props: getFieldConfigurationProps(),
 
@@ -70,8 +81,7 @@ export const ConfigurationComponent = defineComponent({
     ],
 
     setup(props, { emit }) {
-        const groupTypePurposeValueGuid = ref("");
-        const groupTypePurposeDefinedTypeGuid = DefinedType.GrouptypePurpose;
+        const groupTypePurposeValueGuid = ref(props.modelValue[ConfigurationValueKey.GroupTypePurposeValueGuid]);
 
         /**
          * Update the modelValue property if any value of the dictionary has
@@ -82,7 +92,9 @@ export const ConfigurationComponent = defineComponent({
          * @returns true if a new modelValue was emitted to the parent component.
          */
         const maybeUpdateModelValue = (): boolean => {
-            const newValue: Record<string, string> = {};
+            const newValue: Record<string, string> = {
+                ...props.modelValue
+            };
 
             // Construct the new value that will be emitted if it is different
             // than the current value.
@@ -101,6 +113,17 @@ export const ConfigurationComponent = defineComponent({
             }
         };
 
+        const options = computed((): ListItemBag[] => {
+            try {
+                return JSON.parse(props.modelValue[ConfigurationValueKey.SelectableGroupTypes] ?? "[]") as ListItemBag[];
+            }
+            catch {
+                return [];
+            }
+        });
+
+        const internalValue = computed(() : string => props.modelValue.value);
+
         /**
          * Emits the updateConfigurationValue if the value has actually changed.
          *
@@ -112,14 +135,6 @@ export const ConfigurationComponent = defineComponent({
                 emit("updateConfigurationValue", key, value);
             }
         };
-
-        // Watch for changes coming in from the parent component and update our
-        // data to match the new information.
-        watch(() => [props.modelValue, props.configurationProperties], () => {
-            groupTypePurposeValueGuid.value = props.modelValue[ConfigurationValueKey.GroupTypePurposeValueGuid];
-        }, {
-            immediate: true
-        });
 
         // Watch for changes in properties that require new configuration
         // properties to be retrieved from the server.
@@ -134,13 +149,12 @@ export const ConfigurationComponent = defineComponent({
         // Watch for changes in properties that only require a local UI update.
         watch(groupTypePurposeValueGuid, () => maybeUpdateConfiguration(ConfigurationValueKey.GroupTypePurposeValueGuid, groupTypePurposeValueGuid.value));
 
-        return { groupTypePurposeValueGuid, groupTypePurposeDefinedTypeGuid };
+        return { groupTypePurposeValueGuid, options, internalValue };
     },
 
     template: `
 <div>
-    <DefinedValuePicker v-model="groupTypePurposeValueGuid" label="Purpose" :definedTypeGuid="groupTypePurposeDefinedTypeGuid"
-        help="An optional setting to limit the selection of group types to those that have the selected purpose." />
+    <DropDownList v-model="groupTypePurposeValueGuid" label="Purpose" :items="options" help="An optional setting to limit the selection of group types to those that have the selected purpose." />
 </div>
 `
 });
