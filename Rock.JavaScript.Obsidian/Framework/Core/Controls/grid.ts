@@ -754,6 +754,8 @@ function getOrAddRowCacheValue<T>(row: Record<string, unknown>, column: ColumnDe
  */
 function buildAttributeColumns(columns: ColumnDefinition[], node: VNode): void {
     const attributes = getVNodeProp<AttributeFieldDefinitionBag[]>(node, "attributes");
+    const filter = getVNodeProp<ColumnFilter>(node, "filter");
+
     if (!attributes) {
         return;
     }
@@ -770,6 +772,7 @@ function buildAttributeColumns(columns: ColumnDefinition[], node: VNode): void {
             uniqueValue: (r, c) => c.field ? String(r[c.field]) : "",
             sortValue: (r, c) => c.field ? String(r[c.field]) : undefined,
             quickFilterValue: (r, c, g) => getOrAddRowCacheValue(r, c, "quickFilterValue", g, () => c.field ? String(r[c.field]) : undefined),
+            filter,
             filterValue: (r, c) => c.field ? String(r[c.field]) : undefined,
             format: getVNodeProp<VNode>(node, "format") ?? defaultCell,
             props: {},
