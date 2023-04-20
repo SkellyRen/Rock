@@ -1,10 +1,27 @@
 <template>
-    <TextBox v-model="internalValue" />
+    <div class="grid-filter-popup-body">
+        <DropDownList v-model="searchMethod"
+                      inputClasses="mb-2"
+                      :showBlankItem="false"
+                      :items="searchTypeItems" />
+
+        <TextBox v-model="searchValue" />
+    </div>
 </template>
 
 <script setup lang="ts">
+    import TextBox from "@Obsidian/Controls/textBox";
+    import DropDownList from "@Obsidian/Controls/dropDownList";
     import { standardFilterProps } from "@Obsidian/Core/Controls/grid";
+    import { StringFilterMethod, StringFilterMethodDescription } from "@Obsidian/Enums/Controls/Grid/stringFilterMethod";
+    import { ListItemBag } from "@Obsidian/ViewModels/Utility/listItemBag";
     import { ref, watch } from "vue";
+
+    type StringSearchBag = {
+        method: StringFilterMethod;
+
+        value?: string;
+    };
 
     const props = defineProps(standardFilterProps);
 
@@ -12,13 +29,48 @@
         (e: "update:modelValue", value: unknown): void
     }>();
 
-    const internalValue = ref(typeof (props.modelValue) === "string" ? props.modelValue : "");
+    const searchMethod = ref(StringFilterMethod.Equals.toString());
+    const searchValue = ref(typeof (props.modelValue) === "string" ? props.modelValue : "");
 
-    watch(() => props.modelValue, () => {
-        internalValue.value = typeof (props.modelValue) === "string" ? props.modelValue : "";
-    });
+    const searchTypeItems = ref<ListItemBag[]>(Object.keys(StringFilterMethodDescription).map(n => {
+        return {
+            value: n,
+            text: StringFilterMethodDescription[n]
+        };
+    }));
 
-    watch(internalValue, () => {
-        emit("update:modelValue", internalValue.value);
-    });
+    function updateModelValue(): void {
+        if (!searchValue.value === null) {
+            emit("update:modelValue", undefined);
+            return;
+        }
+
+        const searchBag: StringSearchBag = {
+            method: Number(searchMethod.value) as StringFilterMethod,
+            value: searchValue.value ?? undefined
+        };
+
+        emit("update:modelValue", searchBag);
+    }
+
+    function updateSearchValues(): void {
+        if (props.modelValue && typeof props.modelValue === "object") {
+            const modelSearchBag = props.modelValue as Partial<StringSearchBag>;
+
+            if (modelSearchBag.method !== undefined) {
+                searchMethod.value = modelSearchBag.method.toString();
+                searchValue.value = modelSearchBag.value ?? "";
+
+                return;
+            }
+        }
+
+        searchMethod.value = StringFilterMethod.Equals.toString();
+        searchValue.value = "";
+    }
+
+    watch(() => props.modelValue, () => updateSearchValues());
+    watch([searchMethod, searchValue], () => updateModelValue());
+
+    updateSearchValues();
 </script>

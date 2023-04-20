@@ -13,7 +13,7 @@
         <SelectColumn />
         <!-- <ReorderColumn @orderChanged="onOrderChanged" /> -->
 
-        <Column name="name" title="Name" sortValue="{{ row.name.lastName }} {{ row.name.firstName }}" :filter="textValueFilter" quickFilterValue="{{ row.name.firstName }} {{  row.name.lastName }}">
+        <Column name="name" title="Name" sortValue="{{ row.name.lastName }} {{ row.name.firstName }}" :filter="textValueFilter" filterValue="{{ row.name.firstName }} {{ row.name.lastName }}" quickFilterValue="{{ row.name.firstName }} {{  row.name.lastName }}">
             <template #body="{ row }">
                 {{ row.name.firstName }} {{ row.name.lastName }}
             </template>

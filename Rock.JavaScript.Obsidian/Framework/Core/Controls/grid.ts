@@ -18,6 +18,7 @@
 import { defineComponent, PropType, reactive, ref, Ref, shallowRef, ShallowRef, toRaw, unref, VNode, watch, WatchStopHandle } from "vue";
 import { NumberFilterMethod } from "@Obsidian/Enums/Controls/Grid/numberFilterMethod";
 import { DateFilterMethod } from "@Obsidian/Enums/Controls/Grid/dateFilterMethod";
+import { StringFilterMethod, StringFilterMethodDescription } from "@Obsidian/Enums/Controls/Grid/stringFilterMethod";
 import { ColumnFilter, ColumnDefinition, IGridState, StandardFilterProps, StandardCellProps, IGridCache, IGridRowCache, ColumnSort, SortValueFunction, FilterValueFunction, QuickFilterValueFunction, UniqueValueFunction, StandardColumnProps, StandardHeaderCellProps, EntitySetOptions } from "@Obsidian/Types/Controls/grid";
 import { extractText, getVNodeProp, getVNodeProps } from "@Obsidian/Utility/component";
 import { DayOfWeek, RockDateTime } from "@Obsidian/Utility/rockDateTime";
@@ -27,15 +28,6 @@ import { AttributeFieldDefinitionBag } from "@Obsidian/ViewModels/Core/Grid/attr
 import { Guid } from "@Obsidian/Types";
 
 // #region Entity Sets
-
-// grid.entityKeyField
-// grid.personKeyField
-// grid.communicationRecipientKeyFields (array)
-// isBusiness
-// additionalMergeFields
-//
-// grid.getPersonEntitySetBag()
-// grid.getEntitySetBag(additionalMergeFields: string[])
 
 type GridEntitySetItemBag = {
     entityKey?: string;
@@ -360,8 +352,8 @@ export const standardFilterProps: StandardFilterProps = {
 // #region Filter Matches Functions
 
 /**
- * The text column filter that performs a substring search to see if the
- * `needle` is contained within the `haystack`.
+ * The text column filter that performs a comparison of `haystack` and
+ * the value and comparison type inside `needle` to see if it matches.
  *
  * @private This is used internally by Rock and should not be used directly.
  *
@@ -371,15 +363,40 @@ export const standardFilterProps: StandardFilterProps = {
  * @returns True if `haystack` matches the `needle` and should be included in the results.
  */
 export function textFilterMatches(needle: unknown, haystack: unknown): boolean {
-    if (typeof (needle) !== "string") {
+    if (!needle || typeof needle !== "object" || typeof needle["method"] !== "number" || typeof needle["value"] !== "string") {
         return false;
     }
 
-    if (!needle || !haystack || typeof haystack !== "string") {
-        return true;
+    // Allow undefined values and number values, but everything else is
+    // considered a non-match.
+    if (haystack !== undefined && typeof haystack !== "string") {
+        return false;
     }
 
-    return haystack.toLowerCase().includes(needle.toLowerCase());
+    const haystackValue = haystack?.toLowerCase() ?? "";
+    const needleValue = needle["value"].toLowerCase();
+
+    if (needle["method"] === StringFilterMethod.Equals) {
+        return haystackValue === needleValue;
+    }
+    else if (needle["method"] === StringFilterMethod.DoesNotEqual) {
+        return haystackValue !== needleValue;
+    }
+    else if (needle["method"] === StringFilterMethod.Contains) {
+        return haystackValue.includes(needleValue);
+    }
+    else if (needle["method"] === StringFilterMethod.DoesNotContain) {
+        return !haystackValue.includes(needleValue);
+    }
+    else if (needle["method"] === StringFilterMethod.StartsWith) {
+        return haystackValue.indexOf(needleValue) === 0;
+    }
+    else if (needle["method"] === StringFilterMethod.EndsWith) {
+        return haystackValue.lastIndexOf(needleValue) === haystackValue.length - needleValue.length;
+    }
+    else {
+        return false;
+    }
 }
 
 /**
@@ -1497,10 +1514,6 @@ export class GridState implements IGridState {
                 }
 
                 const value: unknown = column.filterValue(row, column, this);
-
-                if (value === undefined) {
-                    return false;
-                }
 
                 return column.filter.matches(columnFilterValue, value, column, this);
             });
