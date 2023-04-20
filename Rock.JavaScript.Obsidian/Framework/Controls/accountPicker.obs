@@ -15,7 +15,7 @@
             <span class="selected-names">{{ selectedNames }}</span>
         </template>
 
-        <template #pickerContentHeader>
+        <template #pickerContentHeader v-if="mode != 'preview'">
             <div class="width-full">
                 <TextBox v-model="searchValue" size="small">
                     <template #inputGroupAppend>
@@ -27,16 +27,34 @@
             </div>
         </template>
 
-        <div v-show="mode == 'flat'">HELLO</div>
+        <div v-show="mode == 'preview'">
+            <Loading :isLoading="isLoading">
+                <div class="d-flex align-items-center preview-item" v-for="item of previewItems" :key="item.value ?? 0">
+                    <div class="flex-fill">
+                        <span class="text-color d-block">{{ item.text }}</span>
+                        <span class="text-muted text-sm" v-html="item.category || 'Top Level'"></span>
+                    </div>
+                    <button title="Remove From Preview" class="btn btn-link text-color btn-xs btn-square ml-auto flex-shrink-0 text-center" @click.prevent="removePreviewItem(item.value as Guid)">
+                        <i class="fa fa-times"></i>
+                    </button>
+                </div>
+            </Loading>
+        </div>
 
         <div v-show="mode == 'search'" class="treeview">
             <Loading :isLoading="isLoading">
-                <div class="search-item js-search-item" :class="multiple ? 'checkbox' : 'radio'" v-for="option of searchItems" :key="option.value as string">
+                <div class="search-item js-search-item"
+                     :class="multiple ? 'checkbox' : 'radio'"
+                     v-for="option of searchItems"
+                     :key="option.value ?? 0">
                     <label>
-                        <input :type="multiple ? 'checkbox' : 'radio'" data-id="6" class="checkbox js-chk-search">
+                        <input class="checkbox js-chk-search"
+                               :type="multiple ? 'checkbox' : 'radio'"
+                               @change="selectSearchItem(option.value as string)"
+                               :checked="internalValues.includes(option.value as string)">
                         <span class="label-text">
                             <span class="text-color d-block">{{ option.text }}</span>
-                            <span class="text-muted text-sm">{{ option.category || "Top Level" }}</span>
+                            <span class="text-muted text-sm" v-html="option.category || 'Top Level'"></span>
                         </span>
                     </label>
                 </div>
@@ -53,6 +71,34 @@
 
         <template #primaryButtonLabel>
             <Loading :isLoading="isLoading">Select</Loading>
+        </template>
+
+        <template #mainPickerActions>
+            <RockButton :btnSize="BtnSize.ExtraSmall" :btnType="BtnType.Primary" class="picker-btn" @click.prevent.stop="select">
+                <Loading :isLoading="isLoading" isSmall>Select</Loading>
+            </RockButton>
+            <RockButton v-if="!isLoading && allowSelectAll" :btnSize="BtnSize.ExtraSmall" :btnType="BtnType.Link" @click.prevent.stop="selectAll">
+                Select All
+            </RockButton>
+            <RockButton v-if="!isLoading" :btnSize="BtnSize.ExtraSmall" :btnType="BtnType.Link" class="picker-cancel" @click.prevent.stop="cancel">
+                Cancel
+            </RockButton>
+        </template>
+
+        <template #customPickerActions>
+            <button type="button"
+                    class="btn btn-link btn-xs picker-preview"
+                    :class="mode == 'tree' ? 'picker-preview' : 'picker-treeview'"
+                    :title="mode == 'tree' ? 'Preview' : 'Tree View'"
+                    v-if="(multiple && internalValues.length > 0) || mode == 'search'"
+                    @click.prevent="changeMode">
+                <i class="fa" :class="mode == 'tree' ? 'fa-list' : 'fa-sitemap'"></i>
+            </button>
+
+            <label class="rock-checkbox-icon text-normal mb-0" v-if="showInactiveCheckbox">
+                <i :class="['fa', includeInactive ? 'fa-check-square-o' : 'fa-square-o']"></i> Show Inactive
+                <span style="display:none"><input type="checkbox" v-model="includeInactive"></span>
+            </label>
         </template>
 
         <template #pickerContentSuperHeader v-if="$slots.pickerContentSuperHeader">
@@ -77,6 +123,9 @@
     import Loading from "./loading";
     import TextBox from "./textBox";
     import TreeList from "./treeList";
+    import RockButton from "./rockButton";
+    import { BtnType } from "@Obsidian/Enums/Controls/btnType";
+    import { BtnSize } from "@Obsidian/Enums/Controls/btnSize";
     import { ListItemBag } from "@Obsidian/ViewModels/Utility/listItemBag";
     import { TreeItemBag } from "@Obsidian/ViewModels/Utility/treeItemBag";
     import { useSecurityGrantToken } from "@Obsidian/Utility/block";
@@ -86,6 +135,7 @@
     import { AccountPickerGetChildrenOptionsBag } from "@Obsidian/ViewModels/Rest/Controls/accountPickerGetChildrenOptionsBag";
     import { AccountPickerGetParentGuidsOptionsBag } from "@Obsidian/ViewModels/Rest/Controls/accountPickerGetParentGuidsOptionsBag";
     import { AccountPickerGetSearchedAccountsOptionsBag } from "@Obsidian/ViewModels/Rest/Controls/accountPickerGetSearchedAccountsOptionsBag";
+    import { AccountPickerGetPreviewItemsOptionsBag } from "@Obsidian/ViewModels/Rest/Controls/accountPickerGetPreviewItemsOptionsBag";
 
     const props = defineProps({
         ...standardRockFormFieldProps,
@@ -122,30 +172,19 @@
 
     // #region Values and Computed Values
 
-    /** Used as base values to calculate other values */
-    const valuesAsArray = computed(() => forceToArray(props.modelValue, true));
-    const valuesAsArrayMultiple = computed(() => forceToArray(props.modelValue, props.multiple));
-
-    /**
-     * Our internal list of selected values. This must be kept seperate because we don't actually
-     * emit the new values until the user clicks the select button.
-     */
-    const internalValues = ref(valuesAsArrayMultiple.value.map(v => v.value ?? ""));
-
+    // Values based off the current model value
+    const valuesAsArray = computed(() => forceToArray(props.modelValue, props.multiple));
     /** The names of the currently selected items. */
-    const selectedNames = computed((): string => {
-        return valuesAsArray.value.map(v => v.text).join(", ");
-    });
-
+    const selectedNames = computed((): string => valuesAsArray.value.map(v => v.text).join(", "));
     /** The Guids of the selected items */
-    const selectedGuids = computed((): string[] => {
-        return valuesAsArray.value.map(v => v.value as string);
-    });
+    const selectedGuids = computed((): string[] => valuesAsArray.value.map(v => v.value as string));
 
-    // Watch for changes to the selected values from the parent control and
-    // update our internal values to match.
+    // Internal values based off current selections in the picker prior to hitting "Select"
+    const internalValues = ref(valuesAsArray.value.map(v => v.value ?? ""));
+
+    // Watch for changes to the selected values from the parent control and update our internal values to match.
     watch([() => props.modelValue, () => props.multiple], (oldValues, newValues) => {
-        updateRefValue(internalValues, valuesAsArrayMultiple.value.map(v => v.value ?? ""));
+        updateRefValue(internalValues, valuesAsArray.value.map(v => v.value ?? ""));
 
         // If the "multiple" property changed, force update the model value.
         if (newValues[1] !== oldValues[1]) {
@@ -154,26 +193,31 @@
     });
 
     /** Updates the model value from our internal value. */
-    function updateModelValue(): void {
+    async function updateModelValue(): Promise<void> {
         if (!internalValues.value || internalValues.value.length == 0) {
             emit("update:modelValue", props.multiple ? [] : null);
+            return;
         }
-        else if (props.multiple) {
+        else {
+            await getRootItems();
+        }
+
+        if (props.multiple) {
             const newModelValue = flatItems.value
                 .filter(i => i.value && internalValues.value.includes(i.value))
                 .map(i => ({ value: i.value, text: i.text }));
 
             emit("update:modelValue", newModelValue);
+            return;
+        }
+
+        const guid = internalValues.value[0];
+        if (guid) {
+            const value = flatItems.value.find(i => i.value == guid);
+            emit("update:modelValue", value ? { value: value.value, text: value.text } : null);
         }
         else {
-            const guid = internalValues.value[0];
-            if (guid) {
-                const value = flatItems.value.find(i => i.value == guid);
-                emit("update:modelValue", value ? { value: value.value, text: value.text } : null);
-            }
-            else {
-                emit("update:modelValue", null);
-            }
+            emit("update:modelValue", null);
         }
     }
 
@@ -187,12 +231,12 @@
 
     /** Determines if the clear button should be shown. */
     const showClear = computed((): boolean => {
-        return valuesAsArrayMultiple.value.length > 0;
+        return valuesAsArray.value.length > 0;
     });
 
     const showInactiveCheckbox = computed(() => !props.activeOnly);
     const includeInactive = ref(false);
-    const mode = ref<"search" | "flat" | "tree">("tree");
+    const mode = ref<"search" | "preview" | "tree">("tree");
     const allowSelectAll = ref(false);
     const formFieldProps = useStandardRockFormFieldProps(props);
 
@@ -200,18 +244,32 @@
     const securityGrantToken = useSecurityGrantToken();
     const http = useHttp();
 
+    let timeout: ReturnType<typeof setTimeout>;
+    function setLoading(val: boolean): void {
+        if (val) {
+            timeout = setTimeout(() => isLoading.value = val, 100);
+        }
+        else {
+            clearTimeout(timeout);
+            isLoading.value = val;
+        }
+    }
+
     // #endregion
 
 
     // #region Event Handlers
 
     function select(): void {
-        updateModelValue();
         showPopup.value = false;
+        updateModelValue();
+        mode.value = "tree";
+        searchValue.value = "";
     }
 
     function cancel(): void {
         showPopup.value = false;
+        internalValues.value = valuesAsArray.value.map(v => v.value ?? "");
     }
 
     function clear(): void {
@@ -222,6 +280,16 @@
 
     function selectAll(): void {
         // TODO
+        console.log("select all");
+    }
+
+    function changeMode(): void {
+        if (mode.value == "tree") {
+            mode.value = "preview";
+        }
+        else {
+            mode.value = "tree";
+        }
     }
 
     // #endregion
@@ -250,18 +318,21 @@
             // We're getting root items and don't have any root items
             (!parentNode && (!treeItems.value || treeItems.value.length == 0))
         ) {
-            treeItems.value = [
-                {
+            const timeout = setTimeout(() => {
+                treeItems.value = [{
                     isActive: true,
                     iconCssClass: "fa fa-spinner fa-spin",
                     isFolder: false,
                     hasChildren: false
-                }
-            ];
+                }];
+            }, 150);
+
             try {
                 treeItems.value = await fetchItems();
+                clearTimeout(timeout);
             }
             catch (e) {
+                clearTimeout(timeout);
                 treeItems.value = [];
             }
         }
@@ -271,26 +342,30 @@
             // We're getting child nodes that don't already exist
             (parentNode && (!parentNode.children || parentNode.children.length == 0))
         ) {
-            parentNode.children = [
-                {
+            const timeout = setTimeout(() => {
+                parentNode.children = [{
                     isActive: true,
                     iconCssClass: "fa fa-spinner fa-spin",
                     isFolder: false,
                     hasChildren: false
-                }
-            ];
+                }];
+            }, 150);
             try {
                 parentNode.children = await fetchItems(parentNode.value);
+                clearTimeout(timeout);
             }
             catch (e) {
+                clearTimeout(timeout);
                 parentNode.children = null;
             }
         }
 
+        //debugger;
+
         // If we're getting the root elements and we have a selected page, we also want to grab
         // all the parent pages so we can pre-load the entire hierarchy to the selected page
-        if (!parentNode && selectedGuids.value?.length > 0) {
-            getHierarchyToSelectedItems(refetch);
+        if (!parentNode && internalValues.value?.length > 0) {
+            await getHierarchyToSelectedItems(refetch);
         }
     }
 
@@ -324,11 +399,11 @@
 
         if (refetch) {
             // Fetch the whole tree we need regardless of what we already have fetched
-            parentGuids = await getParentList(selectedGuids.value);
+            parentGuids = await getParentList(internalValues.value);
         }
         else {
             // Figure out which selected items we don't already have
-            const unFetchedSelectedGuids = selectedGuids.value.filter(guid => {
+            const unFetchedSelectedGuids = internalValues.value.filter(guid => {
                 // Return true if we didn't find a node with that Guid
                 return !flatItems.value.find(i => i.value == guid);
             });
@@ -385,18 +460,18 @@
      * Get the tree items at the root level
      */
     async function getRootItems(refetch = false): Promise<void> {
-        getItems(null, refetch);
+        return getItems(null, refetch);
     }
 
     /**
      * Get the tree items that are children of the given item
      */
     async function getChildItems(item: TreeItemBag, refetch = false): Promise<void> {
-        getItems(item, refetch);
+        return getItems(item, refetch);
     }
 
     // When any of the criteria for which data to fetch changes, refetch the tree
-    watch(() => [props.activeOnly, props.displayPublicName], () => {
+    watch(() => [props.activeOnly, props.displayPublicName, includeInactive.value], () => {
         getRootItems(true);
     });
 
@@ -412,7 +487,6 @@
 
     const searchValue = ref("");
     const searchItems = ref<ListItemBag[]>([]);
-    const searchItemsJson = computed(() => JSON.stringify(searchItems.value, null, 4));
 
     /**
      * Get the hierarchical list of parent pages of the selectedGuid
@@ -420,7 +494,7 @@
      * @returns A list of GUIDs of the parent pages
      */
     async function search(): Promise<void> {
-        isLoading.value = true;
+        setLoading(true);
         mode.value = "search";
         const options: AccountPickerGetSearchedAccountsOptionsBag = {
             searchTerm: searchValue.value,
@@ -433,11 +507,105 @@
             const response = await http.post<ListItemBag[]>("/api/v2/Controls/AccountPickerGetSearchedAccounts", undefined, options);
 
             if (response.isSuccess && response.data != null) {
-                searchItems.value = response.data;
+                searchItems.value = response.data.map(item => {
+                    return {
+                        text: item.text,
+                        value: item.value,
+                        category: item.category?.replace(/\^/gi, "<i class=\"fa fa-chevron-right pl-1 pr-1\" aria-hidden=\"true\"></i>")
+                    };
+                });
+            }
+            else {
+                searchItems.value = [];
             }
         }
         finally {
-            isLoading.value = false;
+            setLoading(false);
+        }
+    }
+
+    /** Changes internal selected values when an item in the search results is selected */
+    function selectSearchItem(guid: string): void {
+        if (props.multiple) {
+            if (internalValues.value.includes(guid)) {
+                // Already exists. Remove it from list
+                const index = internalValues.value.indexOf(guid);
+                internalValues.value.splice(index, 1);
+            }
+            else {
+                // Add to the list
+                internalValues.value.push(guid);
+            }
+        }
+        else {
+            internalValues.value = [guid];
+        }
+    }
+
+    // #endregion
+
+
+    // #region Preview View
+
+    const previewItems = ref<ListItemBag[]>([]);
+
+    /**
+     * Get the list of selected items with their paths
+     *
+     * @returns A list of GUIDs of the parent pages
+     */
+    async function getPreviewItems(): Promise<void> {
+        if (internalValues.value.length == 0) {
+            previewItems.value = [];
+            return;
+        }
+        setLoading(true);
+
+        const options: AccountPickerGetPreviewItemsOptionsBag = {
+            selectedGuids: internalValues.value,
+            displayPublicName: props.displayPublicName ?? false,
+            securityGrantToken: securityGrantToken.value
+        };
+
+        try {
+            const response = await http.post<ListItemBag[]>("/api/v2/Controls/AccountPickerGetPreviewItems", undefined, options);
+
+            if (response.isSuccess && response.data != null) {
+                previewItems.value = response.data.map(item => {
+                    return {
+                        text: item.text,
+                        value: item.value,
+                        category: item.category?.replace(/\^/gi, "<i class=\"fa fa-chevron-right pl-1 pr-1\" aria-hidden=\"true\"></i>")
+                    };
+                });
+            }
+        }
+        finally {
+            setLoading(false);
+        }
+    }
+
+    /** Get the preview items when we switch to that mode */
+    watch(mode, () => {
+        if (mode.value == "preview") {
+            getPreviewItems();
+        }
+    });
+
+    /**
+     * Deselect the selected item
+     */
+    function removePreviewItem(guid: Guid): void {
+        if (internalValues.value.includes(guid)) {
+            // Exists. Remove it from list
+            const index = internalValues.value.indexOf(guid);
+            internalValues.value.splice(index, 1);
+        }
+
+        if (previewItems.value.find(i => i.value == guid)) {
+            // Exists. Remove it from list
+            const index = previewItems.value.findIndex(i => i.value == guid);
+            previewItems.value.splice(index, 1);
         }
     }
 

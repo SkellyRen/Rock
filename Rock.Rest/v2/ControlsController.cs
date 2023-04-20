@@ -213,6 +213,46 @@ namespace Rock.Rest.v2
         }
 
         /// <summary>
+        /// Gets the full account information of the selected accounts for the "preview" view
+        /// </summary>
+        /// <param name="options">The options that describe which items to load.</param>
+        /// <returns>A List of <see cref="ListItemBag"/> objects that represent the selected accounts.</returns>
+        [HttpPost]
+        [System.Web.Http.Route( "AccountPickerGetPreviewItems" )]
+        [Authenticate]
+        [Rock.SystemGuid.RestActionGuid( "007512c6-0147-4683-a3fe-3fdd1da275c2" )]
+        public IHttpActionResult AccountPickerGetPreviewItems( [FromBody] AccountPickerGetPreviewItemsOptionsBag options )
+        {
+            IQueryable<FinancialAccount> qry;
+
+            if ( options.SelectedGuids.Count == 0 )
+            {
+                return Ok( new List<ListItemBag>() );
+            }
+
+            using ( var rockContext = new RockContext() )
+            {
+                var financialAccountService = new FinancialAccountService( rockContext );
+                qry = financialAccountService.Queryable().AsNoTracking()
+                    .Where( f => options.SelectedGuids.Contains(f.Guid) );
+
+                var accountList = qry
+                    .OrderBy( f => f.Order )
+                    .ThenBy( f => f.Name )
+                    .ToList()
+                    .Select( a => new ListItemBag
+                    {
+                        Value = a.Guid.ToString(),
+                        Text = HttpUtility.HtmlEncode( options.DisplayPublicName ? a.PublicName : a.Name ),
+                        Category = financialAccountService.GetDelimitedAccountHierarchy( a, FinancialAccountService.AccountHierarchyDirection.CurrentAccountToParent )
+                    } )
+                    .ToList();
+
+                return Ok( accountList );
+            }
+        }
+
+        /// <summary>
         /// Gets whether or not to allow account picker to Select All based on how many accounts exist
         /// </summary>
         /// <returns>True if there are few enough accounts</returns>
