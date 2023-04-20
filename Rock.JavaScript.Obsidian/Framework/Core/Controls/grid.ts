@@ -792,7 +792,7 @@ function buildAttributeColumns(columns: ColumnDefinition[], node: VNode): void {
 function buildColumn(name: string, node: VNode): ColumnDefinition {
     const field = getVNodeProp<string>(node, "field");
     const title = getVNodeProp<string>(node, "title");
-    const format = node.children?.["body"] ?? getVNodeProp<VNode>(node, "format") ?? defaultCell;
+    const format = node.children?.["format"] ?? getVNodeProp<VNode>(node, "format") ?? defaultCell;
     const headerTemplate = node.children?.["header"] ?? getVNodeProp<VNode>(node, "headerTemplate");
     const filter = getVNodeProp<ColumnFilter>(node, "filter");
     const headerClass = getVNodeProp<string>(node, "headerClass");

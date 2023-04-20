@@ -14,7 +14,7 @@
         <!-- <ReorderColumn @orderChanged="onOrderChanged" /> -->
 
         <Column name="name" title="Name" sortValue="{{ row.name.lastName }} {{ row.name.firstName }}" :filter="textValueFilter" filterValue="{{ row.name.firstName }} {{ row.name.lastName }}" quickFilterValue="{{ row.name.firstName }} {{  row.name.lastName }}">
-            <template #body="{ row }">
+            <template #format="{ row }">
                 {{ row.name.firstName }} {{ row.name.lastName }}
             </template>
         </Column>
@@ -22,7 +22,7 @@
         <Column name="email" title="Email" field="email" sortField="email" :filter="pickExistingValueFilter" />
 
         <Column name="enteredDateTime" title="Entered On" field="enteredDateTime" sortField="enteredDateTime">
-            <template #body="{ row }">
+            <template #format="{ row }">
                 {{ formatDate(row.enteredDateTime) }}
             </template>
         </Column>
