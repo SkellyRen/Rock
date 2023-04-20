@@ -21,8 +21,8 @@
 // </copyright>
 //
 
-/** The filtering method used for a string column filter. */
-export const StringFilterMethod = {
+/** The filtering method used for a text column filter. */
+export const TextFilterMethod = {
     /** The case-insensitive cell value must start with the filter value. */
     StartsWith: 0,
 
@@ -42,8 +42,8 @@ export const StringFilterMethod = {
     DoesNotEqual: 5
 } as const;
 
-/** The filtering method used for a string column filter. */
-export const StringFilterMethodDescription: Record<number, string> = {
+/** The filtering method used for a text column filter. */
+export const TextFilterMethodDescription: Record<number, string> = {
     0: "Starts With",
 
     1: "Contains",
@@ -57,5 +57,5 @@ export const StringFilterMethodDescription: Record<number, string> = {
     5: "Does Not Equal"
 };
 
-/** The filtering method used for a string column filter. */
-export type StringFilterMethod = typeof StringFilterMethod[keyof typeof StringFilterMethod];
+/** The filtering method used for a text column filter. */
+export type TextFilterMethod = typeof TextFilterMethod[keyof typeof TextFilterMethod];

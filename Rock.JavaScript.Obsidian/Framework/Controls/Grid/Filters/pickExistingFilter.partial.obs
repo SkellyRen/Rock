@@ -1,7 +1,13 @@
 <template>
     <div class="grid-filter-popup-body">
+        <DropDownList v-model="searchMethod"
+                      inputClasses="mb-2"
+                      :showBlankItem="false"
+                      :items="searchTypeItems" />
+
         <TextBox label="Search"
                  v-model="searchValue" />
+
         <div v-for="value in displayedValues" class="d-flex align-items-center mb-2">
             <label class="checkbox-inline">
                 <input type="checkbox" :checked="value.selected" @change="onSelected(value, $event)" />
@@ -13,16 +19,25 @@
 </template>
 
 <script setup lang="ts">
+    import DropDownList from "@Obsidian/Controls/dropDownList";
     import TextBox from "@Obsidian/Controls/textBox";
+    import { PickExistingFilterMethod, PickExistingFilterMethodDescription } from "@Obsidian/Enums/Controls/Grid/pickExistingFilterMethod";
     import { deepEqual } from "@Obsidian/Utility/util";
     import { ref, watch, computed } from "vue";
     import { standardFilterProps } from "@Obsidian/Core/Controls/grid";
+    import { ListItemBag } from "@Obsidian/ViewModels/Utility/listItemBag";
 
     const props = defineProps(standardFilterProps);
 
     const emit = defineEmits<{
         (e: "update:modelValue", value: unknown): void
     }>();
+
+    type PickExistingSearchBag = {
+        method: PickExistingFilterMethod;
+
+        value?: unknown[];
+    };
 
     type DistinctValue = {
         row: Record<string, unknown>;
@@ -36,19 +51,25 @@
         selected: boolean
     };
 
-    const distinctValues = ref<DistinctValue[]>([]);
+    const distinctValues = getDistinctValues();
+    const searchMethod = ref(PickExistingFilterMethod.Any.toString());
     const searchValue = ref("");
 
+    const searchTypeItems = ref<ListItemBag[]>(Object.keys(PickExistingFilterMethodDescription).map(n => {
+        return {
+            value: n,
+            text: PickExistingFilterMethodDescription[n]
+        };
+    }));
+
     const displayedValues = computed((): DistinctValue[] => {
-        let values = distinctValues.value;
+        let values = distinctValues;
 
         if (searchValue.value) {
             const lowerSearchValue = searchValue.value.toLowerCase();
 
             values = values.filter(v => v.quickFilterValue.includes(lowerSearchValue));
         }
-
-        console.log(values.slice(0, 50));
 
         return values.slice(0, 50);
     });
@@ -62,7 +83,6 @@
             return [];
         }
 
-        console.log(`${Date.now()}: Starting Process`);
         for (let i = 0; i < rows.length; i++) {
             const value = props.column.uniqueValue(rows[i], props.column, props.grid);
 
@@ -83,7 +103,6 @@
                 };
             }
         }
-        console.log(`${Date.now()}: Finished Process, ${Object.values(valueRows).length} unique values out of ${rows.length} rows.`);
 
         return Object.values(valueRows);
     }
@@ -102,36 +121,52 @@
         const values: unknown[] = [];
 
         if (props.column.field) {
-            for (const value of distinctValues.value) {
+            for (const value of distinctValues) {
                 if (value.selected) {
                     values.push(props.column.filterValue(value.row, props.column, props.grid));
                 }
             }
         }
 
-        emit("update:modelValue", values.length > 0 ? values : undefined);
+        const searchBag: PickExistingSearchBag = {
+            method: Number(searchMethod.value) as PickExistingFilterMethod,
+            value: values
+        };
+
+        emit("update:modelValue", values.length > 0 ? searchBag : undefined);
     }
 
-    function updateSelectedValues(): void {
-        if (!props.modelValue || !Array.isArray(props.modelValue) || !props.column.field) {
-            for (const value of distinctValues.value) {
-                value.selected = false;
+    function updateSearchValues(): void {
+        if (props.modelValue && typeof props.modelValue === "object") {
+            const modelSearchBag = props.modelValue as Partial<PickExistingSearchBag>;
+
+            if (!Array.isArray(modelSearchBag.value) || !props.column.field) {
+                for (const value of distinctValues) {
+                    value.selected = false;
+                }
+
+                return;
             }
 
-            return;
+            if (modelSearchBag.method !== undefined) {
+                searchMethod.value = modelSearchBag.method.toString();
+
+                for (const value of distinctValues) {
+                    value.selected = modelSearchBag.value.some(mv => deepEqual(mv, value.filterValue, true));
+                }
+
+                return;
+            }
         }
 
-        for (const value of distinctValues.value) {
-            value.selected = props.modelValue.some(mv => deepEqual(mv, value.filterValue, true));
+        searchMethod.value = PickExistingFilterMethod.Any.toString();
+        for (const value of distinctValues) {
+            value.selected = false;
         }
     }
 
-    watch(() => props.grid.rows, () => {
-        distinctValues.value = getDistinctValues();
-    });
+    watch(() => props.modelValue, () => updateSearchValues());
+    watch([searchMethod, searchValue], () => updateModelValue());
 
-    watch(() => props.modelValue, () => updateSelectedValues());
-
-    distinctValues.value = getDistinctValues();
-    updateSelectedValues();
+    updateSearchValues();
 </script>

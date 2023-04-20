@@ -341,7 +341,9 @@
     <TypeScriptCompile Include="Framework\Enums\Controls\gatewayEmitStrings.ts" />
     <TypeScriptCompile Include="Framework\Enums\Controls\Grid\dateFilterMethod.ts" />
     <TypeScriptCompile Include="Framework\Enums\Controls\Grid\numberFilterMethod.ts" />
+    <TypeScriptCompile Include="Framework\Enums\Controls\Grid\pickExistingFilterMethod.ts" />
     <TypeScriptCompile Include="Framework\Enums\Controls\Grid\stringFilterMethod.ts" />
+    <TypeScriptCompile Include="Framework\Enums\Controls\Grid\textFilterMethod.ts" />
     <TypeScriptCompile Include="Framework\Enums\Controls\mergeTemplateOwnership.ts" />
     <TypeScriptCompile Include="Framework\Enums\Controls\modalAlertType.ts" />
     <TypeScriptCompile Include="Framework\Enums\Controls\pickerDisplayStyle.ts" />

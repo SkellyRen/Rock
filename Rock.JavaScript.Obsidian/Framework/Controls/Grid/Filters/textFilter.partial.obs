@@ -13,12 +13,12 @@
     import TextBox from "@Obsidian/Controls/textBox";
     import DropDownList from "@Obsidian/Controls/dropDownList";
     import { standardFilterProps } from "@Obsidian/Core/Controls/grid";
-    import { StringFilterMethod, StringFilterMethodDescription } from "@Obsidian/Enums/Controls/Grid/stringFilterMethod";
+    import { TextFilterMethod, TextFilterMethodDescription } from "@Obsidian/Enums/Controls/Grid/textFilterMethod";
     import { ListItemBag } from "@Obsidian/ViewModels/Utility/listItemBag";
     import { ref, watch } from "vue";
 
-    type StringSearchBag = {
-        method: StringFilterMethod;
+    type TextSearchBag = {
+        method: TextFilterMethod;
 
         value?: string;
     };
@@ -29,13 +29,13 @@
         (e: "update:modelValue", value: unknown): void
     }>();
 
-    const searchMethod = ref(StringFilterMethod.Equals.toString());
+    const searchMethod = ref(TextFilterMethod.Equals.toString());
     const searchValue = ref(typeof (props.modelValue) === "string" ? props.modelValue : "");
 
-    const searchTypeItems = ref<ListItemBag[]>(Object.keys(StringFilterMethodDescription).map(n => {
+    const searchTypeItems = ref<ListItemBag[]>(Object.keys(TextFilterMethodDescription).map(n => {
         return {
             value: n,
-            text: StringFilterMethodDescription[n]
+            text: TextFilterMethodDescription[n]
         };
     }));
 
@@ -45,17 +45,17 @@
             return;
         }
 
-        const searchBag: StringSearchBag = {
-            method: Number(searchMethod.value) as StringFilterMethod,
+        const searchBag: TextSearchBag = {
+            method: Number(searchMethod.value) as TextFilterMethod,
             value: searchValue.value ?? undefined
         };
 
-        emit("update:modelValue", searchBag);
+        emit("update:modelValue", searchValue.value ? searchBag : undefined);
     }
 
     function updateSearchValues(): void {
         if (props.modelValue && typeof props.modelValue === "object") {
-            const modelSearchBag = props.modelValue as Partial<StringSearchBag>;
+            const modelSearchBag = props.modelValue as Partial<TextSearchBag>;
 
             if (modelSearchBag.method !== undefined) {
                 searchMethod.value = modelSearchBag.method.toString();
@@ -65,7 +65,7 @@
             }
         }
 
-        searchMethod.value = StringFilterMethod.Equals.toString();
+        searchMethod.value = TextFilterMethod.Equals.toString();
         searchValue.value = "";
     }
 

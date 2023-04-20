@@ -76,7 +76,8 @@
     <Compile Include="Connection\GroupRequirementsFilter.cs" />
     <Compile Include="Controls\Grid\DateFilterMethod.cs" />
     <Compile Include="Controls\Grid\NumberFilterMethod.cs" />
-    <Compile Include="Controls\Grid\StringFilterMethod.cs" />
+    <Compile Include="Controls\Grid\PickExistingFilterMethod.cs" />
+    <Compile Include="Controls\Grid\TextFilterMethod.cs" />
     <Compile Include="Controls\MergeTemplateOwnership.cs" />
     <Compile Include="Controls\RequirementLevel.cs" />
     <Compile Include="Controls\SlidingDateRangePicker.cs" />

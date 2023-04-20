@@ -18,9 +18,9 @@
 namespace Rock.Enums.Controls.Grid
 {
     /// <summary>
-    /// The filtering method used for a string column filter.
+    /// The filtering method used for a text column filter.
     /// </summary>
-    public enum StringFilterMethod
+    public enum TextFilterMethod
     {
         /// <summary>
         /// The case-insensitive cell value must start with the filter value.

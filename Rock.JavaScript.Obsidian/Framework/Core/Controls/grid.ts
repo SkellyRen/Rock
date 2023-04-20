@@ -18,7 +18,8 @@
 import { defineComponent, PropType, reactive, ref, Ref, shallowRef, ShallowRef, toRaw, unref, VNode, watch, WatchStopHandle } from "vue";
 import { NumberFilterMethod } from "@Obsidian/Enums/Controls/Grid/numberFilterMethod";
 import { DateFilterMethod } from "@Obsidian/Enums/Controls/Grid/dateFilterMethod";
-import { StringFilterMethod, StringFilterMethodDescription } from "@Obsidian/Enums/Controls/Grid/stringFilterMethod";
+import { PickExistingFilterMethod } from "@Obsidian/Enums/Controls/Grid/pickExistingFilterMethod";
+import { TextFilterMethod } from "@Obsidian/Enums/Controls/Grid/textFilterMethod";
 import { ColumnFilter, ColumnDefinition, IGridState, StandardFilterProps, StandardCellProps, IGridCache, IGridRowCache, ColumnSort, SortValueFunction, FilterValueFunction, QuickFilterValueFunction, UniqueValueFunction, StandardColumnProps, StandardHeaderCellProps, EntitySetOptions } from "@Obsidian/Types/Controls/grid";
 import { extractText, getVNodeProp, getVNodeProps } from "@Obsidian/Utility/component";
 import { DayOfWeek, RockDateTime } from "@Obsidian/Utility/rockDateTime";
@@ -376,22 +377,22 @@ export function textFilterMatches(needle: unknown, haystack: unknown): boolean {
     const haystackValue = haystack?.toLowerCase() ?? "";
     const needleValue = needle["value"].toLowerCase();
 
-    if (needle["method"] === StringFilterMethod.Equals) {
+    if (needle["method"] === TextFilterMethod.Equals) {
         return haystackValue === needleValue;
     }
-    else if (needle["method"] === StringFilterMethod.DoesNotEqual) {
+    else if (needle["method"] === TextFilterMethod.DoesNotEqual) {
         return haystackValue !== needleValue;
     }
-    else if (needle["method"] === StringFilterMethod.Contains) {
+    else if (needle["method"] === TextFilterMethod.Contains) {
         return haystackValue.includes(needleValue);
     }
-    else if (needle["method"] === StringFilterMethod.DoesNotContain) {
+    else if (needle["method"] === TextFilterMethod.DoesNotContain) {
         return !haystackValue.includes(needleValue);
     }
-    else if (needle["method"] === StringFilterMethod.StartsWith) {
+    else if (needle["method"] === TextFilterMethod.StartsWith) {
         return haystackValue.indexOf(needleValue) === 0;
     }
-    else if (needle["method"] === StringFilterMethod.EndsWith) {
+    else if (needle["method"] === TextFilterMethod.EndsWith) {
         return haystackValue.lastIndexOf(needleValue) === haystackValue.length - needleValue.length;
     }
     else {
@@ -412,15 +413,23 @@ export function textFilterMatches(needle: unknown, haystack: unknown): boolean {
  * @returns True if `haystack` matches the `needle` and should be included in the results.
  */
 export function pickExistingFilterMatches(needle: unknown, haystack: unknown): boolean {
-    if (!Array.isArray(needle)) {
+    if (!needle || typeof needle !== "object" || typeof needle["method"] !== "number" || !Array.isArray(needle["value"])) {
         return false;
     }
 
-    if (needle.length === 0) {
+    if (needle["value"].length === 0) {
         return true;
     }
 
-    return needle.some(n => deepEqual(n, haystack, true));
+    if (needle["method"] === PickExistingFilterMethod.Any) {
+        return needle["value"].some(n => deepEqual(n, haystack, true));
+    }
+    else if (needle["method"] === PickExistingFilterMethod.Exclude) {
+        return !needle["value"].some(n => deepEqual(n, haystack, true));
+    }
+    else {
+        return false;
+    }
 }
 
 /**
