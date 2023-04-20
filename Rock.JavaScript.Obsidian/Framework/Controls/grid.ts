@@ -28,6 +28,7 @@ import NumberColumn from "./Grid/Columns/numberColumn.partial";
 import ReorderColumn from "./Grid/Columns/reorderColumn.partial";
 import SecurityColumn from "./Grid/Columns/securityColumn.partial";
 import SelectColumn from "./Grid/Columns/selectColumn.partial";
+import TextColumn from "./Grid/Columns/textColumn.partial";
 
 import BooleanCell from "./Grid/Cells/booleanCell.partial.obs";
 import DateCell from "./Grid/Cells/dateCell.partial.obs";
@@ -64,7 +65,8 @@ export {
     NumberColumn,
     ReorderColumn,
     SecurityColumn,
-    SelectColumn
+    SelectColumn,
+    TextColumn
 };
 
 // Export cell components.

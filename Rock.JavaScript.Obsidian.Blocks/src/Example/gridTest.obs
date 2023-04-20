@@ -19,7 +19,7 @@
             </template>
         </Column>
 
-        <Column name="email" title="Email" field="email" sortField="email" :filter="pickExistingValueFilter" />
+        <TextColumn name="email" title="Email" field="email" />
 
         <Column name="enteredDateTime" title="Entered On" field="enteredDateTime" sortField="enteredDateTime">
             <template #format="{ row }">
@@ -67,15 +67,12 @@
 </template>
 
 <script setup lang="ts">
-    // #region Imports
     import { useConfigurationValues, useInvokeBlockAction } from "@Obsidian/Utility/block";
     import { ref } from "vue";
     import { RockDateTime } from "@Obsidian/Utility/rockDateTime";
     import { GridDataBag } from "@Obsidian/ViewModels/Core/Grid/gridDataBag";
     import { GridDefinitionBag } from "@Obsidian/ViewModels/Core/Grid/gridDefinitionBag";
-    import Grid, { AttributeColumns, BooleanColumn, Column, DateColumn, dateValueFilter, DeleteColumn, EditColumn, LabelColumn, NumberColumn, numberValueFilter, pickExistingValueFilter, ReorderColumn, SecurityColumn, SelectColumn, textValueFilter } from "@Obsidian/Controls/grid";
-
-    // #endregion
+    import Grid, { AttributeColumns, BooleanColumn, Column, DateColumn, dateValueFilter, DeleteColumn, EditColumn, LabelColumn, NumberColumn, numberValueFilter, pickExistingValueFilter, ReorderColumn, SecurityColumn, SelectColumn, TextColumn, textValueFilter } from "@Obsidian/Controls/grid";
 
     const configuration = useConfigurationValues<{ gridDefinition: GridDefinitionBag }>();
     const invokeBlockAction = useInvokeBlockAction();
