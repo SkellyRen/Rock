@@ -14,7 +14,7 @@
 
     const props = defineProps({
         columns: {
-            type: Array as PropType<ColumnDefinition[]>,
+            type: Array as PropType<ReadonlyArray<ColumnDefinition>>,
             required: true
         },
 

@@ -9,7 +9,7 @@
 
 <script setup lang="ts">
     import { standardHeaderCellProps } from "@Obsidian/Core/Controls/grid";
-    import { computed, ref } from "vue";
+    import {  ref } from "vue";
 
     const props = defineProps(standardHeaderCellProps);
 
@@ -19,31 +19,12 @@
         isChecked.value = !isChecked.value;
 
         if (!isChecked.value) {
-            props.grid.selectedKeys.splice(0);
+            props.grid.selectedKeys = [];
         }
         else {
-            const newKeys: string[] = [];
-            const oldKeys: Record<string, boolean> = {};
-
-            // This is a performance booster. Objects can be indexed into faster
-            // than an array can be searched. Since we would have to search
-            // the selectedKeys array row.length times, that can take a long
-            // time on large data sets. Loop through it once and put them into
-            // a temporary object which will be checked to see if the array
-            // contained the key.
-            for (const oldKey in props.grid.selectedKeys) {
-                oldKeys[oldKey] = true;
-            }
-
-            for (const row of props.grid.rows) {
-                const rowKey = props.grid.getRowKey(row);
-
-                if (rowKey && !oldKeys[rowKey]) {
-                    newKeys.push(rowKey);
-                }
-            }
-
-            props.grid.selectedKeys.push(...newKeys);
+            props.grid.selectedKeys = props.grid.rows
+                .map(r => props.grid.getRowKey(r))
+                .filter(k => k !== undefined) as string[];
         }
     }
 </script>

@@ -15,7 +15,7 @@
 // </copyright>
 //
 
-import { Component, PropType, Ref, ShallowRef } from "vue";
+import { Component, PropType } from "vue";
 import { Guid } from "..";
 
 /** The purpose of the entity set. This activates special logic. */
@@ -412,6 +412,24 @@ type StandardColumnProps = {
     headerTemplate: {
         type: PropType<Component>,
         required: false
+    },
+
+    /**
+     * If `true` then the column will not ever be rendered on screen. It may
+     * still be included in exports and other operations.
+     */
+    hideOnScreen: {
+        type: PropType<boolean>,
+        required: false
+    },
+
+    /**
+     * If `true` then the column will not be included when exporting data to
+     * be downloaded by the individual.
+     */
+    excludeFromExport: {
+        type: PropType<boolean>,
+        required: false
     }
 };
 
@@ -560,6 +578,18 @@ export type ColumnDefinition = {
     /** The additional CSS class to apply to the data item cell. */
     itemClass?: string;
 
+    /**
+     * If `true` then the column will not ever be rendered on screen. It may
+     * still be included in exports and other operations.
+     */
+    hideOnScreen: boolean;
+
+    /**
+     * If `true` then the column will not be included when exporting data to
+     * be downloaded by the individual.
+     */
+    excludeFromExport: boolean;
+
     /** All properties and attributes that were defined on the column. */
     props: Record<string, unknown>;
 
@@ -593,6 +623,15 @@ export type ColumnSort = {
     isDescending: boolean;
 };
 
+export type GridPropertyChangedEvents =
+    "rowsChanged" |
+    "filteredRowsChanged" |
+    "sortedRowsChanged" |
+    "visibleColumnsChanged" |
+    "selectedKeysChanged" |
+    "isFilteredChanged" |
+    "isSortedChanged";
+
 /**
  * Defines the public interface for tracking the state of a grid.
  * Implementations are in charge of all the heavy lifting of a grid to handle
@@ -612,25 +651,31 @@ export interface IGridState {
     readonly rowCache: IGridRowCache;
 
     /** The defined columns on the grid. */
-    readonly columns: ColumnDefinition[];
+    readonly columns: ReadonlyArray<ColumnDefinition>;
+
+    /**
+     * The columns that are currently visible in the DOM. The columns might
+     * still be hidden via CSS.
+     */
+    readonly visibleColumns: ReadonlyArray<ColumnDefinition>;
 
     /** The set of all rows that are known by the grid. */
-    readonly rows: Record<string, unknown>[];
+    readonly rows: ReadonlyArray<Record<string, unknown>>;
 
     /** The current set of rows that have passed the filters. */
-    readonly filteredRows: Readonly<ShallowRef<Record<string, unknown>[]>>;
+    readonly filteredRows: ReadonlyArray<Record<string, unknown>>;
 
     /** The current set of rows that have been filtered and sorted. */
-    readonly sortedRows: Readonly<ShallowRef<Record<string, unknown>[]>>;
+    readonly sortedRows: ReadonlyArray<Record<string, unknown>>;
 
     /** The word or phrase that describes the individual row items.  */
     readonly itemTerm: string;
 
     /** Will be `true` if the grid rows currently have any filtering applied. */
-    readonly isFiltered: Readonly<Ref<boolean>>;
+    readonly isFiltered: boolean;
 
     /** Will be `true` if the grid rows currently have any sorting applied. */
-    readonly isSorted: Readonly<Ref<boolean>>;
+    readonly isSorted: boolean;
 
     /**
      * The unique identifier of the entity type that the rows represent. If the
@@ -642,7 +687,7 @@ export interface IGridState {
      * The currently selected row keys. This is a reactive array so it can
      * be watched for changes.
      */
-    readonly selectedKeys: string[];
+    selectedKeys: ReadonlyArray<string>;
 
     /**
      * Gets the cache key to use for storing column specific data for a
@@ -673,4 +718,22 @@ export interface IGridState {
      * @returns An array of all rows in the grid that has been sorted.
      */
     getSortedRows(): Record<string, unknown>[];
+
+    /**
+     * Registers a function that will be called whenever the value of the
+     * property changes.
+     *
+     * @param event The event to listen for.
+     * @param callback The function to be called.
+     */
+    on(event: GridPropertyChangedEvents, callback: (grid: IGridState) => void): void;
+
+    /**
+     * Removes a function from the specified event. The function will no longer
+     * be called when the event is raised.
+     *
+     * @param event The event that was previously listened to.
+     * @param callback The callback that was previously registered.
+     */
+    off(event: GridPropertyChangedEvents, callback: (grid: IGridState) => void): void;
 }

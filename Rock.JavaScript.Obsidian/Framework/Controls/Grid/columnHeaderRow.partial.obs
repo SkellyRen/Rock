@@ -19,7 +19,7 @@
 
     const props = defineProps({
         columns: {
-            type: Array as PropType<ColumnDefinition[]>,
+            type: Array as PropType<ReadonlyArray<ColumnDefinition>>,
             default: []
         },
 
@@ -34,7 +34,7 @@
         },
 
         rows: {
-            type: Array as PropType<Record<string, unknown>[]>,
+            type: Array as PropType<ReadonlyArray<Record<string, unknown>>>,
             required: true
         },
 

@@ -15,7 +15,7 @@
 // </copyright>
 //
 
-import { defineComponent, PropType, reactive, ref, Ref, shallowRef, ShallowRef, toRaw, unref, VNode, watch, WatchStopHandle } from "vue";
+import { defineComponent, PropType, toRaw, unref, VNode, watch, WatchStopHandle } from "vue";
 import { NumberFilterMethod } from "@Obsidian/Enums/Controls/Grid/numberFilterMethod";
 import { DateFilterMethod } from "@Obsidian/Enums/Controls/Grid/dateFilterMethod";
 import { PickExistingFilterMethod } from "@Obsidian/Enums/Controls/Grid/pickExistingFilterMethod";
@@ -27,6 +27,23 @@ import { resolveMergeFields } from "@Obsidian/Utility/lava";
 import { deepEqual } from "@Obsidian/Utility/util";
 import { AttributeFieldDefinitionBag } from "@Obsidian/ViewModels/Core/Grid/attributeFieldDefinitionBag";
 import { Guid } from "@Obsidian/Types";
+import mitt, { Emitter } from "mitt";
+
+type GridEvents = {
+    rowsChanged: IGridState;
+
+    filteredRowsChanged: IGridState;
+
+    sortedRowsChanged: IGridState;
+
+    visibleColumnsChanged: IGridState;
+
+    selectedKeysChanged: IGridState;
+
+    isFilteredChanged: IGridState;
+
+    isSortedChanged: IGridState;
+};
 
 // #region Entity Sets
 
@@ -292,6 +309,16 @@ export const standardColumnProps: StandardColumnProps = {
 
     headerTemplate: {
         type: Object as PropType<VNode>,
+        required: false
+    },
+
+    hideOnScreen: {
+        type: Boolean as PropType<boolean>,
+        required: false
+    },
+
+    excludeFromExport: {
+        type: Boolean as PropType<boolean>,
         required: false
     }
 };
@@ -775,6 +802,8 @@ function buildAttributeColumns(columns: ColumnDefinition[], node: VNode): void {
             filter,
             filterValue: (r, c) => c.field ? String(r[c.field]) : undefined,
             format: getVNodeProp<VNode>(node, "format") ?? defaultCell,
+            hideOnScreen: false,
+            excludeFromExport: false,
             props: {},
             data: {}
         });
@@ -797,6 +826,8 @@ function buildColumn(name: string, node: VNode): ColumnDefinition {
     const filter = getVNodeProp<ColumnFilter>(node, "filter");
     const headerClass = getVNodeProp<string>(node, "headerClass");
     const itemClass = getVNodeProp<string>(node, "itemClass");
+    const hideOnScreen = getVNodeProp<boolean>(node, "hideOnScreen") === true || getVNodeProp<string>(node, "hideOnScreen") === "";
+    const excludeFromExport = getVNodeProp<boolean>(node, "excludeFromExport") === true || getVNodeProp<string>(node, "excludeFromExport") === "";
 
     // Get the function that will provide the sort value.
     let sortValue = getVNodeProp<SortValueFunction | string>(node, "sortValue");
@@ -920,6 +951,8 @@ function buildColumn(name: string, node: VNode): ColumnDefinition {
         sortValue,
         filterValue,
         quickFilterValue,
+        hideOnScreen,
+        excludeFromExport,
         headerClass,
         itemClass,
         props: getVNodeProps(node),
@@ -1319,7 +1352,13 @@ class BackgroundItemsWorker<T> extends BackgroundWorker {
 export class GridState implements IGridState {
     // #region Properties
 
-    private internalRows: ShallowRef<Record<string, unknown>[]> = shallowRef([]);
+    private internalRows: Record<string, unknown>[] = [];
+    public internalFilteredRows: ReadonlyArray<Record<string, unknown>> = [];
+    public internalSortedRows: ReadonlyArray<Record<string, unknown>> = [];
+    public internalVisibleColumns: ReadonlyArray<ColumnDefinition>;
+    private internalSelectedKeys: string[] = [];
+    private internalIsFiltered: boolean = false;
+    private internalIsSorted: boolean = false;
 
     /** This tracks the state of each row when operating in reactive mode. */
     private rowReactiveTracker: Record<string, string> = {};
@@ -1345,6 +1384,8 @@ export class GridState implements IGridState {
     /** The current column being used to sort the rows. */
     private columnSort?: ColumnSort;
 
+    private readonly emitter: Emitter<GridEvents> = mitt<GridEvents>();
+
     // #endregion
 
     // #region Constructors
@@ -1359,6 +1400,7 @@ export class GridState implements IGridState {
     constructor(columns: ColumnDefinition[], liveUpdates: boolean, itemTerm: string, entityTypeGuid: Guid | undefined) {
         this.rowCache = new GridRowCache(undefined);
         this.columns = columns;
+        this.internalVisibleColumns = columns.filter(c => !c.hideOnScreen);
         this.liveUpdates = liveUpdates;
         this.itemTerm = itemTerm;
         this.entityTypeGuid = entityTypeGuid;
@@ -1380,11 +1422,65 @@ export class GridState implements IGridState {
 
     // #region IGridState Implementation
 
-    public readonly filteredRows: ShallowRef<Record<string, unknown>[]> = shallowRef([]);
+    public get rows(): ReadonlyArray<Record<string, unknown>> {
+        return this.internalRows;
+    }
 
-    public readonly sortedRows: ShallowRef<Record<string, unknown>[]> = shallowRef([]);
+    public get filteredRows(): ReadonlyArray<Record<string, unknown>> {
+        return this.internalFilteredRows;
+    }
+
+    private set filteredRows(value: ReadonlyArray<Record<string, unknown>>) {
+        this.internalFilteredRows = value;
+        this.emitter.emit("filteredRowsChanged", this);
+    }
+
+    public get sortedRows(): ReadonlyArray<Record<string, unknown>> {
+        return this.internalSortedRows;
+    }
+
+    private set sortedRows(value: ReadonlyArray<Record<string, unknown>>) {
+        this.internalSortedRows = value;
+        this.emitter.emit("sortedRowsChanged", this);
+    }
 
     public readonly columns: ColumnDefinition[];
+
+    public get visibleColumns(): ReadonlyArray<ColumnDefinition> {
+        return this.internalVisibleColumns;
+    }
+
+    private set visibleColumns(value: ReadonlyArray<ColumnDefinition>) {
+        this.internalVisibleColumns = value;
+        this.emitter.emit("visibleColumnsChanged", this);
+    }
+
+    public get selectedKeys(): string[] {
+        return this.internalSelectedKeys;
+    }
+
+    private set selectedKeys(value: string[]) {
+        this.internalSelectedKeys = value;
+        this.emitter.emit("selectedKeysChanged", this);
+    }
+
+    public get isFiltered(): boolean {
+        return this.internalIsFiltered;
+    }
+
+    private set isFiltered(value: boolean) {
+        this.internalIsFiltered = value;
+        this.emitter.emit("isFilteredChanged", this);
+    }
+
+    public get isSorted(): boolean {
+        return this.internalIsSorted;
+    }
+
+    private set isSorted(value: boolean) {
+        this.internalIsSorted = value;
+        this.emitter.emit("isSortedChanged", this);
+    }
 
     public readonly cache: IGridCache = new GridCache();
 
@@ -1393,16 +1489,6 @@ export class GridState implements IGridState {
     public readonly itemTerm: string;
 
     public readonly entityTypeGuid?: Guid | undefined;
-
-    public readonly selectedKeys: string[] = reactive([]);
-
-    public isFiltered: Ref<boolean> = ref(false);
-
-    public isSorted: Ref<boolean> = ref(false);
-
-    get rows(): Record<string, unknown>[] {
-        return this.internalRows.value;
-    }
 
     public getColumnCacheKey(column: ColumnDefinition, component: string, key: string): string {
         return `column-${column.name}-${component}-${key}`;
@@ -1413,7 +1499,15 @@ export class GridState implements IGridState {
     }
 
     public getSortedRows(): Record<string, unknown>[] {
-        return this.sortRows(this.internalRows.value);
+        return this.sortRows(this.internalRows);
+    }
+
+    on(event: keyof GridEvents, callback: (grid: IGridState) => void): void {
+        this.emitter.on(event, callback);
+    }
+
+    off(event: keyof GridEvents, callback: (grid: IGridState) => void): void {
+        this.emitter.off(event, callback);
     }
 
     // #endregion
@@ -1459,6 +1553,7 @@ export class GridState implements IGridState {
             knownKeys.push(key);
 
             if (!this.rowReactiveTracker[key]) {
+                this.emitter.emit("rowsChanged", this);
                 console.log("Row added", rows[i]);
             }
             else if (this.rowReactiveTracker[key] !== JSON.stringify(rows[i])) {
@@ -1476,6 +1571,7 @@ export class GridState implements IGridState {
                 console.log("Removed row id", oldKeys[i]);
                 // TODO: Remove the cache data for a row by it's key.
                 delete this.rowReactiveTracker[oldKeys[i]];
+                this.emitter.emit("rowsChanged", this);
             }
         }
     }
@@ -1485,15 +1581,15 @@ export class GridState implements IGridState {
      * match the filters.
      */
     private updateFilteredRows(): void {
-        if (this.columns.length === 0) {
-            this.filteredRows.value = [];
+        if (this.visibleColumns.length === 0) {
+            this.filteredRows = [];
             this.updateSortedRows();
 
             return;
         }
 
         const start = Date.now();
-        const columns = this.columns;
+        const columns = this.visibleColumns;
         const quickFilterRawValue = this.quickFilter.toLowerCase();
 
         const result = this.rows.filter(row => {
@@ -1531,7 +1627,7 @@ export class GridState implements IGridState {
             });
         });
 
-        this.filteredRows.value = result;
+        this.filteredRows = result;
 
         console.log(`Filtering took ${Date.now() - start}ms.`);
 
@@ -1545,7 +1641,7 @@ export class GridState implements IGridState {
      *
      * @returns A new array of rows that is properly sorted.
      */
-    private sortRows(rows: Record<string, unknown>[]): Record<string, unknown>[] {
+    private sortRows(rows: ReadonlyArray<Record<string, unknown>>): Record<string, unknown>[] {
         const columnSort = this.columnSort;
 
         // Bail early if we don't have any sorting to perform.
@@ -1553,7 +1649,7 @@ export class GridState implements IGridState {
             return [...rows];
         }
 
-        const column = this.columns.find(c => c.name === columnSort.column);
+        const column = this.visibleColumns.find(c => c.name === columnSort.column);
         const order = columnSort.isDescending ? -1 : 1;
 
         if (!column) {
@@ -1610,7 +1706,7 @@ export class GridState implements IGridState {
      */
     private updateSortedRows(): void {
         const start = Date.now();
-        this.sortedRows.value = this.sortRows(this.filteredRows.value);
+        this.sortedRows = this.sortRows(this.filteredRows);
         console.log(`updatedSortedRows took ${Date.now() - start}ms.`);
     }
 
@@ -1641,8 +1737,8 @@ export class GridState implements IGridState {
             this.internalRowsWatcher = undefined;
         }
 
-        // Update out internal rows and clear all the cache.
-        this.internalRows.value = rows;
+        // Update our internal rows and clear all the cache.
+        this.internalRows = rows;
         this.cache.clear();
         this.rowCache.clear();
 
@@ -1656,6 +1752,7 @@ export class GridState implements IGridState {
             }, { deep: true });
         }
 
+        this.emitter.emit("rowsChanged", this);
         this.updateFilteredRows();
     }
 
@@ -1670,7 +1767,7 @@ export class GridState implements IGridState {
         this.columnFilters = columnFilters ?? {};
         this.updateFilteredRows();
 
-        this.isFiltered.value = this.quickFilter !== "" || Object.keys(this.columnFilters).length > 0;
+        this.isFiltered = this.quickFilter !== "" || Object.keys(this.columnFilters).length > 0;
     }
 
     /**
@@ -1682,7 +1779,7 @@ export class GridState implements IGridState {
         this.columnSort = columnSort;
         this.updateSortedRows();
 
-        this.isSorted.value = this.columnSort !== undefined;
+        this.isSorted = this.columnSort !== undefined;
     }
 
     // #endregion

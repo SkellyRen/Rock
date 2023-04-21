@@ -4,20 +4,38 @@
 
 <script setup lang="ts">
     import { standardCellProps } from "@Obsidian/Core/Controls/grid";
-    import { Ref, computed, toRaw } from "vue";
+    import { IGridState } from "@Obsidian/Types/Controls/grid";
+    import { Ref, computed, onBeforeUnmount, ref } from "vue";
 
     const props = defineProps(standardCellProps);
 
-    // We are givne the column property in a reactive form. This messes
-    // with the actual ref we placed in data, so unwrap it first.
-    const dropOperationInProgress = toRaw(props.column).data.dropOperationInProgress as Ref<boolean>;
+    const isFiltered = ref(props.grid.isFiltered);
+    const isSorted = ref(props.grid.isSorted);
+
+    const dropOperationInProgress = props.column.data.dropOperationInProgress as Ref<boolean>;
 
     const iconStyle = computed((): Record<string, string> => {
-        const disabled = dropOperationInProgress.value || props.grid.isFiltered.value || props.grid.isSorted.value;
+        const disabled = dropOperationInProgress.value || isFiltered.value || isSorted.value;
 
         return {
             cursor: disabled ? "not-allowed" : "grab",
             opacity: disabled ? "0.25" : "1"
         };
     });
+
+    function onIsFilteredChanged(grid: IGridState): void {
+        isFiltered.value = grid.isFiltered;
+    }
+
+    function onIsSortedChanged(grid: IGridState): void {
+        isSorted.value = grid.isSorted;
+    }
+
+    onBeforeUnmount(() => {
+        props.grid.off("isFilteredChanged", onIsFilteredChanged);
+        props.grid.off("isSortedChanged", onIsSortedChanged);
+    });
+
+    props.grid.on("isFilteredChanged", onIsFilteredChanged);
+    props.grid.on("isSortedChanged", onIsSortedChanged);
 </script>

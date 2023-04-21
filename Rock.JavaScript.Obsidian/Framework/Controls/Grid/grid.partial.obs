@@ -225,7 +225,7 @@ table.table-obsidian th.grid-error > .alert {
     import DataRows from "./dataRows.partial.obs";
     import FilterHeaderRow from "./filterHeaderRow.partial.obs";
     import PagerRow from "./pagerRow.partial.obs";
-    import { computed, PropType, ref, useSlots, watch } from "vue";
+    import { computed, onUnmounted, PropType, ref, shallowRef, useSlots, watch } from "vue";
     import { asFormattedString } from "@Obsidian/Utility/numberUtils";
     import { pluralConditional } from "@Obsidian/Utility/stringUtils";
     import { getColumnDefinitions, getEntitySetBag, GridActionUrlKey, GridState, GridCommunicationBag } from "@Obsidian/Core/Controls/grid";
@@ -448,7 +448,7 @@ table.table-obsidian th.grid-error > .alert {
     const visibleRows = ref<Record<string, unknown>[]>([]);
     const pageCount = ref(0);
     const pagerMessage = ref("");
-    const visibleColumnDefinitions = ref<ColumnDefinition[]>(gridState.columns);
+    const visibleColumnDefinitions = shallowRef<ReadonlyArray<ColumnDefinition>>(gridState.visibleColumns);
     const dragOptions = ref<IDragSourceOptions | undefined>();
     const reorderColumn: ColumnDefinition | undefined = gridState.columns.find(c => c.name === "__reorder");
 
@@ -657,15 +657,15 @@ table.table-obsidian th.grid-error > .alert {
     function updateVisibleRows(): void {
         const startIndex = (currentPage.value - 1) * pageSize.value;
 
-        visibleRows.value = gridState.sortedRows.value.slice(startIndex, startIndex + pageSize.value);
+        visibleRows.value = gridState.sortedRows.slice(startIndex, startIndex + pageSize.value);
     }
 
     function updatePageCount(): void {
-        pageCount.value = Math.ceil(gridState.filteredRows.value.length / pageSize.value);
+        pageCount.value = Math.ceil(gridState.filteredRows.length / pageSize.value);
     }
 
     function updatePagerMessage(): void {
-        pagerMessage.value = `${asFormattedString(gridState.filteredRows.value.length)} ${pluralConditional(gridState.filteredRows.value.length, `${gridState.itemTerm}`, `${gridState.itemTerm}s`)}`;
+        pagerMessage.value = `${asFormattedString(gridState.filteredRows.length)} ${pluralConditional(gridState.filteredRows.length, `${gridState.itemTerm}`, `${gridState.itemTerm}s`)}`;
     }
 
     async function updateGridData(): Promise<void> {
@@ -795,7 +795,7 @@ table.table-obsidian th.grid-error > .alert {
         // the additional merge fields.
         const mergeColumns: Record<string, string> = {};
         const dataColumns = gridState.columns
-            .filter(c => !c.name.startsWith("__"));
+            .filter(c => !c.name.startsWith("__") && !c.excludeFromExport);
 
         for (const column of dataColumns) {
             mergeColumns[column.name] = `${column.name[0].toUpperCase()}${column.name.substring(1)}`;
@@ -942,6 +942,12 @@ table.table-obsidian th.grid-error > .alert {
         window.location.href = finalUrl;
     }
 
+    function onSortedRowsChanged(): void {
+        updateVisibleRows();
+        updatePageCount();
+        updatePagerMessage();
+    }
+
     watch([quickFilterValue, columnFilterValues], () => {
         currentPage.value = 1;
         gridState.setFilters(quickFilterValue.value, columnFilterValues.value);
@@ -959,10 +965,11 @@ table.table-obsidian th.grid-error > .alert {
         gridState.setItemKey(props.keyField);
     });
 
-    watch(gridState.sortedRows, () => {
-        updateVisibleRows();
-        updatePageCount();
-        updatePagerMessage();
+    gridState.on("sortedRowsChanged", onSortedRowsChanged);
+
+    onUnmounted(() => {
+        gridState.off("sortedRowsChanged", onSortedRowsChanged);
+        gridState.dispose();
     });
 
     updateGridData();
