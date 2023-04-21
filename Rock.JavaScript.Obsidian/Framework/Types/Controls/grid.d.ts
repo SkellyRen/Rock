@@ -17,6 +17,7 @@
 
 import { Component, PropType } from "vue";
 import { Guid } from "..";
+import { RockDateTime } from "@Obsidian/Utility/rockDateTime";
 
 /** The purpose of the entity set. This activates special logic. */
 export type EntitySetPurpose = "communication" | "export";
@@ -259,6 +260,12 @@ export type FilterValueFunction = (row: Record<string, unknown>, column: ColumnD
 export type UniqueValueFunction = (row: Record<string, unknown>, column: ColumnDefinition, grid: IGridState) => string | number | undefined;
 
 /**
+ * A function that will be called to get the value to use when exporting the
+ * cell to an external document.
+ */
+export type ExportValueFunction = (row: Record<string, unknown>, column: ColumnDefinition, grid: IGridState) => string | number | boolean | RockDateTime | undefined;
+
+/**
  * A function that will be called in order to determine if a row matches the
  * filtering request for the column.
  *
@@ -379,6 +386,16 @@ type StandardColumnProps = {
     },
 
     /**
+     * The function that will be called when exporting cells in this column.
+     * If not provided then the text value from the column format template
+     * will be used instead.
+     */
+    exportValue: {
+        type: PropType<ExportValueFunction>,
+        required: false
+    },
+
+    /**
      * Additional CSS class to apply to the header cell.
      */
     headerClass: {
@@ -399,7 +416,7 @@ type StandardColumnProps = {
      * the cell. This is rarely needed as you can usually accomplish the same
      * with a template that defines the body content.
      */
-    format: {
+    formatComponent: {
         type: PropType<Component>,
         required: false
     },
@@ -409,7 +426,7 @@ type StandardColumnProps = {
      * cell. This is rarely needed as you can usually accomplish the same
      * with a template that defines the header content.
      */
-    headerTemplate: {
+    headerComponent: {
         type: PropType<Component>,
         required: false
     },
@@ -551,19 +568,19 @@ export type ColumnDefinition = {
      * Defines the content that will be used in the header cell. This will
      * override any title value provided.
      */
-    headerTemplate?: Component;
+    headerComponent?: Component;
 
     /**
      * The component to use when formatting the value for display in a normal
      * grid cell.
      */
-    format: Component;
+    formatComponent: Component;
 
     /**
      * The component to use when formatting the value for display in a
      * condensed grid cell.
      */
-    condensedFormat: Component;
+    condensedComponent: Component;
 
     /** Gets the value to use when filtering on the quick filter. */
     quickFilterValue: QuickFilterValueFunction;
@@ -581,6 +598,12 @@ export type ColumnDefinition = {
 
     /** Gets the value to use when performing column filtering. */
     filterValue: FilterValueFunction;
+
+    /**
+     * Gets the function to call that will provide the value to use when
+     * exporting the column values to a document.
+     */
+    exportValue: ExportValueFunction;
 
     /** Gets the filter to use to perform column filtering. */
     filter?: ColumnFilter;

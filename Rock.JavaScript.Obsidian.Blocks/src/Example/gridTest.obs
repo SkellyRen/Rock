@@ -17,18 +17,17 @@
             <template #format="{ row }">
                 {{ row.name.firstName }} {{ row.name.lastName }}
             </template>
-            <template #condensedFormat="{ row }">
+            <template #condensed="{ row }">
                 {{ row.name.firstName }}
+            </template>
+            <template #export="{ row }">
+                Export for: {{  row.name.lastName }}
             </template>
         </Column>
 
         <TextColumn name="email" title="Email" field="email" />
 
-        <Column name="enteredDateTime" title="Entered On" field="enteredDateTime" sortField="enteredDateTime" visiblePriority="lg">
-            <template #format="{ row }">
-                {{ formatDate(row.enteredDateTime) }}
-            </template>
-        </Column>
+        <DateColumn name="enteredDateTime" title="Entered On" field="enteredDateTime" sortField="enteredDateTime" visiblePriority="lg" />
 
         <NumberColumn name="id" title="Id" field="id" sortField="id" :filter="numberValueFilter" visiblePriority="sm"  />
 
@@ -113,16 +112,6 @@
             throw new Error(result.errorMessage ?? "Unknown error while trying to load grid data.");
         }
     };
-
-    function formatDate(value?: string): string {
-        if (!value) {
-            return "";
-        }
-
-        const dt = RockDateTime.parseISO(value);
-
-        return dt?.toASPString("g") ?? "";
-    }
 
     async function onEditClick(key: string): Promise<void> {
         return new Promise<void>(resolve => {

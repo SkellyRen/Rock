@@ -1,6 +1,6 @@
 <template>
     <td :class="additionalItemClass">
-        <component :is="props.column.format"
+        <component :is="props.column.formatComponent"
                    :row="props.row"
                    :column="props.column"
                    :grid="props.grid" />

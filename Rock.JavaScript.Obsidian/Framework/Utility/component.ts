@@ -498,7 +498,7 @@ export function extractText(node: VNode | Component, props?: Record<string, unkn
     // Unmount it.
     render(null, el);
 
-    return text;
+    return text.trim();
 }
 
 /**

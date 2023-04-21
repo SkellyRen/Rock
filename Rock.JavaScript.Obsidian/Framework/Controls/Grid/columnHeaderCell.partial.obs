@@ -1,6 +1,6 @@
 <template>
     <th ref="columnHeaderElement" class="grid-column-header" :class="additionalHeaderClass">
-        <component v-if="column.headerTemplate" :is="column.headerTemplate" :column="column" :grid="grid" />
+        <component v-if="column.headerComponent" :is="column.headerComponent" :column="column" :grid="grid" />
         <span v-else :class="titleClass" @click.prevent="onSortClick">{{ column.title }}</span>
 
         <span v-if="isSortAscending" class="grid-sort-direction"><i class="fa fa-sort-alpha-up"></i></span>

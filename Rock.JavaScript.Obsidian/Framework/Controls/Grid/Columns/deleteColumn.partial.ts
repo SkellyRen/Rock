@@ -1,5 +1,5 @@
 import { standardColumnProps } from "@Obsidian/Core/Controls/grid";
-import { defineComponent, PropType, VNode } from "vue";
+import { Component, defineComponent, PropType } from "vue";
 import DeleteCell from "../Cells/deleteCell.partial.obs";
 
 export default defineComponent({
@@ -11,8 +11,8 @@ export default defineComponent({
             default: "__delete"
         },
 
-        format: {
-            type: Object as PropType<VNode>,
+        formatComponent: {
+            type: Object as PropType<Component>,
             default: DeleteCell
         },
 

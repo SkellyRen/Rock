@@ -9,7 +9,7 @@
 
 <script setup lang="ts">
     import { standardCellProps } from "@Obsidian/Core/Controls/grid";
-    import { confirm, confirmDelete } from "@Obsidian/Utility/dialogs";
+    import { confirmDelete } from "@Obsidian/Utility/dialogs";
     import { isPromise } from "@Obsidian/Utility/promiseUtils";
     import { ref } from "vue";
 

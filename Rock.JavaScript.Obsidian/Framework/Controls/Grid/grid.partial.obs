@@ -239,6 +239,7 @@ table.table-obsidian th.grid-error > .alert {
     import { makeUrlRedirectSafe } from "@Obsidian/Utility/url";
     import { EntityType } from "@Obsidian/SystemGuids/entityType";
     import { alert } from "@Obsidian/Utility/dialogs";
+    import { RockDateTime } from "@Obsidian/Utility/rockDateTime";
 
     /*
      * 8/17/2022 - DSH
@@ -802,7 +803,8 @@ table.table-obsidian th.grid-error > .alert {
         }
 
         const options: EntitySetOptions = {
-            mergeColumns
+            mergeColumns,
+            purpose: "export"
         };
 
         const entitySet = await getEntitySetBag(gridState, [], options);
@@ -824,7 +826,11 @@ table.table-obsidian th.grid-error > .alert {
             const row: unknown[] = [];
 
             for (const key of Object.keys(mergeColumns)) {
-                const value = item.additionalMergeValues?.[mergeColumns[key]];
+                let value = item.additionalMergeValues?.[mergeColumns[key]];
+
+                if (value instanceof RockDateTime) {
+                    value = new Date(value.toMilliseconds());
+                }
 
                 row.push(value);
             }
@@ -834,7 +840,7 @@ table.table-obsidian th.grid-error > .alert {
 
         // Generate the excel file and initiate the download.
         const xlsx = (await import("@Obsidian/Libs/xlsx"));
-        const worksheet = xlsx.utils.aoa_to_sheet(data);
+        const worksheet = xlsx.utils.aoa_to_sheet(data, { cellDates: true });
         const workbook = xlsx.utils.book_new();
         xlsx.utils.book_append_sheet(workbook, worksheet, "Sheet 1");
         xlsx.writeFile(workbook, "export.xlsx", { compression: true });

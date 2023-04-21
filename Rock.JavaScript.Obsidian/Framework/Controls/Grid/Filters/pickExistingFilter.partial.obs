@@ -13,7 +13,7 @@
                 <input type="checkbox" :checked="value.selected" @change="onSelected(value, $event)" />
                 <span class="label-text">&nbsp;</span>
             </label>
-            <component :is="column.condensedFormat" :row="value.row" :column="column" />
+            <component :is="column.condensedComponent" :row="value.row" :column="column" />
         </div>
     </div>
 </template>

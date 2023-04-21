@@ -16,16 +16,30 @@
 //
 
 import { standardColumnProps } from "@Obsidian/Core/Controls/grid";
-import { defineComponent, PropType, VNode } from "vue";
+import { Component, defineComponent, PropType } from "vue";
 import BooleanCell from "../Cells/booleanCell.partial.obs";
+import { ColumnDefinition, ExportValueFunction } from "@Obsidian/Types/Controls/grid";
+
+function getExportValue(row: Record<string, unknown>, column: ColumnDefinition): boolean | undefined {
+    if (!column.field) {
+        return undefined;
+    }
+
+    return row[column.field] === true;
+}
 
 export default defineComponent({
     props: {
         ...standardColumnProps,
 
-        format: {
-            type: Object as PropType<VNode>,
+        formatComponent: {
+            type: Object as PropType<Component>,
             default: BooleanCell
+        },
+
+        exportValue: {
+            type: Function as PropType<ExportValueFunction>,
+            default: getExportValue
         }
     }
 });

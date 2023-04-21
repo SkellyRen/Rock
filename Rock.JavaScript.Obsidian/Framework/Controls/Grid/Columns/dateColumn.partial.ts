@@ -16,17 +16,32 @@
 //
 
 import { standardColumnProps } from "@Obsidian/Core/Controls/grid";
-import { ColumnDefinition, QuickFilterValueFunction } from "@Obsidian/Types/Controls/grid";
+import { ColumnDefinition, ExportValueFunction, QuickFilterValueFunction } from "@Obsidian/Types/Controls/grid";
 import { RockDateTime } from "@Obsidian/Utility/rockDateTime";
-import { defineComponent, PropType, VNode } from "vue";
+import { Component, defineComponent, PropType } from "vue";
 import DateColumnCell from "../Cells/dateCell.partial.obs";
+
+function getExportValue(row: Record<string, unknown>, column: ColumnDefinition): RockDateTime | undefined {
+    if (!column.field) {
+        return undefined;
+    }
+
+    const value = row[column.field];
+
+    if (typeof value !== "string") {
+        return undefined;
+    }
+
+    return RockDateTime.parseISO(value) ?? undefined;
+}
+
 
 export default defineComponent({
     props: {
         ...standardColumnProps,
 
-        format: {
-            type: Object as PropType<VNode>,
+        formatComponent: {
+            type: Object as PropType<Component>,
             default: DateColumnCell
         },
 
@@ -37,8 +52,19 @@ export default defineComponent({
                     return undefined;
                 }
 
-                return RockDateTime.parseISO(r[c.field] as string)?.toASPString("d");
+                const value = r[c.field];
+
+                if (typeof value !== "string") {
+                    return undefined;
+                }
+
+                return RockDateTime.parseISO(value)?.toASPString("d");
             }
+        },
+
+        exportValue: {
+            type: Function as PropType<ExportValueFunction>,
+            default: getExportValue
         }
     }
 });

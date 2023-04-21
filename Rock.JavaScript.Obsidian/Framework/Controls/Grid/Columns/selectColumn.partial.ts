@@ -1,5 +1,5 @@
 import { standardColumnProps } from "@Obsidian/Core/Controls/grid";
-import { defineComponent, PropType, VNode } from "vue";
+import { Component, defineComponent, PropType } from "vue";
 import SelectCell from "../Cells/selectCell.partial.obs";
 import SelectHeaderCell from "../Cells/selectHeaderCell.partial.obs";
 
@@ -12,13 +12,13 @@ export default defineComponent({
             default: "__select"
         },
 
-        format: {
-            type: Object as PropType<VNode>,
+        formatComponent: {
+            type: Object as PropType<Component>,
             default: SelectCell
         },
 
-        headerTemplate: {
-            type: Object as PropType<VNode>,
+        headerComponent: {
+            type: Object as PropType<Component>,
             default: SelectHeaderCell
         },
 

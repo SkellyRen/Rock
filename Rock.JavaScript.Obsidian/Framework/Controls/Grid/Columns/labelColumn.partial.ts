@@ -1,7 +1,7 @@
 import { standardColumnProps } from "@Obsidian/Core/Controls/grid";
-import { defineComponent, PropType, VNode } from "vue";
+import { Component, defineComponent, PropType } from "vue";
 import LabelCell from "../Cells/labelCell.partial.obs";
-import { ColumnDefinition, QuickFilterValueFunction } from "@Obsidian/Types/Controls/grid";
+import { ColumnDefinition, ExportValueFunction, QuickFilterValueFunction } from "@Obsidian/Types/Controls/grid";
 import { ListItemBag } from "@Obsidian/ViewModels/Utility/listItemBag";
 
 function textValue(row: Record<string, unknown>, column: ColumnDefinition): string | undefined {
@@ -26,13 +26,18 @@ export default defineComponent({
     props: {
         ...standardColumnProps,
 
-        format: {
-            type: Object as PropType<VNode>,
+        formatComponent: {
+            type: Object as PropType<Component>,
             default: LabelCell
         },
 
         quickFilterValue: {
             type: Object as PropType<QuickFilterValueFunction | string>,
+            default: textValue
+        },
+
+        exportValue: {
+            type: Function as PropType<ExportValueFunction>,
             default: textValue
         },
 

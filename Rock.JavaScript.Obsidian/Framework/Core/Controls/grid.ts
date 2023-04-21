@@ -15,12 +15,12 @@
 // </copyright>
 //
 
-import { defineComponent, PropType, toRaw, unref, VNode, watch, WatchStopHandle } from "vue";
+import { Component, defineComponent, PropType, toRaw, unref, VNode, watch, WatchStopHandle } from "vue";
 import { NumberFilterMethod } from "@Obsidian/Enums/Controls/Grid/numberFilterMethod";
 import { DateFilterMethod } from "@Obsidian/Enums/Controls/Grid/dateFilterMethod";
 import { PickExistingFilterMethod } from "@Obsidian/Enums/Controls/Grid/pickExistingFilterMethod";
 import { TextFilterMethod } from "@Obsidian/Enums/Controls/Grid/textFilterMethod";
-import { ColumnFilter, ColumnDefinition, IGridState, StandardFilterProps, StandardCellProps, IGridCache, IGridRowCache, ColumnSort, SortValueFunction, FilterValueFunction, QuickFilterValueFunction, UniqueValueFunction, StandardColumnProps, StandardHeaderCellProps, EntitySetOptions } from "@Obsidian/Types/Controls/grid";
+import { ColumnFilter, ColumnDefinition, IGridState, StandardFilterProps, StandardCellProps, IGridCache, IGridRowCache, ColumnSort, SortValueFunction, FilterValueFunction, QuickFilterValueFunction, UniqueValueFunction, StandardColumnProps, StandardHeaderCellProps, EntitySetOptions, ExportValueFunction } from "@Obsidian/Types/Controls/grid";
 import { extractText, getVNodeProp, getVNodeProps } from "@Obsidian/Utility/component";
 import { DayOfWeek, RockDateTime } from "@Obsidian/Utility/rockDateTime";
 import { resolveMergeFields } from "@Obsidian/Utility/lava";
@@ -144,13 +144,18 @@ export async function getEntitySetBag(grid: IGridState, keyFields: string[], opt
                 const column = grid.columns.find(c => c.name === mergeKey);
 
                 if (column) {
-                    const cellProps = {
-                        column,
-                        row,
-                        grid
-                    };
+                    if (options?.purpose === "export") {
+                        mergeValues[options.mergeColumns[mergeKey]] = column.exportValue(row, column, grid);
+                    }
+                    else {
+                        const cellProps = {
+                            column,
+                            row,
+                            grid
+                        };
 
-                    mergeValues[options.mergeColumns[mergeKey]] = extractText(column.format, cellProps);
+                        mergeValues[options.mergeColumns[mergeKey]] = extractText(column.formatComponent, cellProps);
+                    }
                 }
             }
         }
@@ -288,7 +293,12 @@ export const standardColumnProps: StandardColumnProps = {
     },
 
     uniqueValue: {
-        type: Object as PropType<UniqueValueFunction>,
+        type: Function as PropType<UniqueValueFunction>,
+        required: false
+    },
+
+    exportValue: {
+        type: Function as PropType<ExportValueFunction>,
         required: false
     },
 
@@ -302,13 +312,13 @@ export const standardColumnProps: StandardColumnProps = {
         required: false
     },
 
-    format: {
-        type: Object as PropType<VNode>,
+    formatComponent: {
+        type: Object as PropType<Component>,
         required: false
     },
 
-    headerTemplate: {
-        type: Object as PropType<VNode>,
+    headerComponent: {
+        type: Object as PropType<Component>,
         required: false
     },
 
@@ -806,8 +816,9 @@ function buildAttributeColumns(columns: ColumnDefinition[], node: VNode): void {
             quickFilterValue: (r, c, g) => getOrAddRowCacheValue(r, c, "quickFilterValue", g, () => c.field ? String(r[c.field]) : undefined),
             filter,
             filterValue: (r, c) => c.field ? String(r[c.field]) : undefined,
-            format: getVNodeProp<VNode>(node, "format") ?? defaultCell,
-            condensedFormat: getVNodeProp<VNode>(node, "condensedFormat") ?? defaultCell,
+            exportValue: (r, c) => c.field ? String(r[c.field]) : undefined,
+            formatComponent: defaultCell,
+            condensedComponent: defaultCell,
             hideOnScreen: false,
             excludeFromExport: false,
             visiblePriority: "md",
@@ -828,9 +839,13 @@ function buildAttributeColumns(columns: ColumnDefinition[], node: VNode): void {
 function buildColumn(name: string, node: VNode): ColumnDefinition {
     const field = getVNodeProp<string>(node, "field");
     const title = getVNodeProp<string>(node, "title");
-    const format = node.children?.["format"] ?? getVNodeProp<VNode>(node, "format") ?? defaultCell;
-    const condensedFormat = node.children?.["condensedFormat"] ?? getVNodeProp<VNode>(node, "condensedFormat") ?? format;
-    const headerTemplate = node.children?.["header"] ?? getVNodeProp<VNode>(node, "headerTemplate");
+    const formatTemplate = node.children?.["format"] as Component | undefined;
+    const formatComponent = formatTemplate ?? getVNodeProp<Component>(node, "formatComponent") ?? defaultCell;
+    const condensedTemplate = node.children?.["condensed"] as Component | undefined;
+    const condensedComponent = condensedTemplate ?? getVNodeProp<Component>(node, "condensedComponent") ?? formatComponent;
+    const headerTemplate = node.children?.["header"] as Component | undefined;
+    const headerComponent = headerTemplate ?? getVNodeProp<Component>(node, "headerComponent");
+    const exportTemplate = node.children?.["export"] as Component | undefined;
     const filter = getVNodeProp<ColumnFilter>(node, "filter");
     const headerClass = getVNodeProp<string>(node, "headerClass");
     const itemClass = getVNodeProp<string>(node, "itemClass");
@@ -925,6 +940,24 @@ function buildColumn(name: string, node: VNode): ColumnDefinition {
         };
     }
 
+    // Get the function that will provide the export value.
+    let exportValue = getVNodeProp<ExportValueFunction>(node, "exportValue");
+
+    if (!exportValue) {
+        const component = exportTemplate ?? formatComponent;
+        const fn: ExportValueFunction = (r, c, g) => {
+            const cellProps = {
+                column: c,
+                row: r,
+                grid: g
+            };
+
+            return extractText(component, cellProps);
+        };
+
+        exportValue = fn;
+    }
+
     // Convert all the value functions into cached ones.
     const uniqueValueFactory = uniqueValue;
     uniqueValue = (r, c, g) => {
@@ -953,14 +986,15 @@ function buildColumn(name: string, node: VNode): ColumnDefinition {
         name,
         title,
         field,
-        format,
-        condensedFormat,
-        headerTemplate,
+        formatComponent,
+        condensedComponent,
+        headerComponent,
         filter,
         uniqueValue,
         sortValue,
         filterValue,
         quickFilterValue,
+        exportValue,
         hideOnScreen,
         excludeFromExport,
         visiblePriority,
