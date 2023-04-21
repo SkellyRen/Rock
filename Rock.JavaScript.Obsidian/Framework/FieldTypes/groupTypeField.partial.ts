@@ -17,6 +17,13 @@
 import { Component } from "vue";
 import { defineAsyncComponent } from "@Obsidian/Utility/component";
 import { FieldTypeBase } from "./fieldType";
+import { ListItemBag } from "@Obsidian/ViewModels/Utility/listItemBag";
+
+export const enum ConfigurationValueKey {
+    GroupTypePurposeValueGuid = "groupTypePurposeValueGuid",
+    GroupTypePurposes = "groupTypePurposes",
+    Values = "values"
+}
 
 // The edit component can be quite large, so load it only as needed.
 const editComponent = defineAsyncComponent(async () => {
@@ -29,11 +36,22 @@ const configurationComponent = defineAsyncComponent(async () => {
 });
 
 /**
- * The field type handler for the Gender field.
+ * The field type handler for the Group Type field.
  */
 export class GroupTypeField extends FieldTypeBase {
-    public override getTextValue(value: string, _configurationValues: Record<string, string>): string {
-        return value;
+    public override getTextValue(value: string, configurationValues: Record<string, string>): string {
+        if (value === undefined || value === null || value === "") {
+            return "";
+        }
+
+        try {
+            const values = JSON.parse(configurationValues[ConfigurationValueKey.Values] ?? "[]") as ListItemBag[];
+            const selectedValues = values.filter(o => o.value === value);
+            return selectedValues.map(o => o.text).join(", ");
+        }
+        catch {
+            return value;
+        }
     }
 
     public override getEditComponent(): Component {

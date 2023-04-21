@@ -18,13 +18,8 @@ import { computed, defineComponent, ref, watch } from "vue";
 import { getFieldEditorProps, getFieldConfigurationProps } from "./utils";
 import DefinedValuePicker from "@Obsidian/Controls/definedValuePicker.obs";
 import DropDownList from "@Obsidian/Controls/dropDownList";
+import { ConfigurationValueKey } from "./groupTypeField.partial";
 import { ListItemBag } from "@Obsidian/ViewModels/Utility/listItemBag";
-
-const enum ConfigurationValueKey {
-    GroupTypePurposeValueGuid = "groupTypePurposeValueGuid",
-    GroupTypePurposes = "groupTypePurposes",
-    Values = "values"
-}
 
 export const EditComponent = defineComponent({
 
