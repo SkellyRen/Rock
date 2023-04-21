@@ -71,43 +71,82 @@ namespace Rock.Rest.v2
         {
             using ( var rockContext = new RockContext() )
             {
-                var financialAccountService = new FinancialAccountService( rockContext );
+                return Ok( AccountPickerGetChildrenData( options, rockContext ) );
+            }
+        }
 
-                IQueryable<FinancialAccount> qry;
+        /// <summary>
+        /// Gets the accounts that can be displayed in the account picker.
+        /// </summary>
+        /// <param name="options">The options that describe which items to load.</param>
+        /// <param name="rockContext">DB context.</param>
+        /// <returns>A List of <see cref="TreeItemBag"/> objects that represent the accounts.</returns>
+        private List<TreeItemBag> AccountPickerGetChildrenData ( AccountPickerGetChildrenOptionsBag options, RockContext rockContext )
+        {
+            var financialAccountService = new FinancialAccountService( rockContext );
 
-                if ( options.ParentGuid == Guid.Empty )
+            IQueryable<FinancialAccount> qry;
+
+            if ( options.ParentGuid == Guid.Empty )
+            {
+                qry = financialAccountService.Queryable().AsNoTracking()
+                    .Where( f => f.ParentAccountId.HasValue == false );
+            }
+            else
+            {
+                qry = financialAccountService.Queryable().AsNoTracking()
+                    .Where( f => f.ParentAccount != null && f.ParentAccount.Guid == options.ParentGuid );
+            }
+
+            if ( !options.IncludeInactive )
+            {
+                qry = qry
+                    .Where( f => f.IsActive == true );
+            }
+
+            var accountList = qry
+                .OrderBy( f => f.Order )
+                .ThenBy( f => f.Name )
+                .ToList();
+
+            var accountTreeViewItems = accountList
+                .Select( a => new TreeItemBag
                 {
-                    qry = financialAccountService.Queryable().AsNoTracking()
-                        .Where( f => f.ParentAccountId.HasValue == false );
-                }
-                else
+                    Value = a.Guid.ToString(),
+                    Text = HttpUtility.HtmlEncode( options.DisplayPublicName ? a.PublicName : a.Name ),
+                    IsActive = a.IsActive,
+                    IconCssClass = "fa fa-file-o"
+                } ).ToList();
+
+            var resultIds = accountList.Select( f => f.Id ).ToList();
+
+            if ( options.LoadFullTree )
+            {
+                foreach ( var accountTreeViewItem in accountTreeViewItems )
                 {
-                    qry = financialAccountService.Queryable().AsNoTracking()
-                        .Where( f => f.ParentAccount != null && f.ParentAccount.Guid == options.ParentGuid);
-                }
-
-                if ( !options.IncludeInactive )
-                {
-                    qry = qry
-                        .Where( f => f.IsActive == true );
-                }
-
-                var accountList = qry
-                    .OrderBy( f => f.Order )
-                    .ThenBy( f => f.Name )
-                    .ToList();
-
-                var accountTreeViewItems = accountList
-                    .Select( a => new TreeItemBag
+                    var newOptions = new AccountPickerGetChildrenOptionsBag
                     {
-                        Value = a.Guid.ToString(),
-                        Text = HttpUtility.HtmlEncode( options.DisplayPublicName ? a.PublicName : a.Name ),
-                        IsActive = a.IsActive,
-                        IconCssClass = "fa fa-file-o"
-                    } ).ToList();
+                        DisplayPublicName = options.DisplayPublicName,
+                        IncludeInactive = options.IncludeInactive,
+                        LoadFullTree = options.LoadFullTree,
+                        ParentGuid = new Guid(accountTreeViewItem.Value),
+                        SecurityGrantToken = options.SecurityGrantToken
+                    };
+                    accountTreeViewItem.Children = AccountPickerGetChildrenData( newOptions, rockContext );
+                    int childrenCount = accountTreeViewItem.Children.Count;
 
-                var resultIds = accountList.Select( f => f.Id ).ToList();
+                    accountTreeViewItem.HasChildren = childrenCount > 0;
+                    accountTreeViewItem.IsFolder = accountTreeViewItem.HasChildren;
+                    accountTreeViewItem.ChildCount = childrenCount;
 
+                    if ( !accountTreeViewItem.HasChildren )
+                    {
+                        accountTreeViewItem.Children = null;
+                    }
+                }
+            }
+            else
+            {
                 var childQry = financialAccountService.Queryable().AsNoTracking()
                     .Where( f =>
                     f.ParentAccountId.HasValue && resultIds.Contains( f.ParentAccountId.Value )
@@ -123,7 +162,8 @@ namespace Rock.Rest.v2
 
                 foreach ( var accountTreeViewItem in accountTreeViewItems )
                 {
-                    int childrenCount = ( childrenList?.Count( v => v == accountTreeViewItem.Value ) ).GetValueOrDefault( 0 );
+                    int childrenCount = 0;
+                    childrenCount = ( childrenList?.Count( v => v == accountTreeViewItem.Value ) ).GetValueOrDefault( 0 );
 
                     accountTreeViewItem.HasChildren = childrenCount > 0;
                     accountTreeViewItem.IsFolder = childrenCount > 0;
@@ -133,9 +173,9 @@ namespace Rock.Rest.v2
                         accountTreeViewItem.ChildCount = childrenCount;
                     }
                 }
-
-                return Ok(accountTreeViewItems);
             }
+
+            return accountTreeViewItems;
         }
 
         /// <summary>
@@ -176,7 +216,7 @@ namespace Rock.Rest.v2
         [HttpPost]
         [System.Web.Http.Route( "AccountPickerGetSearchedAccounts" )]
         [Authenticate]
-        [Rock.SystemGuid.RestActionGuid( "007512c6-0147-4683-a3fe-3fdd1da275c2" )]
+        [Rock.SystemGuid.RestActionGuid( "69fd94cc-f049-4cee-85d1-13e573e30586" )]
         public IHttpActionResult AccountPickerGetSearchedAccounts( [FromBody] AccountPickerGetSearchedAccountsOptionsBag options )
         {
             IQueryable<FinancialAccount> qry;
@@ -220,7 +260,7 @@ namespace Rock.Rest.v2
         [HttpPost]
         [System.Web.Http.Route( "AccountPickerGetPreviewItems" )]
         [Authenticate]
-        [Rock.SystemGuid.RestActionGuid( "007512c6-0147-4683-a3fe-3fdd1da275c2" )]
+        [Rock.SystemGuid.RestActionGuid( "b080e9d6-207a-412d-acf5-d811fdec30a3" )]
         public IHttpActionResult AccountPickerGetPreviewItems( [FromBody] AccountPickerGetPreviewItemsOptionsBag options )
         {
             IQueryable<FinancialAccount> qry;
@@ -267,7 +307,7 @@ namespace Rock.Rest.v2
                 var financialAccountService = new FinancialAccountService( rockContext );
                 var count = financialAccountService.Queryable().Count();
 
-                return Ok( count < 1000 );
+                return Ok( count < 1500 );
             }
         }
 

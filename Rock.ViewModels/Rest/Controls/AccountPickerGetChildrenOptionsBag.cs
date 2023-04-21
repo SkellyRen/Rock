@@ -41,6 +41,11 @@ namespace Rock.ViewModels.Rest.Controls
         public bool DisplayPublicName { get; set; } = false;
 
         /// <summary>
+        /// Whether or not to load the full tree instead of just this level
+        /// </summary>
+        public bool LoadFullTree { get; set; } = false;
+
+        /// <summary>
         /// The security grant token to use when performing authorization checks.
         /// </summary>
         public string SecurityGrantToken { get; set; }

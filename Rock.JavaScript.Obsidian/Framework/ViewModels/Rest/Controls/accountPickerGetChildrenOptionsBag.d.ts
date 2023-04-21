@@ -34,6 +34,9 @@ export type AccountPickerGetChildrenOptionsBag = {
     /** Whether or not to include inactive accounts */
     includeInactive: boolean;
 
+    /** Whether or not to load the full tree instead of just this level */
+    loadFullTree: boolean;
+
     /** Get the child accounts for the account of this GUID. Empty Guid gets the root level accounts */
     parentGuid?: Guid | null;
 

@@ -77,7 +77,7 @@
             <RockButton :btnSize="BtnSize.ExtraSmall" :btnType="BtnType.Primary" class="picker-btn" @click.prevent.stop="select">
                 <Loading :isLoading="isLoading" isSmall>Select</Loading>
             </RockButton>
-            <RockButton v-if="!isLoading && allowSelectAll" :btnSize="BtnSize.ExtraSmall" :btnType="BtnType.Link" @click.prevent.stop="selectAll">
+            <RockButton v-if="!isLoading && allowSelectAll && multiple" :btnSize="BtnSize.ExtraSmall" :btnType="BtnType.Link" @click.prevent.stop="selectAll">
                 Select All
             </RockButton>
             <RockButton v-if="!isLoading" :btnSize="BtnSize.ExtraSmall" :btnType="BtnType.Link" class="picker-cancel" @click.prevent.stop="cancel">
@@ -193,7 +193,12 @@
     });
 
     /** Updates the model value from our internal value. */
-    async function updateModelValue(): Promise<void> {
+    async function updateModelValue(selectAll = false): Promise<void> {
+        if (selectAll) {
+            emit("update:modelValue", flatItems.value.map(({ value, text }) => ({ value, text })));
+            return;
+        }
+
         if (!internalValues.value || internalValues.value.length == 0) {
             emit("update:modelValue", props.multiple ? [] : null);
             return;
@@ -278,9 +283,12 @@
         showPopup.value = false;
     }
 
-    function selectAll(): void {
-        // TODO
-        console.log("select all");
+    async function selectAll(): Promise<void> {
+        setLoading(true);
+        await getRootItems(true, true);
+        setLoading(false);
+        updateModelValue(true);
+        showPopup.value = false;
     }
 
     function changeMode(): void {
@@ -311,8 +319,10 @@
      * @param parentGuid The parent item whose children are retrieved.
      * @param refetch If false, don't fetch data we already have, otherwise fetch and overwrite our data
      */
-    async function getItems(parentNode: TreeItemBag | null, refetch: boolean): Promise<void> {
+    async function getItems(parentNode: TreeItemBag | null, refetch: boolean, loadFullTree = false): Promise<void> {
         if (
+            // We want the full tree, so we need to refetch from the root
+            loadFullTree ||
             // We're told to refetch the root nodes
             (refetch && !parentNode) ||
             // We're getting root items and don't have any root items
@@ -328,7 +338,7 @@
             }, 150);
 
             try {
-                treeItems.value = await fetchItems();
+                treeItems.value = await fetchItems(undefined, loadFullTree);
                 clearTimeout(timeout);
             }
             catch (e) {
@@ -364,7 +374,7 @@
 
         // If we're getting the root elements and we have a selected page, we also want to grab
         // all the parent pages so we can pre-load the entire hierarchy to the selected page
-        if (!parentNode && internalValues.value?.length > 0) {
+        if (!parentNode && !loadFullTree && internalValues.value?.length > 0) {
             await getHierarchyToSelectedItems(refetch);
         }
     }
@@ -372,11 +382,12 @@
     /**
      * Does the actual heavy work of fetching items from the server.
      */
-    async function fetchItems(parentGuid?: Guid | null): Promise<TreeItemBag[]> {
+    async function fetchItems(parentGuid?: Guid | null, loadFullTree = false): Promise<TreeItemBag[]> {
         const options: Partial<AccountPickerGetChildrenOptionsBag> = {
             parentGuid: parentGuid ?? emptyGuid,
             displayPublicName: props.displayPublicName ?? false,
             includeInactive: !props.activeOnly && includeInactive.value,
+            loadFullTree,
             securityGrantToken: securityGrantToken.value
         };
         const url = "/api/v2/Controls/AccountPickerGetChildren";
@@ -459,8 +470,8 @@
     /**
      * Get the tree items at the root level
      */
-    async function getRootItems(refetch = false): Promise<void> {
-        return getItems(null, refetch);
+    async function getRootItems(refetch = false, loadFullTree = false): Promise<void> {
+        return getItems(null, refetch, loadFullTree);
     }
 
     /**
