@@ -807,6 +807,7 @@ function buildAttributeColumns(columns: ColumnDefinition[], node: VNode): void {
             filter,
             filterValue: (r, c) => c.field ? String(r[c.field]) : undefined,
             format: getVNodeProp<VNode>(node, "format") ?? defaultCell,
+            condensedFormat: getVNodeProp<VNode>(node, "condensedFormat") ?? defaultCell,
             hideOnScreen: false,
             excludeFromExport: false,
             visiblePriority: "md",
@@ -828,6 +829,7 @@ function buildColumn(name: string, node: VNode): ColumnDefinition {
     const field = getVNodeProp<string>(node, "field");
     const title = getVNodeProp<string>(node, "title");
     const format = node.children?.["format"] ?? getVNodeProp<VNode>(node, "format") ?? defaultCell;
+    const condensedFormat = node.children?.["condensedFormat"] ?? getVNodeProp<VNode>(node, "condensedFormat") ?? format;
     const headerTemplate = node.children?.["header"] ?? getVNodeProp<VNode>(node, "headerTemplate");
     const filter = getVNodeProp<ColumnFilter>(node, "filter");
     const headerClass = getVNodeProp<string>(node, "headerClass");
@@ -952,6 +954,7 @@ function buildColumn(name: string, node: VNode): ColumnDefinition {
         title,
         field,
         format,
+        condensedFormat,
         headerTemplate,
         filter,
         uniqueValue,

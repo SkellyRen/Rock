@@ -554,11 +554,16 @@ export type ColumnDefinition = {
     headerTemplate?: Component;
 
     /**
-     * Formats the value for display in the cell. Should return HTML safe
-     * content, meaning if you intend to display the < character you need
-     * to HTML encode it as &lt;.
+     * The component to use when formatting the value for display in a normal
+     * grid cell.
      */
     format: Component;
+
+    /**
+     * The component to use when formatting the value for display in a
+     * condensed grid cell.
+     */
+    condensedFormat: Component;
 
     /** Gets the value to use when filtering on the quick filter. */
     quickFilterValue: QuickFilterValueFunction;
