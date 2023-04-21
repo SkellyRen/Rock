@@ -15,7 +15,7 @@
             <span class="selected-names">{{ selectedNames }}</span>
         </template>
 
-        <template #pickerContentHeader v-if="mode != 'preview'">
+        <template #pickerContentHeader v-if="mode != 'preview' && enhanceForLongLists">
             <div class="width-full">
                 <TextBox v-model="searchValue" size="small">
                     <template #inputGroupAppend>
@@ -67,7 +67,7 @@
                   v-model:items="treeItems"
                   @treeitem-expanded="getChildItems"
                   autoExpand
-                  showChildCount />
+                  :showChildCount="displayChildItemCountLabel" />
 
         <template #primaryButtonLabel>
             <Loading :isLoading="isLoading">Select</Loading>
@@ -160,9 +160,14 @@
             default: false
         },
 
-        showChildCount: {
+        displayChildItemCountLabel: {
             type: Boolean,
             default: false
+        },
+
+        enhanceForLongLists: {
+            type: Boolean,
+            default: true
         }
     });
 

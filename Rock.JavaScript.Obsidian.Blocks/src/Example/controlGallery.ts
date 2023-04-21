@@ -7591,27 +7591,14 @@ const accountPickerGallery = defineComponent({
     },
     setup() {
         return {
-            value: ref([
-                {
-                    "value": "4410306f-3fb5-4a57-9a80-09a3f9d40d0c",
-                    "text": "General Fund"
-                },
-                {
-                    "value": "67c6181c-1d8c-44d7-b262-b81e746f06d8",
-                    "text": "Building Fund"
-                },
-                {
-                    "value": "7f545e59-1408-4f76-94f3-cc13513ab593",
-                    "text": "CodeGen Account 1717 (891)"
-                }
-            ]),
-            // value: ref(null),
-            isFlat: ref(false),
+            value: ref(null),
             activeOnly: ref(false),
             displayPublic: ref(false),
-            multiple: ref(true),
+            multiple: ref(false),
+            enhance: ref(false),
+            displayChildItemCountLabel: ref(false),
             importCode: getSfcControlImportPath("accountPicker"),
-            exampleCode: `<AccountPicker label="Financial Account" v-model="value" />`
+            exampleCode: `<AccountPicker label="Financial Account" v-model="value" enhanceForLongLists activeOnly displayPublicName multiple displayChildItemCountLabel />`
         };
     },
     template: `
@@ -7621,12 +7608,12 @@ const accountPickerGallery = defineComponent({
     :exampleCode="exampleCode"
     enableReflection >
 
-    <AccountPicker label="Financial Account" v-model="value" :mode="isFlat ? 'flat' : 'tree'" :activeOnly="activeOnly" :displayPublicName="displayPublic" :multiple="multiple" />
+    <AccountPicker label="Financial Account" v-model="value" :enhanceForLongLists="enhance" :activeOnly="activeOnly" :displayPublicName="displayPublic" :multiple="multiple" :displayChildItemCountLabel="displayChildItemCountLabel" />
 
     <template #settings>
         <div class="row">
             <div class="col-md-4">
-                <CheckBox label="Flat View" v-model="isFlat" />
+                <CheckBox label="Enhance For Long Lists" v-model="enhance" />
             </div>
             <div class="col-md-4">
                 <CheckBox label="Active Only" v-model="activeOnly" />
@@ -7636,6 +7623,9 @@ const accountPickerGallery = defineComponent({
             </div>
             <div class="col-md-4">
                 <CheckBox label="Select Multiple" v-model="multiple" />
+            </div>
+            <div class="col-md-4">
+                <CheckBox label="Display Child Count" v-model="displayChildItemCountLabel" />
             </div>
         </div>
         <p class="text-semibold font-italic">Not all settings are demonstrated in this gallery.</p>
