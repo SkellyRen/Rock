@@ -320,6 +320,11 @@ export const standardColumnProps: StandardColumnProps = {
     excludeFromExport: {
         type: Boolean as PropType<boolean>,
         required: false
+    },
+
+    visiblePriority: {
+        type: String as PropType<"xs" | "sm" | "md" | "lg" | "xl">,
+        default: "xs"
     }
 };
 
@@ -804,6 +809,7 @@ function buildAttributeColumns(columns: ColumnDefinition[], node: VNode): void {
             format: getVNodeProp<VNode>(node, "format") ?? defaultCell,
             hideOnScreen: false,
             excludeFromExport: false,
+            visiblePriority: "md",
             props: {},
             data: {}
         });
@@ -828,6 +834,7 @@ function buildColumn(name: string, node: VNode): ColumnDefinition {
     const itemClass = getVNodeProp<string>(node, "itemClass");
     const hideOnScreen = getVNodeProp<boolean>(node, "hideOnScreen") === true || getVNodeProp<string>(node, "hideOnScreen") === "";
     const excludeFromExport = getVNodeProp<boolean>(node, "excludeFromExport") === true || getVNodeProp<string>(node, "excludeFromExport") === "";
+    const visiblePriority = getVNodeProp<"xs" | "sm" | "md" | "lg" | "xl">(node, "visiblePriority") || "xs";
 
     // Get the function that will provide the sort value.
     let sortValue = getVNodeProp<SortValueFunction | string>(node, "sortValue");
@@ -953,6 +960,7 @@ function buildColumn(name: string, node: VNode): ColumnDefinition {
         quickFilterValue,
         hideOnScreen,
         excludeFromExport,
+        visiblePriority,
         headerClass,
         itemClass,
         props: getVNodeProps(node),

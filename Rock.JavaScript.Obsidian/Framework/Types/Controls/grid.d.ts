@@ -430,6 +430,14 @@ type StandardColumnProps = {
     excludeFromExport: {
         type: PropType<boolean>,
         required: false
+    },
+
+    /**
+     * Specifies the minimum window size for the column to be displayed.
+     */
+    visiblePriority: {
+        type: PropType<"xs" | "sm" | "md" | "lg" | "xl">,
+        default: "xs"
     }
 };
 
@@ -589,6 +597,11 @@ export type ColumnDefinition = {
      * be downloaded by the individual.
      */
     excludeFromExport: boolean;
+
+    /**
+     * Specifies the minimum window size for the column to be displayed.
+     */
+    visiblePriority: "xs" | "sm" | "md" | "lg" | "xl";
 
     /** All properties and attributes that were defined on the column. */
     props: Record<string, unknown>;

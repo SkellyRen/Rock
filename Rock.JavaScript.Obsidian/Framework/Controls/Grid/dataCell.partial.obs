@@ -28,7 +28,19 @@
         }
     });
 
-    const additionalItemClass = computed((): string | undefined => {
-        return props.column.itemClass;
+    const additionalItemClass = computed((): string => {
+        let classes = props.column.itemClass ?? "";
+
+        if (["sm", "md", "lg", "xl"].includes(props.column.visiblePriority)) {
+            // We don't have support for lg just yet, but it's coming.
+            if (props.column.visiblePriority === "xl") {
+                classes += ` d-none d-lg-table-cell`;
+            }
+            else {
+                classes += ` d-none d-${props.column.visiblePriority}-table-cell`;
+            }
+        }
+
+        return classes.trim();
     });
 </script>

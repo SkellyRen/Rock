@@ -100,7 +100,21 @@
         return sortDirection.value < 0 && isSortingEnabled.value;
     });
 
-    const additionalHeaderClass = computed((): string | undefined => props.column.headerClass);
+    const additionalHeaderClass = computed((): string => {
+        let classes = props.column.headerClass ?? "";
+
+        if (["sm", "md", "lg", "xl"].includes(props.column.visiblePriority)) {
+            // We don't have support for lg just yet, but it's coming.
+            if (props.column.visiblePriority === "xl") {
+                classes += ` d-none d-lg-table-cell`;
+            }
+            else {
+                classes += ` d-none d-${props.column.visiblePriority}-table-cell`;
+            }
+        }
+
+        return classes.trim();
+    });
 
     const titleClass = computed((): string => {
         let classValue = "grid-column-title";

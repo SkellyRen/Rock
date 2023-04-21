@@ -21,39 +21,43 @@
 
         <TextColumn name="email" title="Email" field="email" />
 
-        <Column name="enteredDateTime" title="Entered On" field="enteredDateTime" sortField="enteredDateTime">
+        <Column name="enteredDateTime" title="Entered On" field="enteredDateTime" sortField="enteredDateTime" visiblePriority="lg">
             <template #format="{ row }">
                 {{ formatDate(row.enteredDateTime) }}
             </template>
         </Column>
 
-        <NumberColumn name="id" title="Id" field="id" sortField="id" :filter="numberValueFilter" />
+        <NumberColumn name="id" title="Id" field="id" sortField="id" :filter="numberValueFilter" visiblePriority="sm"  />
 
-        <DateColumn name="expirationDateTime" title="Expires" field="expirationDateTime" :filter="dateValueFilter" sortField="expirationDateTime" />
+        <DateColumn name="expirationDateTime" title="Expires" field="expirationDateTime" :filter="dateValueFilter" sortField="expirationDateTime" visiblePriority="lg" />
 
-        <BooleanColumn name="isUrgent" title="Urgent" field="isUrgent" sortField="isUrgent" />
+        <BooleanColumn name="isUrgent" title="Urgent" field="isUrgent" sortField="isUrgent" visiblePriority="sm" />
 
         <LabelColumn name="isUrgent"
                      title="Urgent"
                      field="isUrgent"
                      sortField="isUrgent"
+                     visiblePriority="lg"
                      :classSource="badgeClassLookup" />
 
         <LabelColumn name="isUrgent2"
                      title="Urgent 2"
                      field="isUrgent"
                      sortField="isUrgent"
+                     visiblePriority="lg"
                      :colorSource="badgeColorLookup" />
 
         <LabelColumn name="mode"
                      title="Mode"
                      field="mode"
                      :filter="pickExistingValueFilter"
+                     visiblePriority="lg"
                      quickFilterValue="{{ row.mode.text }}" />
 
         <BooleanColumn name="isPublic"
                        title="Public"
                        field="isPublic"
+                       visiblePriority="md"
                        sortField="isPublic" />
 
         <AttributeColumns :attributes="attributeFields" />
