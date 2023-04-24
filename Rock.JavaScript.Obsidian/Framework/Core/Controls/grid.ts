@@ -21,6 +21,7 @@ import { DateFilterMethod } from "@Obsidian/Enums/Controls/Grid/dateFilterMethod
 import { PickExistingFilterMethod } from "@Obsidian/Enums/Controls/Grid/pickExistingFilterMethod";
 import { TextFilterMethod } from "@Obsidian/Enums/Controls/Grid/textFilterMethod";
 import { ColumnFilter, ColumnDefinition, IGridState, StandardFilterProps, StandardCellProps, IGridCache, IGridRowCache, ColumnSort, SortValueFunction, FilterValueFunction, QuickFilterValueFunction, UniqueValueFunction, StandardColumnProps, StandardHeaderCellProps, EntitySetOptions, ExportValueFunction } from "@Obsidian/Types/Controls/grid";
+import { ICancellationToken } from "@Obsidian/Utility/cancellation";
 import { extractText, getVNodeProp, getVNodeProps } from "@Obsidian/Utility/component";
 import { DayOfWeek, RockDateTime } from "@Obsidian/Utility/rockDateTime";
 import { resolveMergeFields } from "@Obsidian/Utility/lava";
@@ -210,7 +211,7 @@ export async function getEntitySetBag(grid: IGridState, keyFields: string[], opt
         }
     }
 
-    const worker = new BackgroundItemsWorker(grid.getSortedRows(), processRow);
+    const worker = new BackgroundItemsFunctionWorker(grid.getSortedRows(), processRow);
 
     await worker.run();
 
@@ -1244,7 +1245,8 @@ abstract class BackgroundWorker {
 
     /**
      * The maximum number of milliseconds to run a single iteration if no
-     * duration is provided by the browser.
+     * duration is provided by the browser. 50ms seems to be what browsers
+     * use for the idle callback, so use the same value.
      */
     private intervalRunDuration: number = 50;
 
@@ -1259,6 +1261,17 @@ abstract class BackgroundWorker {
 
     /** The callback funciton to trigger the promise to reject with an error. */
     private rejectPromise!: (error: Error) => void;
+
+    /**
+     * Creates a new instance of {@link BackgroundWorker}.
+     *
+     * @param cancellationToken An optional cancellation token that will instruct this worker to stop processing.
+     */
+    constructor(cancellationToken?: ICancellationToken) {
+        if (cancellationToken) {
+            cancellationToken.onCancellationRequested(() => this.cancel());
+        }
+    }
 
     /**
      * Starts the worker and begins processing in the background.
@@ -1322,9 +1335,7 @@ abstract class BackgroundWorker {
                 });
             }
             else {
-                // 50ms seems to be the default max run time used by
-                // browsers with requestIdleCallback.
-                const timeoutAt = window.performance.now() + 50;
+                const timeoutAt = window.performance.now() + this.intervalRunDuration;
                 hasMore = this.process(() => window.performance.now() >= timeoutAt);
             }
 
@@ -1356,7 +1367,7 @@ abstract class BackgroundWorker {
  * callback will be called for each item in the array, pausing between
  * invocations whenever the time limit has been reached.
  */
-class BackgroundItemsWorker<T> extends BackgroundWorker {
+class BackgroundItemsFunctionWorker<T> extends BackgroundWorker {
     /** The worker function to call for each item. */
     private workerFunction: (item: T) => void;
 
@@ -1386,6 +1397,42 @@ class BackgroundItemsWorker<T> extends BackgroundWorker {
         }
 
         return this.itemIndex < this.items.length;
+    }
+}
+
+/**
+ * Walks the row data in the grid and slowly triggers all the row values so
+ * that they get cached into memory for fast access later.
+ */
+class BackgroundGridRowCacheWorker extends BackgroundWorker {
+    /** The next row index to be processed. */
+    private rowIndex: number = 0;
+
+    private readonly grid: GridState;
+
+    constructor(grid: GridState) {
+        super();
+
+        this.grid = grid;
+    }
+
+    protected override process(didTimeout: () => boolean): boolean {
+        while (this.rowIndex < this.grid.rows.length && !didTimeout()) {
+            const row = this.grid.rows[this.rowIndex++];
+
+            for (const column of this.grid.columns) {
+                if (column.name.startsWith("__")) {
+                    continue;
+                }
+
+                column.uniqueValue(row, column, this.grid);
+                column.sortValue?.(row, column, this.grid);
+                column.filterValue(row, column, this.grid);
+                column.quickFilterValue(row, column, this.grid);
+            }
+        }
+
+        return this.rowIndex < this.grid.rows.length;
     }
 }
 
@@ -1429,7 +1476,11 @@ export class GridState implements IGridState {
     /** The current column being used to sort the rows. */
     private columnSort?: ColumnSort;
 
+    /** The event emitter for all the grid events. */
     private readonly emitter: Emitter<GridEvents> = mitt<GridEvents>();
+
+    /** A background worker that will populate all the row cache data. */
+    private populateRowCacheWorker: BackgroundGridRowCacheWorker | null = null;
 
     // #endregion
 
@@ -1776,6 +1827,12 @@ export class GridState implements IGridState {
      * @param rows The array of row data to use for the Grid.
      */
     public setDataRows(rows: Record<string, unknown>[]): void {
+        // Stop the cache worker if it is running.
+        if (this.populateRowCacheWorker) {
+            this.populateRowCacheWorker.cancel();
+            this.populateRowCacheWorker = null;
+        }
+
         // Stop watching the old rows if we are currently watching for changes.
         if (this.internalRowsWatcher) {
             this.internalRowsWatcher();
@@ -1796,6 +1853,10 @@ export class GridState implements IGridState {
                 this.updateFilteredRows();
             }, { deep: true });
         }
+
+        // Start the cache worker.
+        this.populateRowCacheWorker = new BackgroundGridRowCacheWorker(this);
+        this.populateRowCacheWorker.run();
 
         this.emitter.emit("rowsChanged", this);
         this.updateFilteredRows();
