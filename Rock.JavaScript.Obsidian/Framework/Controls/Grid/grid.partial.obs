@@ -227,7 +227,7 @@ table.table-obsidian th.grid-error > .alert {
     import PagerRow from "./pagerRow.partial.obs";
     import { computed, onUnmounted, PropType, ref, shallowRef, useSlots, watch } from "vue";
     import { asFormattedString } from "@Obsidian/Utility/numberUtils";
-    import { pluralConditional } from "@Obsidian/Utility/stringUtils";
+    import { pluralConditional, pluralize } from "@Obsidian/Utility/stringUtils";
     import { getColumnDefinitions, getEntitySetBag, GridActionUrlKey, GridState, GridCommunicationBag } from "@Obsidian/Core/Controls/grid";
     import { DragSource as vDragSource, DragTarget as vDragTarget, IDragSourceOptions, useDragReorder } from "@Obsidian/Directives/dragDrop";
     import { ColumnSort, GridAction, ColumnDefinition, EntitySetOptions } from "@Obsidian/Types/Controls/grid";
@@ -318,7 +318,8 @@ table.table-obsidian th.grid-error > .alert {
 
         /**
          * The term that identifies individual rows in the grid. This
-         * property is not reactive.
+         * property is not reactive. If not specified it will default to "item".
+         * This value should be singular and not plural.
          */
         itemTerm: {
             type: String as PropType<string>,
@@ -330,6 +331,17 @@ table.table-obsidian th.grid-error > .alert {
          */
         entityTypeGuid: {
             type: String as PropType<Guid>,
+            required: false
+        },
+
+        /**
+         * The title to use when exporting the grid contents. This is used as
+         * the exported filename as well as some other information inside the
+         * export file. If not specified it will default to the itemTerm
+         * property.
+         */
+        exportTitle: {
+            type: String as PropType<string>,
             required: false
         },
 
@@ -666,7 +678,7 @@ table.table-obsidian th.grid-error > .alert {
     }
 
     function updatePagerMessage(): void {
-        pagerMessage.value = `${asFormattedString(gridState.filteredRows.length)} ${pluralConditional(gridState.filteredRows.length, `${gridState.itemTerm}`, `${gridState.itemTerm}s`)}`;
+        pagerMessage.value = `${asFormattedString(gridState.filteredRows.length)} ${pluralize(gridState.itemTerm, gridState.filteredRows.length)}`;
     }
 
     async function updateGridData(): Promise<void> {
@@ -839,11 +851,13 @@ table.table-obsidian th.grid-error > .alert {
         }
 
         // Generate the excel file and initiate the download.
+        const title = props.exportTitle || pluralize(gridState.itemTerm);
+        const filename = title.replace(/[^a-zA-Z0-9\-_]/g, "");
         const xlsx = (await import("@Obsidian/Libs/xlsx"));
         const worksheet = xlsx.utils.aoa_to_sheet(data, { cellDates: true });
         const workbook = xlsx.utils.book_new();
         xlsx.utils.book_append_sheet(workbook, worksheet, "Sheet 1");
-        xlsx.writeFile(workbook, "export.xlsx", { compression: true });
+        xlsx.writeFile(workbook, `${filename}.xlsx`, { compression: true });
     }
 
     async function onLaunchWorkflow(): Promise<void> {
