@@ -89,7 +89,7 @@
          container: {
             type: HTMLElement as PropType<HTMLElement | null>,
             required: false
-        }
+        },
 
         ...standardRockFormFieldProps
     });
