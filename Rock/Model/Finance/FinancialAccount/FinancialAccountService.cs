@@ -227,7 +227,7 @@ namespace Rock.Model
                 {
                     var account = accountList.Where ( a => a.Id.ToString() == accountTreeViewItem.Id ).FirstOrDefault();
                     accountPaths.Add( accountTreeViewItem.ParentId,
-                        GetDelimitedAccountHierarchy( account, FinancialAccountService.AccountHierarchyDirection.CurrentAccountToParent) );
+                        this.GetDelimitedAccountHierarchy( account, FinancialAccountService.AccountHierarchyDirection.CurrentAccountToParent) );
                 }
 
                 accountTreeViewItem.Path = accountPaths[accountTreeViewItem.ParentId];

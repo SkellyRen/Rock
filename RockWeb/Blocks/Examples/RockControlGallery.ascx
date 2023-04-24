@@ -478,7 +478,7 @@
 
                      <a id="AccountPicker"></a>
                     <div runat="server" class="r-example">
-                        <Rock:AccountPicker ID="acctpExample" runat="server" Label="Rock:AccountPicker" AllowMultiSelect="true" DisplayChildItemCountLabel="true" DisplayPublicName="true" />
+                        <Rock:AccountPicker ID="acctpExample" runat="server" Label="Rock:AccountPicker" />
                     </div>
 
                     <a id="FinancialGatewayPicker"></a>
