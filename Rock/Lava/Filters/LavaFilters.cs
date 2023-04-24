@@ -2275,8 +2275,12 @@ namespace Rock.Lava
 
             if ( person != null )
             {
-                PersonService.SaveUserPreference( person, settingKey, settingValue );
-                rockContext.QueryCount++; // The service method above won't allow passing in a RockContext so we'll just increment a query manually.
+                var preferences = PersonPreferenceCache.GetPersonPreferenceCollection( person );
+
+                preferences.SetValue( settingKey, settingValue );
+                preferences.Save();
+
+                rockContext.QueryCount++; // The method above won't allow passing in a RockContext so we'll just increment a query manually.
                 if ( rockContext.QueryMetricDetailLevel == QueryMetricDetailLevel.Full )
                 {
                     rockContext.QueryMetricDetails.Add( new QueryMetricDetail
@@ -2312,7 +2316,9 @@ namespace Rock.Lava
 
             if ( person != null )
             {
-                rockContext.QueryCount++; // The service method above won't allow passing in a RockContext so we'll just increment a query manually.
+                var preferences = PersonPreferenceCache.GetPersonPreferenceCollection( person );
+
+                rockContext.QueryCount++; // The method above won't allow passing in a RockContext so we'll just increment a query manually.
                 if ( rockContext.QueryMetricDetailLevel == QueryMetricDetailLevel.Full )
                 {
                     rockContext.QueryMetricDetails.Add( new QueryMetricDetail
@@ -2320,7 +2326,8 @@ namespace Rock.Lava
                         Sql = "Query metrics are not available for GetUserPreference."
                     } );
                 }
-                return PersonService.GetUserPreference( person, settingKey );
+
+                return preferences.GetValue( settingKey );
             }
 
             return string.Empty;
@@ -2349,8 +2356,12 @@ namespace Rock.Lava
 
             if ( person != null )
             {
-                PersonService.DeleteUserPreference( person, settingKey );
-                rockContext.QueryCount++; // The service method above won't allow passing in a RockContext so we'll just increment a query manually.
+                var preferences = PersonPreferenceCache.GetPersonPreferenceCollection( person );
+
+                preferences.SetValue( settingKey, string.Empty );
+                preferences.Save();
+
+                rockContext.QueryCount++; // The method above won't allow passing in a RockContext so we'll just increment a query manually.
                 if ( rockContext.QueryMetricDetailLevel == QueryMetricDetailLevel.Full )
                 {
                     rockContext.QueryMetricDetails.Add( new QueryMetricDetail
@@ -2524,13 +2535,21 @@ namespace Rock.Lava
         /// <returns></returns>
         public static List<Person> Parents( ILavaRenderContext context, object input )
         {
-            Person person = GetPerson( input, context );
-
+            var person = GetPerson( input, context );
             if ( person != null )
             {
-                Guid adultGuid = Rock.SystemGuid.GroupRole.GROUPROLE_FAMILY_MEMBER_ADULT.AsGuid();
-                var parents = new PersonService( LavaHelper.GetRockContextFromLavaContext( context ) ).GetFamilyMembers( person.Id ).Where( m => m.GroupRole.Guid == adultGuid ).Select( a => a.Person );
-                return parents.ToList();
+                var adultGuid = Rock.SystemGuid.GroupRole.GROUPROLE_FAMILY_MEMBER_ADULT.AsGuid();
+                var parents = new PersonService( LavaHelper.GetRockContextFromLavaContext( context ) )
+                    .GetFamilyMembers( person.Id, includeSelf: true )
+                    .Where( m => m.GroupRole.Guid == adultGuid )
+                    .Select( a => a.Person )
+                    .ToList();
+
+                // If the list includes the target Person, they are a parent themselves.
+                if ( !parents.Any( c => c.Id == person.Id ) )
+                {
+                    return parents.ToList();
+                }
             }
 
             return new List<Person>();
@@ -2544,13 +2563,22 @@ namespace Rock.Lava
         /// <returns></returns>
         public static List<Person> Children( ILavaRenderContext context, object input )
         {
-            Person person = GetPerson( input, context );
-
+            var person = GetPerson( input, context );
             if ( person != null )
             {
-                Guid childGuid = Rock.SystemGuid.GroupRole.GROUPROLE_FAMILY_MEMBER_CHILD.AsGuid();
-                var children = new PersonService( LavaHelper.GetRockContextFromLavaContext( context ) ).GetFamilyMembers( person.Id ).Where( m => m.GroupRole.Guid == childGuid ).Select( a => a.Person );
-                return children.ToList();
+                var childGuid = Rock.SystemGuid.GroupRole.GROUPROLE_FAMILY_MEMBER_CHILD.AsGuid();
+
+                var children = new PersonService( LavaHelper.GetRockContextFromLavaContext( context ) )
+                    .GetFamilyMembers( person.Id, includeSelf: true )
+                    .Where( m => m.GroupRole.Guid == childGuid )
+                    .Select( a => a.Person )
+                    .ToList();
+
+                // If the list includes the target Person, they are a child themselves.
+                if ( !children.Any( c => c.Id == person.Id ) )
+                {
+                    return children.ToList();
+                }
             }
 
             return new List<Person>();
@@ -3594,14 +3622,14 @@ namespace Rock.Lava
         /// </summary>
         /// <param name="context">The context.</param>
         /// <param name="input">The input.</param>
-        /// <param name="groupId">The role Id.</param>
+        /// <param name="roleId">The role Id.</param>
         /// <returns>
         ///   <c>true</c> if [is in security role] [the specified context]; otherwise, <c>false</c>.
         /// </returns>
-        public static bool IsInSecurityRole( ILavaRenderContext context, object input, int groupId )
+        public static bool IsInSecurityRole( ILavaRenderContext context, object input, object roleId )
         {
             var person = GetPerson( input, context );
-            var role = RoleCache.Get( groupId );
+            var role = RoleCache.Get( roleId.ToStringSafe().AsInteger() );
 
             if ( person == null || role == null )
             {
@@ -3610,7 +3638,7 @@ namespace Rock.Lava
 
             if ( !role.IsSecurityTypeGroup )
             {
-                ExceptionLogService.LogException( $"LavaFilter.IsInSecurityRole group with Id: {groupId} is not a SecurityRole" );
+                ExceptionLogService.LogException( $"LavaFilter.IsInSecurityRole group with Id: {roleId} is not a SecurityRole" );
                 return false;
             }
 
@@ -3776,30 +3804,20 @@ namespace Rock.Lava
         }
 
         /// <summary>
-        /// Resolves the rock address.
+        /// Resolves a relative URL to an absolute URL for the current Rock environment.
         /// </summary>
+        /// <param name="context">The current Lava render context.</param>
         /// <param name="input">The input.</param>
         /// <returns></returns>
-        public static string ResolveRockUrl( string input )
+        public static string ResolveRockUrl( ILavaRenderContext context, string input )
         {
-            RockPage page = HttpContext.Current.Handler as RockPage;
+            var url = input;
 
-            if ( input.StartsWith( "~~" ) )
+            var host = context.GetService<ILavaHost>();
+            if ( host != null )
             {
-                string theme = "Rock";
-                if ( page.Theme.IsNotNullOrWhiteSpace() )
-                {
-                    theme = page.Theme;
-                }
-                else if ( page.Site != null && page.Site.Theme.IsNotNullOrWhiteSpace() )
-                {
-                    theme = page.Site.Theme;
-                }
-
-                input = "~/Themes/" + theme + ( input.Length > 2 ? input.Substring( 2 ) : string.Empty );
+                url = host.ResolveUrl( input );
             }
-
-            var url = page.ResolveUrl( input );
 
             return url;
         }
@@ -4380,7 +4398,7 @@ namespace Rock.Lava
         /// <returns></returns>
         public static string AddMetaTagToHead( string input, string attributeName, string attributeValue )
         {
-            RockPage page = HttpContext.Current.Handler as RockPage;
+            var page = HttpContext.Current?.Handler as RockPage;
 
             if ( page != null )
             {
@@ -4402,7 +4420,7 @@ namespace Rock.Lava
         /// <returns></returns>
         public static string AddLinkTagToHead( string input, string attributeName, string attributeValue )
         {
-            var page = HttpContext.Current.Handler as RockPage;
+            var page = HttpContext.Current?.Handler as RockPage;
 
             if ( page != null )
             {
@@ -4437,7 +4455,7 @@ namespace Rock.Lava
         /// <returns></returns>
         public static string SetPageTitle( string input, string titleLocation = "All" )
         {
-            RockPage page = HttpContext.Current.Handler as RockPage;
+            var page = HttpContext.Current?.Handler as RockPage;
 
             if ( page != null )
             {
@@ -4476,15 +4494,17 @@ namespace Rock.Lava
         /// <summary>
         /// Adds the script link.
         /// </summary>
+        /// <param name="context">The current Lava render context.</param>
         /// <param name="input">The input.</param>
         /// <param name="fingerprintLink">if set to <c>true</c> [fingerprint link].</param>
         /// <returns></returns>
-        public static string AddScriptLink( string input, bool fingerprintLink = false )
+        public static string AddScriptLink( ILavaRenderContext context, string input, bool fingerprintLink = false )
         {
-            if ( HttpContext.Current != null )
+            var page = HttpContext.Current?.Handler as RockPage;
+
+            if ( page != null )
             {
-                RockPage page = HttpContext.Current.Handler as RockPage;
-                RockPage.AddScriptLink( page, ResolveRockUrl( input ), fingerprintLink );
+                RockPage.AddScriptLink( page, ResolveRockUrl( context, input ), fingerprintLink );
             }
 
             return string.Empty;
@@ -4493,15 +4513,17 @@ namespace Rock.Lava
         /// <summary>
         /// Adds the CSS link.
         /// </summary>
+        /// <param name="context">The current Lava render context.</param>
         /// <param name="input">The input.</param>
         /// <param name="fingerprintLink">if set to <c>true</c> [fingerprint link].</param>
         /// <returns></returns>
-        public static string AddCssLink( string input, bool fingerprintLink = false )
+        public static string AddCssLink( ILavaRenderContext context, string input, bool fingerprintLink = false )
         {
-            if ( HttpContext.Current != null )
+            var page = HttpContext.Current?.Handler as RockPage;
+
+            if ( page != null )
             {
-                RockPage page = HttpContext.Current.Handler as RockPage;
-                RockPage.AddCSSLink( page, ResolveRockUrl( input ), fingerprintLink );
+                RockPage.AddCSSLink( page, ResolveRockUrl( context, input ), fingerprintLink );
             }
 
             return string.Empty;
@@ -4676,7 +4698,7 @@ namespace Rock.Lava
         /// <returns></returns>
         public static object Page( string input, string parm )
         {
-            RockPage page = HttpContext.Current.Handler as RockPage;
+            var page = HttpContext.Current?.Handler as RockPage;
 
             if ( page != null )
             {
@@ -4792,7 +4814,11 @@ namespace Rock.Lava
         /// <returns></returns>
         public static object PageParameter( string input, string parm )
         {
-            RockPage page = HttpContext.Current.Handler as RockPage;
+            var page = HttpContext.Current?.Handler as RockPage;
+            if ( page == null )
+            {
+                return null;
+            }
 
             var parmReturn = page.PageParameter( parm );
 
@@ -5324,11 +5350,14 @@ namespace Rock.Lava
         /// <param name="typeOrder">The type order.</param>
         public static void AddQuickReturn( string input, string typeName, int typeOrder = 0 )
         {
-            RockPage rockPage = HttpContext.Current.Handler as RockPage;
+            var rockPage = HttpContext.Current?.Handler as RockPage;
+            if ( rockPage == null )
+            {
+                return;
+            }
 
             if ( input.IsNotNullOrWhiteSpace() )
             {
-
                 /* 08-16-2021 MDP
                  * This is only supported for pages that have the PersonalLinks block on it.
                  * 

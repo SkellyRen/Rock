@@ -45,7 +45,7 @@ namespace Rock.Blocks.Engagement.SignUp
     /// <seealso cref="Rock.Blocks.IHasCustomActions" />
 
     [DisplayName( "Sign-Up Finder" )]
-    [Category( "Engagement > Sign-Up" )]
+    [Category( "Obsidian > Engagement > Sign-Up" )]
     [Description( "Block used for finding a sign-up group/project." )]
     [IconCssClass( "fa fa-clipboard-check" )]
 
@@ -71,7 +71,7 @@ namespace Rock.Blocks.Engagement.SignUp
 
     [CustomDropdownListField( "Display Project Filters As",
         Key = AttributeKey.DisplayProjectFiltersAs,
-        Description = "Determines if the project filters should be show as checkboxes or multi-select dropdowns.",
+        Description = @"Determines if the ""Project Types"", ""Campus"", and ""Named Schedule"" project filters should be shown as checkboxes or multi-select dropdowns.",
         Category = AttributeCategory.CustomSetting,
         ListSource = "Checkboxes^Checkboxes,MultiSelectDropDown^Multi-Select Dropdown",
         DefaultValue = "Checkboxes",
@@ -322,7 +322,7 @@ namespace Rock.Blocks.Engagement.SignUp
 {% if projectCount > 0 %}
     <div class=""row d-flex flex-wrap"">
         {% for project in Projects %}
-            <div class=""col-md-4 col-sm-6 col-xs-12 mb-4"">
+            <div class=""col-xs-12 col-sm-6 col-md-4 mb-4"">
                 <div class=""card h-100"">
                     <div class=""card-body"">
                         <h3 class=""card-title mt-0"">{{ project.Name }}</h3>
@@ -355,7 +355,7 @@ namespace Rock.Blocks.Engagement.SignUp
                         {% endif %}
                     </div>
                     <div class=""card-footer bg-white border-0"">
-                        {% if project.ShowRegisterButton == true %}
+                        {% if project.ShowRegisterButton %}
                             <a href=""{{ project.RegisterPageUrl }}"" class=""btn btn-primary btn-xs"">Register</a>
                         {% endif %}
                         <a href=""{{ project.ProjectDetailPageUrl }}"" class=""btn btn-link btn-xs"">Details</a>
@@ -688,7 +688,7 @@ namespace Rock.Blocks.Engagement.SignUp
                     continue;
                 }
 
-                var group = new Group { GroupTypeId = projectTypeId.Value };
+                var group = new Rock.Model.Group { GroupTypeId = projectTypeId.Value };
                 group.LoadAttributes( rockContext );
 
                 // Note that we're not enforcing security here, as the public-facing individual performing the search would most likely be restricted.
@@ -1276,7 +1276,7 @@ namespace Rock.Blocks.Engagement.SignUp
                         continue;
                     }
 
-                    var group = new Group { GroupTypeId = groupTypeCache.Id };
+                    var group = new Rock.Model.Group { GroupTypeId = groupTypeCache.Id };
                     group.LoadAttributes();
 
                     foreach ( var attribute in group.Attributes.Select( a => a.Value ) )
@@ -1649,7 +1649,7 @@ namespace Rock.Blocks.Engagement.SignUp
         /// </summary>
         private class Opportunity
         {
-            public Group Project { get; set; }
+            public Rock.Model.Group Project { get; set; }
 
             public Location Location { get; set; }
 
