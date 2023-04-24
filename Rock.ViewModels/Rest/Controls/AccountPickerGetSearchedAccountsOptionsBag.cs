@@ -20,13 +20,12 @@ using System.Collections.Generic;
 namespace Rock.ViewModels.Rest.Controls
 {
     /// <summary>
-    /// The options that can be passed to the GetAchievementTypes API action of
-    /// the AchievementTypePicker control.
+    /// The options that can be passed to the GetSearchedAccounts API action of the AccountPicker control.
     /// </summary>
     public class AccountPickerGetSearchedAccountsOptionsBag
     {
         /// <summary>
-        /// The query we're searching accounts for
+        /// The query we're using to find accounts
         /// </summary>
         public string SearchTerm { get; set; }
 

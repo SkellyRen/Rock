@@ -21,10 +21,7 @@
 // </copyright>
 //
 
-/**
- * The options that can be passed to the GetAchievementTypes API action of
- * the AchievementTypePicker control.
- */
+/** The options that can be passed to the GetSearchedAccounts API action of the AccountPicker control. */
 export type AccountPickerGetSearchedAccountsOptionsBag = {
     /** Whether or not to display the public name (vs the normal name) */
     displayPublicName: boolean;
@@ -32,7 +29,7 @@ export type AccountPickerGetSearchedAccountsOptionsBag = {
     /** Whether or not to include inactive accounts */
     includeInactive: boolean;
 
-    /** The query we're searching accounts for */
+    /** The query we're using to find accounts */
     searchTerm?: string | null;
 
     /** The security grant token to use when performing authorization checks. */

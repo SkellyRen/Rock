@@ -23,10 +23,7 @@
 
 import { Guid } from "@Obsidian/Types";
 
-/**
- * The options that can be passed to the GetAchievementTypes API action of
- * the AchievementTypePicker control.
- */
+/** The options that can be passed to the GetChildren API action of the AccountPicker control. */
 export type AccountPickerGetChildrenOptionsBag = {
     /** Whether or not to display the public name (vs the normal name) */
     displayPublicName: boolean;

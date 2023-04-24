@@ -23,10 +23,7 @@
 
 import { Guid } from "@Obsidian/Types";
 
-/**
- * The options that can be passed to the GetAchievementTypes API action of
- * the AchievementTypePicker control.
- */
+/** The options that can be passed to the GetPreviewItems API action of the AccountPicker control. */
 export type AccountPickerGetPreviewItemsOptionsBag = {
     /** Whether or not to display the public name (vs the normal name) */
     displayPublicName: boolean;
@@ -34,6 +31,6 @@ export type AccountPickerGetPreviewItemsOptionsBag = {
     /** The security grant token to use when performing authorization checks. */
     securityGrantToken?: string | null;
 
-    /** The query we're searching accounts for */
+    /** The Guids of the accounts we need data on */
     selectedGuids?: Guid[] | null;
 };

@@ -20,8 +20,7 @@ using System.Collections.Generic;
 namespace Rock.ViewModels.Rest.Controls
 {
     /// <summary>
-    /// The options that can be passed to the GetAchievementTypes API action of
-    /// the AchievementTypePicker control.
+    /// The options that can be passed to the GetChildren API action of the AccountPicker control.
     /// </summary>
     public class AccountPickerGetChildrenOptionsBag
     {

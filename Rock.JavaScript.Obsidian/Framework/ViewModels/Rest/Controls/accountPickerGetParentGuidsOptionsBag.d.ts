@@ -23,10 +23,7 @@
 
 import { Guid } from "@Obsidian/Types";
 
-/**
- * The options that can be passed to the GetAchievementTypes API action of
- * the AchievementTypePicker control.
- */
+/** The options that can be passed to the GetParentGuids API action of the AccountPicker control. */
 export type AccountPickerGetParentGuidsOptionsBag = {
     /** List of Guids of accounts that we want to get the parent Guids of */
     guids?: Guid[] | null;
