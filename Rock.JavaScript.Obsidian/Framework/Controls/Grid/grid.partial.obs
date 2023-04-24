@@ -227,7 +227,7 @@ table.table-obsidian th.grid-error > .alert {
     import PagerRow from "./pagerRow.partial.obs";
     import { computed, onUnmounted, PropType, ref, shallowRef, useSlots, watch } from "vue";
     import { asFormattedString } from "@Obsidian/Utility/numberUtils";
-    import { pluralConditional, pluralize } from "@Obsidian/Utility/stringUtils";
+    import { pluralize } from "@Obsidian/Utility/stringUtils";
     import { getColumnDefinitions, getEntitySetBag, GridActionUrlKey, GridState, GridCommunicationBag } from "@Obsidian/Core/Controls/grid";
     import { DragSource as vDragSource, DragTarget as vDragTarget, IDragSourceOptions, useDragReorder } from "@Obsidian/Directives/dragDrop";
     import { ColumnSort, GridAction, ColumnDefinition, EntitySetOptions } from "@Obsidian/Types/Controls/grid";
@@ -240,6 +240,7 @@ table.table-obsidian th.grid-error > .alert {
     import { EntityType } from "@Obsidian/SystemGuids/entityType";
     import { alert } from "@Obsidian/Utility/dialogs";
     import { RockDateTime } from "@Obsidian/Utility/rockDateTime";
+    import { type ColInfo, type WorkSheet } from "@Obsidian/Libs/xlsx";
 
     /*
      * 8/17/2022 - DSH
@@ -681,6 +682,75 @@ table.table-obsidian th.grid-error > .alert {
         pagerMessage.value = `${asFormattedString(gridState.filteredRows.length)} ${pluralize(gridState.itemTerm, gridState.filteredRows.length)}`;
     }
 
+    /**
+     * Set the width of all columns of the given worksheet,
+     * to fit the content of the cells.
+     */
+    function autoFitColumns(worksheet: WorkSheet): void {
+        const ref = worksheet["!ref"];
+
+        if (!ref) {
+            return;
+        }
+
+        const colRange = ref.replace(/\d/, "").split(":");
+        const firstCol = colRange[0];
+        const lastCol = colRange[1];
+
+        const numRegexp = new RegExp(/\d+$/g);
+
+        const firstColIndex = firstCol.charCodeAt(0);
+        const lastColIndex = lastCol.charCodeAt(0);
+        const lastColMatch = numRegexp.exec(lastCol);
+
+        if (!lastColMatch) {
+            return;
+        }
+
+        const rows = Number(lastColMatch[0]);
+
+        const objectMaxLength: ColInfo[] = [];
+
+        // Loop on columns.
+        for (let colIndex = firstColIndex; colIndex <= lastColIndex; colIndex++) {
+            // Check if we have gone past column "Z".
+            if (colIndex > 90) {
+                break;
+            }
+
+            const col = String.fromCharCode(colIndex);
+            let maxCellLength = 0;
+
+            // Loop on rows.
+            for (let row = 1; row <= rows; row++) {
+                const cell = worksheet[`${col}${row}`];
+                if (cell) {
+                    let cellLength: number;
+
+                    if (cell.t === "s") {
+                        cellLength = cell.v.length + 1;
+                    }
+                    else if (cell.t === "d") {
+                        cellLength = 11;
+                    }
+                    else {
+                        cellLength = String(cell.v).length  + 1;
+                    }
+
+                    if (cellLength > maxCellLength) {
+                        maxCellLength = Math.min(50, cellLength);
+                    }
+                }
+            }
+
+            objectMaxLength.push({
+                width: Math.max(4, maxCellLength)
+            });
+        }
+
+        worksheet["!cols"] = objectMaxLength;
+    }
+
     async function updateGridData(): Promise<void> {
         loadingData.value = true;
 
@@ -853,9 +923,31 @@ table.table-obsidian th.grid-error > .alert {
         // Generate the excel file and initiate the download.
         const title = props.exportTitle || pluralize(gridState.itemTerm);
         const filename = title.replace(/[^a-zA-Z0-9\-_]/g, "");
-        const xlsx = (await import("@Obsidian/Libs/xlsx"));
+        const xlsx = (await import("@Obsidian/Libs/xlsx")).default;
         const worksheet = xlsx.utils.aoa_to_sheet(data, { cellDates: true });
         const workbook = xlsx.utils.book_new();
+
+        // Bold the header row.
+        for (let columnIndex = 0; columnIndex < headerRow.length; columnIndex++) {
+            let ref: string;
+
+            if (columnIndex < 26) {
+                ref = `${String.fromCharCode(65 + columnIndex)}1`;
+            }
+            else {
+                continue;
+            }
+
+            worksheet[ref].s = {
+                font: {
+                    bold: true
+                }
+            };
+        }
+
+        // Calculate rough column width.
+        autoFitColumns(worksheet);
+
         xlsx.utils.book_append_sheet(workbook, worksheet, "Sheet 1");
         xlsx.writeFile(workbook, `${filename}.xlsx`, { compression: true });
     }
