@@ -88,6 +88,7 @@
     <Compile Include="Core\ColorDepth.cs" />
     <Compile Include="Core\FollowingSuggestedStatus.cs" />
     <Compile Include="Core\Format.cs" />
+    <Compile Include="Core\Grid\ColumnPositionAnchor.cs" />
     <Compile Include="Core\JobNotificationStatus.cs" />
     <Compile Include="Core\KioskType.cs" />
     <Compile Include="Core\MatchFlag.cs" />

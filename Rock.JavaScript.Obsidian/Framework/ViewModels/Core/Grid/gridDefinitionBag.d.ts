@@ -22,6 +22,7 @@
 //
 
 import { AttributeFieldDefinitionBag } from "@Obsidian/ViewModels/Core/Grid/attributeFieldDefinitionBag";
+import { CustomColumnDefinitionBag } from "@Obsidian/ViewModels/Core/Grid/customColumnDefinitionBag";
 import { FieldDefinitionBag } from "@Obsidian/ViewModels/Core/Grid/fieldDefinitionBag";
 
 /**
@@ -42,6 +43,12 @@ export type GridDefinitionBag = {
      * data object.
      */
     attributeFields?: AttributeFieldDefinitionBag[] | null;
+
+    /**
+     * Gets or sets the definitions of any custom columns that should be
+     * added to the grid. These are defined by the administrator.
+     */
+    customColumns?: CustomColumnDefinitionBag[] | null;
 
     /**
      * Gets or sets the fields that have been defined on the grid. Each

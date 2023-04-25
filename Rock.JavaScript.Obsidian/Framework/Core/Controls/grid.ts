@@ -27,10 +27,13 @@ import { DayOfWeek, RockDateTime } from "@Obsidian/Utility/rockDateTime";
 import { resolveMergeFields } from "@Obsidian/Utility/lava";
 import { deepEqual } from "@Obsidian/Utility/util";
 import { AttributeFieldDefinitionBag } from "@Obsidian/ViewModels/Core/Grid/attributeFieldDefinitionBag";
+import { GridDefinitionBag } from "@Obsidian/ViewModels/Core/Grid/gridDefinitionBag";
 import { GridEntitySetBag } from "@Obsidian/ViewModels/Core/Grid/gridEntitySetBag";
 import { GridEntitySetItemBag } from "@Obsidian/ViewModels/Core/Grid/gridEntitySetItemBag";
 import { Guid } from "@Obsidian/Types";
 import mitt, { Emitter } from "mitt";
+import { CustomColumnDefinitionBag } from "@Obsidian/ViewModels/Core/Grid/customColumnDefinitionBag";
+import { ColumnPositionAnchor } from "@Obsidian/Enums/Core/Grid/columnPositionAnchor";
 
 // #region Internal Types
 
@@ -826,6 +829,54 @@ function buildAttributeColumns(columns: ColumnDefinition[], node: VNode): void {
 }
 
 /**
+ * Builds and inserts the column definitions for the array of custom columns.
+ *
+ * @param columns The array of column definitions to be updated.
+ * @param customColumns The array of custom columns that the new columns derived from.
+ *
+ * @private This function is private and should not be exported.
+ */
+function insertCustomColumns(columns: ColumnDefinition[], customColumns: CustomColumnDefinitionBag[]): void {
+    for (const customColumn of customColumns) {
+        if (!customColumn.fieldName) {
+            continue;
+        }
+
+        const columnDefinition: ColumnDefinition = {
+            name: customColumn.fieldName,
+            title: customColumn.headerText ?? undefined,
+            field: customColumn.fieldName,
+            uniqueValue: (r, c) => c.field ? String(r[c.field]) : "",
+            sortValue: (r, c) => c.field ? String(r[c.field]) : undefined,
+            quickFilterValue: (r, c, g) => getOrAddRowCacheValue(r, c, "quickFilterValue", g, () => c.field ? String(r[c.field]) : undefined),
+            filter: undefined, // TODO: Fill this in somehow.
+            filterValue: (r, c) => c.field ? String(r[c.field]) : undefined,
+            exportValue: (r, c) => c.field ? String(r[c.field]) : undefined,
+            formatComponent: defaultCell,
+            condensedComponent: defaultCell,
+            headerClass: customColumn.headerClass ?? undefined,
+            itemClass: customColumn.itemClass ?? undefined,
+            hideOnScreen: false,
+            excludeFromExport: false,
+            visiblePriority: "md",
+            props: {},
+            data: {}
+        };
+
+        // Get the offset position, clamp it between 0 and the size of the array.
+        let offset = Math.max(0, customColumn.positionOffset);
+        offset = Math.min(columns.length, offset);
+
+        if (customColumn.anchor === ColumnPositionAnchor.FirstColumn) {
+            columns.splice(offset, 0, columnDefinition);
+        }
+        else if (customColumn.anchor === ColumnPositionAnchor.LastColumn) {
+            columns.splice(columns.length - offset, 0, columnDefinition);
+        }
+    }
+}
+
+/**
  * Builds a new column definition from the information provided.
  *
  * @param name The name of the column.
@@ -1504,16 +1555,24 @@ export class GridState implements IGridState {
      * Creates a new instance of the GridState for use with the Grid component.
      *
      * @param columns The columns to initialize the Grid with.
+     * @param gridDefinition The definition data that defines some of the structure of the grid.
      * @param liveUpdates If true then the grid will monitor for live updates to rows.
      * @param itemTerm The word or phrase that describes each row.
+     * @param entityTypeGuid The unique identifier of the entity type this grid represents, or `undefined`.
      */
-    constructor(columns: ColumnDefinition[], liveUpdates: boolean, itemTerm: string, entityTypeGuid: Guid | undefined) {
+    constructor(columns: ColumnDefinition[], gridDefinition: GridDefinitionBag, liveUpdates: boolean, itemTerm: string, entityTypeGuid: Guid | undefined) {
         this.rowCache = new GridRowCache(undefined);
-        this.columns = columns;
-        this.internalVisibleColumns = columns.filter(c => !c.hideOnScreen);
+        this.columns = [...columns];
         this.liveUpdates = liveUpdates;
         this.itemTerm = itemTerm;
         this.entityTypeGuid = entityTypeGuid;
+
+        // If we have custom columns, append them as the last data columns.
+        if (gridDefinition.customColumns && gridDefinition.customColumns.length > 0) {
+            insertCustomColumns(this.columns, gridDefinition.customColumns);
+        }
+
+        this.internalVisibleColumns = this.columns.filter(c => !c.hideOnScreen);
     }
 
     /**

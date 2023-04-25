@@ -172,13 +172,14 @@
     <Compile Include="Cms\ObsidianBlockPreferencesBag.cs" />
     <Compile Include="Communication\ConversationAttachmentBag.cs" />
     <Compile Include="Communication\ConversationMessageBag.cs" />
+    <Compile Include="Core\Grid\CustomColumnDefinitionBag.cs" />
     <Compile Include="Core\Grid\GridCommunicationBag.cs" />
     <Compile Include="Core\Grid\GridEntitySetBag.cs" />
     <Compile Include="Core\Grid\GridEntitySetItemBag.cs" />
     <Compile Include="Core\Grid\AttributeFieldDefinitionBag.cs" />
     <Compile Include="Core\Grid\FieldDefinitionBag.cs" />
     <Compile Include="Core\Grid\GridDataBag.cs" />
-    <Compile Include="Core\Grid\GridDefinition.cs" />
+    <Compile Include="Core\Grid\GridDefinitionBag.cs" />
     <Compile Include="Core\NotificationMessageActionBag.cs" />
     <Compile Include="Core\PersonPreferenceValueBag.cs" />
     <Compile Include="Entities\NotificationMessageTypeBag.cs" />

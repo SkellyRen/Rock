@@ -46,5 +46,12 @@ namespace Rock.ViewModels.Core.Grid
         /// </summary>
         /// <value>The action urls.</value>
         public Dictionary<string, string> ActionUrls { get; set; }
+
+        /// <summary>
+        /// Gets or sets the definitions of any custom columns that should be
+        /// added to the grid. These are defined by the administrator.
+        /// </summary>
+        /// <value>The definitions of any custom columns.</value>
+        public List<CustomColumnDefinitionBag> CustomColumns { get; set; }
     }
 }

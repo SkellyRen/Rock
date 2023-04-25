@@ -17,6 +17,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 
 using Rock.Attribute;
@@ -142,6 +143,16 @@ namespace Rock.Obsidian.UI
         public static GridBuilder<T> WithBlock<T>( this GridBuilder<T> builder, IRockBlockType block )
         {
             // Add all the action URLs for the current site.
+            AddDefaultGridActionUrls( builder, block );
+
+            // Add any custom columns that are defined.
+            AddCustomGridColumns( builder, block );
+
+            return builder;
+        }
+
+        private static void AddDefaultGridActionUrls<T>( GridBuilder<T> builder, IRockBlockType block )
+        {
             builder.AddDefinitionAction( definition =>
             {
                 string communicationUrl = GetCommunicationRoute( block );
@@ -176,8 +187,65 @@ namespace Rock.Obsidian.UI
                     definition.ActionUrls.AddOrIgnore( GridActionUrlKey.MergeTemplate, "/MergeTemplate/{EntitySetId}" );
                 }
             } );
+        }
 
-            return builder;
+        private static void AddCustomGridColumns<T>( GridBuilder<T> builder, IRockBlockType block )
+        {
+            if ( !( block is ICustomGridColumns ) )
+            {
+                return;
+            }
+
+            var additionalColumns = block.BlockCache.GetAttributeValue( CustomGridColumnsConfig.AttributeKey ).FromJsonOrNull<CustomGridColumnsConfig>();
+
+            if ( additionalColumns == null || additionalColumns.ColumnsConfig.Count == 0 )
+            {
+                return;
+            }
+
+            for ( int i = 0; i < additionalColumns.ColumnsConfig.Count; i++ )
+            {
+                var column = additionalColumns.ColumnsConfig[i];
+
+                builder.AddTextField( $"core.customColumn_${i}", row =>
+                {
+                    return GetCustomColumnText( row, column.LavaTemplate, block.RequestContext );
+                } );
+            }
+
+            builder.AddDefinitionAction( definition =>
+            {
+                definition.CustomColumns = additionalColumns.ColumnsConfig
+                    .Select( ( cc, index ) => new CustomColumnDefinitionBag
+                    {
+                        HeaderText = cc.HeaderText,
+                        HeaderClass = cc.HeaderClass,
+                        ItemClass = cc.ItemClass,
+                        FieldName = $"core.customColumn_${index}",
+                        Anchor = cc.PositionOffsetType == CustomGridColumnsConfig.ColumnConfig.OffsetType.FirstColumn
+                            ? Enums.Core.Grid.ColumnPositionAnchor.FirstColumn
+                            : Enums.Core.Grid.ColumnPositionAnchor.LastColumn,
+                        PositionOffset = cc.PositionOffset
+                    } )
+                    .ToList();
+            } );
+        }
+
+        private static string GetCustomColumnText( object row, string template, RockRequestContext requestContext )
+        {
+            var mergeFields = requestContext.GetCommonMergeFields();
+
+            mergeFields.AddOrReplace( "Row", row );
+
+            var text = template.ResolveMergeFields( mergeFields );
+
+            // Resolve any dynamic url references.
+            var appRoot = requestContext.ResolveRockUrl( "~/" );
+            var themeRoot = requestContext.ResolveRockUrl( "~~/" );
+
+            text = text.Replace( "~~/", themeRoot ).Replace( "~/", appRoot );
+
+            return text;
         }
 
         /// <summary>

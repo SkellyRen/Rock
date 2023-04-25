@@ -713,6 +713,7 @@ table.table-obsidian th.grid-error > .alert {
     function createGridState(): GridState {
         const state = new GridState(
             getColumnDefinitions(slots["default"]?.() ?? []),
+            props.definition ?? {},
             props.liveUpdates ?? false,
             props.itemTerm || "item",
             props.entityTypeGuid);
