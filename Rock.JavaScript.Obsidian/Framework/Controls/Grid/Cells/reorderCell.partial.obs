@@ -14,9 +14,12 @@
 
     const dropOperationInProgress = props.column.data.dropOperationInProgress as Ref<boolean>;
 
+    /** Contains the custom style values to apply to the icon. */
     const iconStyle = computed((): Record<string, string> => {
         const disabled = dropOperationInProgress.value || isFiltered.value || isSorted.value;
 
+        // Make the handles look disabled if we are currently processing
+        // a drop operation.
         return {
             cursor: disabled ? "not-allowed" : "grab",
             opacity: disabled ? "0.25" : "1"

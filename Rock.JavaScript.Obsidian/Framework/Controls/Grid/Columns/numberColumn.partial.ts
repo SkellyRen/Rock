@@ -3,7 +3,15 @@ import { Component, defineComponent, PropType } from "vue";
 import NumberCell from "../Cells/numberCell.partial.obs";
 import { ColumnDefinition, ExportValueFunction } from "@Obsidian/Types/Controls/grid";
 
-function getNumberValue(row: Record<string, unknown>, column: ColumnDefinition): number | undefined {
+/**
+ * Gets the value to use when exporting a cell of this column.
+ *
+ * @param row The row that will be exported.
+ * @param column The column that will be exported.
+ *
+ * @returns A RockDateTime value or undefined if the cell has no value.
+ */
+function getExportValue(row: Record<string, unknown>, column: ColumnDefinition): number | undefined {
     if (!column.field) {
         return undefined;
     }
@@ -28,7 +36,7 @@ export default defineComponent({
 
         exportValue: {
             type: Function as PropType<ExportValueFunction>,
-            default: getNumberValue
+            default: getExportValue
         }
     }
 });

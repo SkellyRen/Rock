@@ -26,6 +26,12 @@ export default defineComponent({
             default: "grid-columnreorder"
         },
 
+        /**
+         * Called when the order of an item has changed. The first parameter
+         * is the row item that was moved. The second parameter is the row item
+         * it was dropped in front of or `null` if it was dropped at the end of
+         * the grid.
+         */
         onOrderChanged: {
             type: Function as PropType<(item: Record<string, unknown>, beforeItem: Record<string, unknown> | null, order: number) => void | Promise<void> | boolean | Promise<boolean>>,
             required: false

@@ -12,7 +12,7 @@
                     </button>
 
                     <div class="grid-quick-filter-search" :style="searchBoxStyle">
-                        <TextBox v-model="filterValue" placeholder="Filter" />
+                        <TextBox v-model="quickFilterValue" placeholder="Filter" />
                     </div>
                 </div>
 
@@ -30,21 +30,28 @@
     import { GridAction, IGridState } from "@Obsidian/Types/Controls/grid";
 
     const props = defineProps({
-        filterValue: {
+        /** The current text being used for the quick filter feature. */
+        quickFilterValue: {
             type: String as PropType<string>,
             default: ""
         },
 
+        /** The array of grid actions that will be displayed. */
         gridActions: {
             type: Array as PropType<GridAction[]>,
             default: []
         },
 
+        /** The state object for the entire grid. */
         grid: {
             type: Object as PropType<IGridState>,
             required: true
         },
 
+        /**
+         * The number of columns currently visible in the grid. This is used
+         * as the colspan for this row so that we span the entire grid width.
+         */
         visibleColumnCount: {
             type: Number as PropType<number>,
             default: 0
@@ -52,16 +59,22 @@
     });
 
     const emit = defineEmits<{
-        (event: "update:filterValue", value: string): void
+        (event: "update:quickFilterValue", value: string): void
     }>();
+
+    // #region Values
 
     const isFilterable = !props.grid.columns.some(c => c.name === "__reorder");
     const isSearchVisible = ref(false);
-    const filterValue = useVModelPassthrough(props, "filterValue", emit);
+    const quickFilterValue = useVModelPassthrough(props, "quickFilterValue", emit);
+
+    // #endregion
 
     // #region Computed Values
 
+    /** Contains the custom style values to be applied to the search box. */
     const searchBoxStyle = computed(() => {
+        // Set the width of the search box based on the visibility state.
         return {
             width: `${isSearchVisible.value ? 100 : 0}%`
         };
@@ -71,9 +84,13 @@
 
     // #region Functions
 
+    /**
+     * Called when the quick filter search button is clicked. Toggle the
+     * visible state of the search box.
+     */
     function onSearchClick(): void {
         isSearchVisible.value = !isSearchVisible.value;
     }
 
-        // #endregion
+    // #endregion
 </script>

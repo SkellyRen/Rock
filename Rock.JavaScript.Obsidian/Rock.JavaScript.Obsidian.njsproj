@@ -747,8 +747,11 @@
     <TypeScriptCompile Include="Framework\ViewModels\Controls\slidingDateRangeBag.d.ts" />
     <TypeScriptCompile Include="Framework\ViewModels\Core\Grid\attributeFieldDefinitionBag.d.ts" />
     <TypeScriptCompile Include="Framework\ViewModels\Core\Grid\fieldDefinitionBag.d.ts" />
+    <TypeScriptCompile Include="Framework\ViewModels\Core\Grid\gridCommunicationBag.d.ts" />
     <TypeScriptCompile Include="Framework\ViewModels\Core\Grid\gridDataBag.d.ts" />
     <TypeScriptCompile Include="Framework\ViewModels\Core\Grid\gridDefinitionBag.d.ts" />
+    <TypeScriptCompile Include="Framework\ViewModels\Core\Grid\gridEntitySetBag.d.ts" />
+    <TypeScriptCompile Include="Framework\ViewModels\Core\Grid\gridEntitySetItemBag.d.ts" />
     <TypeScriptCompile Include="Framework\ViewModels\Core\notificationMessageActionBag.d.ts" />
     <TypeScriptCompile Include="Framework\ViewModels\Core\personPreferenceValueBag.d.ts" />
     <TypeScriptCompile Include="Framework\ViewModels\Crm\renderedBadgeBag.d.ts" />

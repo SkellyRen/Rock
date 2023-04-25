@@ -1,16 +1,26 @@
 import { standardColumnProps } from "@Obsidian/Core/Controls/grid";
 import { Component, defineComponent, PropType } from "vue";
 import LabelCell from "../Cells/labelCell.partial.obs";
-import { ColumnDefinition, ExportValueFunction, QuickFilterValueFunction } from "@Obsidian/Types/Controls/grid";
+import { ColumnDefinition, ExportValueFunction, QuickFilterValueFunction, SortValueFunction } from "@Obsidian/Types/Controls/grid";
 import { ListItemBag } from "@Obsidian/ViewModels/Utility/listItemBag";
 
-function textValue(row: Record<string, unknown>, column: ColumnDefinition): string | undefined {
+/**
+ * Gets the value to use when quick filtering or exporting a cell of this
+ * column.
+ *
+ * @param row The row that will be filtered or exported.
+ * @param column The column that will be filtered or exported.
+ *
+ * @returns A string value or undefined if the cell has no value.
+ */
+function getTextValue(row: Record<string, unknown>, column: ColumnDefinition): string | undefined {
     if (!column.field) {
         return undefined;
     }
 
     const value = row[column.field];
 
+    // Check if it is a ListItemBag value type.
     if (typeof value === "object") {
         if (value === null || value["text"] === null || value["text"] === undefined) {
             return "";
@@ -33,12 +43,17 @@ export default defineComponent({
 
         quickFilterValue: {
             type: Object as PropType<QuickFilterValueFunction | string>,
-            default: textValue
+            default: getTextValue
+        },
+
+        sortValue: {
+            type: Function as PropType<SortValueFunction>,
+            default: getTextValue
         },
 
         exportValue: {
             type: Function as PropType<ExportValueFunction>,
-            default: textValue
+            default: getTextValue
         },
 
         /**

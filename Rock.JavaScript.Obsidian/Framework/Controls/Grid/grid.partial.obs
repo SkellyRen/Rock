@@ -2,7 +2,7 @@
 <template>
     <table class="grid-table table table-bordered table-striped table-hover table-obsidian" :class="{ 'table-sticky': props.stickyHeader }">
         <thead>
-            <FilterHeaderRow v-model:filterValue="quickFilterValue"
+            <FilterHeaderRow v-model:quickFilterValue="quickFilterValue"
                              :grid="gridState"
                              :enableFiltering="!reorderColumn"
                              :gridActions="gridActions"
@@ -228,11 +228,12 @@ table.table-obsidian th.grid-error > .alert {
     import { computed, onUnmounted, PropType, ref, shallowRef, useSlots, watch } from "vue";
     import { asFormattedString } from "@Obsidian/Utility/numberUtils";
     import { pluralize } from "@Obsidian/Utility/stringUtils";
-    import { getColumnDefinitions, getEntitySetBag, GridActionUrlKey, GridState, GridCommunicationBag } from "@Obsidian/Core/Controls/grid";
+    import { getColumnDefinitions, getEntitySetBag, GridActionUrlKey, GridState } from "@Obsidian/Core/Controls/grid";
     import { DragSource as vDragSource, DragTarget as vDragTarget, IDragSourceOptions, useDragReorder } from "@Obsidian/Directives/dragDrop";
     import { ColumnSort, GridAction, ColumnDefinition, EntitySetOptions } from "@Obsidian/Types/Controls/grid";
     import { GridDataBag } from "@Obsidian/ViewModels/Core/Grid/gridDataBag";
     import { GridDefinitionBag } from "@Obsidian/ViewModels/Core/Grid/gridDefinitionBag";
+    import { GridCommunicationBag } from "@Obsidian/ViewModels/Core/Grid/gridCommunicationBag";
     import { Guid } from "@Obsidian/Types";
     import { isPromise } from "@Obsidian/Utility/promiseUtils";
     import { useInvokeBlockAction } from "@Obsidian/Utility/block";
@@ -252,12 +253,24 @@ table.table-obsidian th.grid-error > .alert {
      * unwrapped raw array takes about 40ms.
      */
 
+    // #region Component Properties
+
     const props = defineProps({
+        /**
+         * The data to be displayed in the grid. This may either be an object
+         * that contains the grid data directly or a function that returns the
+         * grid data. The function may return a Promise which will be waited
+         * asynchronously until the data is ready.
+         */
         data: {
             type: [Object, Function] as PropType<GridDataBag | (() => GridDataBag | Promise<GridDataBag>)>,
             default: []
         },
 
+        /**
+         * Contains the definition data about the grid. This contains information
+         * about the fields, action URLS and other features of the grid.
+         */
         definition: {
             type: Object as PropType<GridDefinitionBag>,
             required: false
@@ -445,10 +458,14 @@ table.table-obsidian th.grid-error > .alert {
         }
     });
 
+    // #endregion
+
     const slots = useSlots();
     const invokeBlockAction = useInvokeBlockAction();
 
     const gridState = createGridState();
+
+    // #region Values
 
     const customGridActions = ref<GridAction[]>([]);
     const currentPage = ref(1);
@@ -466,15 +483,21 @@ table.table-obsidian th.grid-error > .alert {
     const dragOptions = ref<IDragSourceOptions | undefined>();
     const reorderColumn: ColumnDefinition | undefined = gridState.columns.find(c => c.name === "__reorder");
 
+    // #endregion
+
+    // #region Computed Values
+
+    /**
+     * Contains the number of currently visible columns.
+     */
     const visibleColumnCount = computed((): number => {
         return visibleColumnDefinitions.value.length;
     });
 
-    const personKeyField = computed((): string | undefined => {
-        return props.personKeyField ?? props.keyField;
-    });
-
-    const showMergeTemplate = computed((): boolean => {
+    /**
+     * Contains `true` if the merge template action should be visible.
+     */
+    const isMergeTemplateVisible = computed((): boolean => {
         if (!props.definition?.actionUrls?.[GridActionUrlKey.MergeTemplate]) {
             return false;
         }
@@ -482,43 +505,55 @@ table.table-obsidian th.grid-error > .alert {
         return props.showMergeTemplate !== false;
     });
 
-    const showExport = computed((): boolean => {
+    /**
+     * Contains `true` if the export action should be visible.
+     */
+    const isExportVisible = computed((): boolean => {
         return props.showExport !== false;
     });
 
-    const showLaunchWorkflow = computed((): boolean => {
+    /**
+     * Contains `true` if the launch workflow action should be visible.
+     */
+    const isLaunchWorkflowVisible = computed((): boolean => {
         if (!props.definition?.actionUrls?.[GridActionUrlKey.LaunchWorkflow]) {
             return false;
         }
 
-        if (props.showLaunchWorkflow) {
-            return true;
-        }
-        else if (props.showLaunchWorkflow === false) {
-            return false;
+        // If they explicitly provided a true or a false value then use
+        // those values. Otherwise, determine it automatically.
+        if (props.showLaunchWorkflow === true || props.showLaunchWorkflow === false) {
+            return props.showLaunchWorkflow;
         }
         else {
+            // Show if we have a keyField and we have an entityTypeGuid.
             return !!props.keyField && !!props.entityTypeGuid;
         }
     });
 
-    const showBulkUpdate = computed((): boolean => {
+    /**
+     * Contains `true` if the bulk update action should be visible.
+     */
+    const isBulkUpdateVisible = computed((): boolean => {
         if (!props.definition?.actionUrls?.[GridActionUrlKey.BulkUpdate]) {
             return false;
         }
 
-        if (props.showBulkUpdate) {
-            return true;
-        }
-        else if (props.showBulkUpdate === false) {
-            return false;
+        // If they explicitly provided a true or a false value then use
+        // those values. Otherwise, determine it automatically.
+        if (props.showBulkUpdate === true || props.showBulkUpdate === false) {
+            return props.showBulkUpdate;
         }
         else {
+            // Show if we have a personKeyField and we have an entityTypeGuid.
             return !!props.personKeyField && !!props.entityTypeGuid;
         }
     });
 
-    const showMergePerson = computed((): boolean => {
+    /**
+     * Contains `true` if the merge person action should be visible.
+     */
+    const isMergePersonVisible = computed((): boolean => {
         if (!props.definition?.actionUrls?.[GridActionUrlKey.MergePerson]) {
             return false;
         }
@@ -527,18 +562,21 @@ table.table-obsidian th.grid-error > .alert {
             return false;
         }
 
-        if (props.showPersonMerge) {
-            return true;
-        }
-        else if (props.showPersonMerge === false) {
-            return false;
+        // If they explicitly provided a true or a false value then use
+        // those values. Otherwise, determine it automatically.
+        if (props.showPersonMerge === true || props.showPersonMerge === false) {
+            return props.showPersonMerge;
         }
         else {
+            // Show if we have a personKeyField.
             return !!props.personKeyField;
         }
     });
 
-    const showMergeBusiness = computed((): boolean => {
+    /**
+     * Contains `true` if the merge business action should be visible.
+     */
+    const isMergeBusinessVisible = computed((): boolean => {
         if (!props.definition?.actionUrls?.[GridActionUrlKey.MergeBusiness]) {
             return false;
         }
@@ -547,105 +585,113 @@ table.table-obsidian th.grid-error > .alert {
             return false;
         }
 
-        if (props.showPersonMerge) {
-            return true;
-        }
-        else if (props.showPersonMerge === false) {
-            return false;
+        // If they explicitly provided a true or a false value then use
+        // those values. Otherwise, determine it automatically.
+        if (props.showPersonMerge === true || props.showPersonMerge === false) {
+            return props.showPersonMerge;
         }
         else {
+            // Show if we have a personKeyField.
             return !!props.personKeyField;
         }
     });
 
-    const showCommunicate = computed((): boolean => {
+    /**
+     * Contains `true` if the communication action should be visible.
+     */
+    const isCommunicateVisible = computed((): boolean => {
         if (!props.definition?.actionUrls?.[GridActionUrlKey.Communicate]) {
             return false;
         }
 
-        if (props.showCommunicate) {
-            return true;
-        }
-        else if (props.showCommunicate === false) {
-            return false;
+        // If they explicitly provided a true or a false value then use
+        // those values. Otherwise, determine it automatically.
+        if (props.showCommunicate === true || props.showCommunicate === false) {
+            return props.showCommunicate;
         }
         else {
+            // Show if we have a personKeyField or if we have a set of
+            // communication recipient key fields.
             return !!props.personKeyField || (props.communicationRecipientPersonKeyFields ?? []).length > 0;
         }
     });
 
+    /**
+     * Contains the array of grid actions that should currently be available
+     * for the individual to interact with.
+     */
     const gridActions = computed((): GridAction[] => {
         const actions: GridAction[] = [];
 
-        // Append the add action.
+        // Append the add item action.
         if (props.onAddItem) {
             actions.push({
                 handler: props.onAddItem,
-                iconCssClass: "fa fa-plus-circle fa-fw",
+                iconCssClass: "fa fa-plus-circle",
                 buttonCssClass: "btn-add",
                 tooltip: "Add a new item."
             });
         }
 
-        // Add the action for Merge Records.
-        if (showMergeTemplate.value) {
+        // Append the action for Merge Records.
+        if (isMergeTemplateVisible.value) {
             actions.push({
                 handler: onMergeTemplate,
-                iconCssClass: "fa fa-files-o fa-fw",
+                iconCssClass: "fa fa-files-o",
                 tooltip: "Merge Records into Merge Template"
             });
         }
 
-        // Add the action for Export to Excel.
-        if (showExport.value) {
+        // Append the action for Export to Excel.
+        if (isExportVisible.value) {
             actions.push({
                 handler: onExport,
-                iconCssClass: "fa fa-table fa-fw",
+                iconCssClass: "fa fa-table",
                 tooltip: "Export to Excel"
             });
         }
 
-        // Add the action for Launch Workflow.
-        if (showLaunchWorkflow.value) {
+        // Append the action for Launch Workflow.
+        if (isLaunchWorkflowVisible.value) {
             actions.push({
                 handler: onLaunchWorkflow,
-                iconCssClass: "fa fa-cog fa-fw",
+                iconCssClass: "fa fa-cog",
                 tooltip: "Launch Workflow"
             });
         }
 
-        // Add the action for Bulk Update.
-        if (showBulkUpdate.value) {
+        // Append the action for Bulk Update.
+        if (isBulkUpdateVisible.value) {
             actions.push({
                 handler: onBulkUpdate,
-                iconCssClass: "fa fa-truck fa-fw",
+                iconCssClass: "fa fa-truck",
                 tooltip: "Bulk Update"
             });
         }
 
-        // Add the action for Merge Person Records.
-        if (showMergePerson.value) {
+        // Append the action for Merge Person Records.
+        if (isMergePersonVisible.value) {
             actions.push({
                 handler: onPersonMerge,
-                iconCssClass: "fa fa-users fa-fw",
+                iconCssClass: "fa fa-users",
                 tooltip: "Merge Person Records"
             });
         }
 
-        // Add the action for Merge Business Records.
-        if (showMergeBusiness.value) {
+        // Append the action for Merge Business Records.
+        if (isMergeBusinessVisible.value) {
             actions.push({
                 handler: onPersonMerge,
-                iconCssClass: "fa fa-sign-in-alt fa-fw",
+                iconCssClass: "fa fa-sign-in-alt",
                 tooltip: "Merge Business Records"
             });
         }
 
-        // Add the action for Communicate.
-        if (showCommunicate.value) {
+        // Append the action for Communicate.
+        if (isCommunicateVisible.value) {
             actions.push({
                 handler: onCommunicate,
-                iconCssClass: "fa fa-comment fa-fw",
+                iconCssClass: "fa fa-comment",
                 tooltip: "Communicate"
             });
         }
@@ -656,6 +702,14 @@ table.table-obsidian th.grid-error > .alert {
         return actions;
     });
 
+    // #endregion
+
+    // #region Functions
+
+    /**
+     * Creates the object that will track the grid state and provide most of
+     * the features required by all the grid components.
+     */
     function createGridState(): GridState {
         const state = new GridState(
             getColumnDefinitions(slots["default"]?.() ?? []),
@@ -668,16 +722,27 @@ table.table-obsidian th.grid-error > .alert {
         return state;
     }
 
+    /**
+     * Updates the {@link visibleRows} value based on the current selections.
+     */
     function updateVisibleRows(): void {
         const startIndex = (currentPage.value - 1) * pageSize.value;
 
         visibleRows.value = gridState.sortedRows.slice(startIndex, startIndex + pageSize.value);
     }
 
+    /**
+     * Updates the {@link pageCount} value based on the current filters and
+     * selected page size.
+     */
     function updatePageCount(): void {
         pageCount.value = Math.ceil(gridState.filteredRows.length / pageSize.value);
     }
 
+    /**
+     * Updates the message to be displayed in the pager footer. This describes
+     * the items and how many there are.
+     */
     function updatePagerMessage(): void {
         pagerMessage.value = `${asFormattedString(gridState.filteredRows.length)} ${pluralize(gridState.itemTerm, gridState.filteredRows.length)}`;
     }
@@ -686,28 +751,26 @@ table.table-obsidian th.grid-error > .alert {
      * Set the width of all columns of the given worksheet,
      * to fit the content of the cells.
      */
-    function autoFitColumns(worksheet: WorkSheet): void {
+    function autoFitExportColumns(worksheet: WorkSheet): void {
         const ref = worksheet["!ref"];
 
         if (!ref) {
             return;
         }
 
-        const colRange = ref.replace(/\d/, "").split(":");
+        // Extract the column range. This is in the format of "A1:F48".
+        const colRange = ref.split(":");
         const firstCol = colRange[0];
         const lastCol = colRange[1];
 
-        const numRegexp = new RegExp(/\d+$/g);
-
+        // Extract the letter from each segment to determine the first and
+        // last column. This won't work if there are more than 26 columns.
         const firstColIndex = firstCol.charCodeAt(0);
         const lastColIndex = lastCol.charCodeAt(0);
-        const lastColMatch = numRegexp.exec(lastCol);
 
-        if (!lastColMatch) {
-            return;
-        }
-
-        const rows = Number(lastColMatch[0]);
+        // Determine the number of rows to be scanned.
+        const lastColMatch = new RegExp(/\d+$/g).exec(lastCol);
+        const rows = lastColMatch ? Number(lastColMatch[0]) : 0;
 
         const objectMaxLength: ColInfo[] = [];
 
@@ -734,7 +797,7 @@ table.table-obsidian th.grid-error > .alert {
                         cellLength = 11;
                     }
                     else {
-                        cellLength = String(cell.v).length  + 1;
+                        cellLength = String(cell.v).length + 1;
                     }
 
                     if (cellLength > maxCellLength) {
@@ -751,24 +814,37 @@ table.table-obsidian th.grid-error > .alert {
         worksheet["!cols"] = objectMaxLength;
     }
 
+    /**
+     * Begin loading the grid data.
+     */
     async function updateGridData(): Promise<void> {
+        // Show an indicator that we are loading data from the server.
         loadingData.value = true;
 
+        // Check if they gave us real data or a function to call.
         if (typeof props.data === "object") {
-            const data = props.data;
-            gridState.setDataRows(data.rows ?? []);
+            // We got real data. Just set it on the grid strate.
+            gridState.setDataRows(props.data.rows ?? []);
         }
         else if (typeof props.data === "function") {
+            // We got a function to be called.
             try {
-                const data = await props.data();
+                let data = props.data();
+
+                if (isPromise(data)) {
+                    data = await data;
+                }
 
                 gridState.setDataRows(data.rows ?? []);
+                gridErrorMessage.value = "";
             }
             catch (error) {
                 gridErrorMessage.value = error instanceof Error ? error.message : new String(error).toString();
             }
         }
 
+        // If we don't have any error, then proceed with final setup of the
+        // data that was received.
         if (!gridErrorMessage.value) {
             setupManualOrdering();
         }
@@ -776,47 +852,121 @@ table.table-obsidian th.grid-error > .alert {
         loadingData.value = false;
     }
 
+    /**
+     * Attempt to setup the manual re-ordering logic to support drag and drop
+     * of the rows.
+     */
     function setupManualOrdering(): void {
+        // If we don't have a re-order column, then nothing to do.
         if (!reorderColumn) {
             dragOptions.value = undefined;
             return;
         }
 
-        if (reorderColumn && !props.keyField) {
+        // If we have a re-order column but no keyField then throw an error.
+        if (!props.keyField) {
             throw new Error("Re-ordering rows requires each row has a unique key.");
         }
 
+        // Create an observable value that cells can use to determine if a drop
+        // operation is in progress. This is used by them to prevent starting
+        // a new drag operation until the previous drop operation has completed.
         const dropOperationInProgress = ref(false);
         reorderColumn.data.dropOperationInProgress = dropOperationInProgress;
 
+        // Configure the drag and drop feature.
         dragOptions.value = useDragReorder(visibleRows, async (item, beforeItem) => {
-            if (typeof reorderColumn.props.onOrderChanged === "function") {
-                const fn = reorderColumn.props.onOrderChanged as (item: Record<string, unknown>, beforeItem: Record<string, unknown> | null, order: number) => void | Promise<void> | boolean | Promise<boolean>;
-
-                dropOperationInProgress.value = true;
-                try {
-                    const result = fn(item, beforeItem, visibleRows.value.indexOf(item));
-
-                    if (isPromise(result)) {
-                        await result;
-                    }
-
-                    return result !== false;
-                }
-                finally {
-                    dropOperationInProgress.value = false;
-                }
-            }
-            else {
+            // The visibleRows object has already been updated. Allow the
+            // component using the grid a chance to move their own data around.
+            if (typeof reorderColumn.props.onOrderChanged !== "function") {
                 return true;
+            }
+
+            // We don't have type information, so cast it to what they are
+            // supposed to provide.
+            const fn = reorderColumn.props.onOrderChanged as (item: Record<string, unknown>, beforeItem: Record<string, unknown> | null, order: number) => void | Promise<void> | boolean | Promise<boolean>;
+
+            // Indicate to the cells that a drop operation is in progress.
+            dropOperationInProgress.value = true;
+
+            try {
+                const result = fn(item, beforeItem, visibleRows.value.indexOf(item));
+
+                if (isPromise(result)) {
+                    await result;
+                }
+
+                // If they returned anything other than false then allow the
+                // drop operation complete successfully. This allows them to
+                // return void/nothing to mean success.
+                return result !== false;
+            }
+            finally {
+                // Indicate to cells that the drop operation has completed.
+                dropOperationInProgress.value = false;
             }
         });
     }
 
+    /**
+     * Uses a block action to create a new communication for the recipients and
+     * then redirects the individual to the configured URL.
+     *
+     * @param communicationBag The communication bag that describes the communication to be created.
+     * @param url The URL to redirect to after the communication has been created.
+     */
+    async function createCommunicationAndRedirect(communicationBag: GridCommunicationBag, url: string): Promise<void> {
+        const args = {
+            communication: communicationBag
+        };
+
+        const result = await invokeBlockAction<Guid>("CreateGridCommunication", args);
+
+        if (!result.isSuccess || !result.data) {
+            return await alert(result.errorMessage || "Unable to create communication.");
+        }
+
+        const finalUrl = makeUrlRedirectSafe(url.replace("{CommunicationId}", `${result.data}`));
+
+        window.location.href = finalUrl;
+    }
+
+    /**
+     * Uses a block action to create a new entity set for the items in the
+     * grid and then redirects the individual to the configured URL.
+     *
+     * @param keyFields The key field(s) to use when getting the entity keys.
+     * @param url The URL to redirect the individual to after creating the entity set.
+     * @param options The options to be passed to {@link getEntitySetBag}.
+     */
+    async function createEntitySetAndRedirect(keyFields: string[], url: string, options: EntitySetOptions | undefined): Promise<void> {
+        // Get the entity set to be sent to the server.
+        const args = {
+            entitySet: await getEntitySetBag(gridState, keyFields, options)
+        };
+
+        const result = await invokeBlockAction<Guid>("CreateGridEntitySet", args);
+
+        if (!result.isSuccess || !result.data) {
+            return await alert(result.errorMessage || "Unable to create entity set.");
+        }
+
+        const finalUrl = makeUrlRedirectSafe(url.replace("{EntitySetId}", `${result.data}`));
+
+        window.location.href = finalUrl;
+    }
+
+    // #endregion
+
+    // #region Event Handlers
+
+    /**
+     * Called when the bulk update grid action has been clicked.
+     */
     async function onBulkUpdate(): Promise<void> {
         const url = props.definition?.actionUrls?.[GridActionUrlKey.BulkUpdate];
 
-        if (!personKeyField.value || !url) {
+        if (!props.personKeyField || !url) {
             return;
         }
 
@@ -824,9 +974,13 @@ table.table-obsidian th.grid-error > .alert {
             entityTypeGuid: EntityType.Person
         };
 
-        await createEntitySetAndRedirect([personKeyField.value], url, options);
+        await createEntitySetAndRedirect([props.personKeyField], url, options);
     }
 
+    /**
+     * Called when either the merge person or merge business grid actions
+     * have been clicked.
+     */
     async function onPersonMerge(): Promise<void> {
         let url: string | undefined;
 
@@ -837,13 +991,16 @@ table.table-obsidian th.grid-error > .alert {
             url = props.definition?.actionUrls?.[GridActionUrlKey.MergePerson];
         }
 
-        if (!personKeyField.value || !url) {
+        if (!props.personKeyField || !url) {
             return;
         }
 
-        await createEntitySetAndRedirect([personKeyField.value], url, undefined);
+        await createEntitySetAndRedirect([props.personKeyField], url, undefined);
     }
 
+    /**
+     * Called when the merge template grid action has been clicked.
+     */
     async function onMergeTemplate(): Promise<void> {
         const url = props.definition?.actionUrls?.[GridActionUrlKey.MergeTemplate];
 
@@ -851,8 +1008,8 @@ table.table-obsidian th.grid-error > .alert {
             return;
         }
 
-        if (props.mergeTemplateAsPerson && personKeyField.value) {
-            await createEntitySetAndRedirect([personKeyField.value], url, undefined);
+        if (props.mergeTemplateAsPerson && props.personKeyField) {
+            await createEntitySetAndRedirect([props.personKeyField], url, undefined);
         }
         else {
             // Find all columns that aren't special columns and include them in
@@ -873,6 +1030,9 @@ table.table-obsidian th.grid-error > .alert {
         }
     }
 
+    /**
+     * Called when the export grid action has been clicked.
+     */
     async function onExport(): Promise<void> {
         // Find all columns that aren't special columns and include them in
         // the additional merge fields.
@@ -946,12 +1106,15 @@ table.table-obsidian th.grid-error > .alert {
         }
 
         // Calculate rough column width.
-        autoFitColumns(worksheet);
+        autoFitExportColumns(worksheet);
 
         xlsx.utils.book_append_sheet(workbook, worksheet, "Sheet 1");
         xlsx.writeFile(workbook, `${filename}.xlsx`, { compression: true });
     }
 
+    /**
+     * Called when the launch workflow grid action has been clicked.
+     */
     async function onLaunchWorkflow(): Promise<void> {
         const url = props.definition?.actionUrls?.[GridActionUrlKey.LaunchWorkflow];
 
@@ -962,10 +1125,14 @@ table.table-obsidian th.grid-error > .alert {
         await createEntitySetAndRedirect([props.keyField], url, undefined);
     }
 
+    /**
+     * Called when the communication grid action has been clicked.
+     */
     async function onCommunicate(): Promise<void> {
         const url = props.definition?.actionUrls?.[GridActionUrlKey.Communicate];
         let keyFields: string[] = [];
 
+        // Determine which key fields to use to find people.
         if (props.communicationRecipientPersonKeyFields) {
             keyFields = props.communicationRecipientPersonKeyFields;
         }
@@ -973,6 +1140,7 @@ table.table-obsidian th.grid-error > .alert {
             keyFields = [props.personKeyField];
         }
 
+        // If we don't have any key fields or a URL then nothing to do.
         if (keyFields.length === 0 || !url) {
             return;
         }
@@ -982,17 +1150,22 @@ table.table-obsidian th.grid-error > .alert {
             purpose: "communication"
         };
 
+        // TypeScript isn't happy if we set these above.
         options.mergeColumns = {};
         options.mergeFields = {};
         const mergeFields: string[] = [];
 
+        // If they have specified which additional merge fields to be included
+        // in the communication, add those to the list of mergeFields.
         if (props.communicationMergeFields) {
             for (const mf of props.communicationMergeFields) {
-
                 const parts = mf.split("|")
                     .map(f => f.replace(/\./g, "_"))
                     .filter(f => f !== "");
 
+                // If we have a column that matches the name, put it in the
+                // mergeColumns. Otherwise put it in the mergeFields. This
+                // basically means, give us the formatted value or the raw value.
                 if (gridState.columns.some(c => c.name === parts[0])) {
                     options.mergeColumns[parts[0]] = parts.length >= 2 ? parts[1] : parts[0];
                 }
@@ -1004,6 +1177,7 @@ table.table-obsidian th.grid-error > .alert {
             }
         }
 
+        // Get all the data from the grid.
         const entitySet = await getEntitySetBag(gridState, keyFields, options);
 
         const communicationBag: GridCommunicationBag = {
@@ -1011,6 +1185,8 @@ table.table-obsidian th.grid-error > .alert {
             fromUrl: window.location.href
         };
 
+        // Determine if we have anything that should show up in the
+        // "Additional Merge Fields" option of the lava field picker.
         if (props.communicationRecipientPersonKeyFields) {
             communicationBag.mergeFields = [`AdditionalMergeFields|${mergeFields.join("^")}`];
         }
@@ -1021,44 +1197,17 @@ table.table-obsidian th.grid-error > .alert {
         await createCommunicationAndRedirect(communicationBag, url);
     }
 
-    async function createCommunicationAndRedirect(communicationBag: GridCommunicationBag, url: string): Promise<void> {
-        const args = {
-            communication: communicationBag
-        };
-
-        const result = await invokeBlockAction<Guid>("CreateGridCommunication", args);
-
-        if (!result.isSuccess || !result.data) {
-            return await alert(result.errorMessage || "Unable to create entity set.");
-        }
-
-        const finalUrl = makeUrlRedirectSafe(url.replace("{CommunicationId}", `${result.data}`));
-
-        window.location.href = finalUrl;
-    }
-
-    async function createEntitySetAndRedirect(keyFields: string[], url: string, options: EntitySetOptions | undefined): Promise<void> {
-        const entitySet = await getEntitySetBag(gridState, keyFields, options);
-        const args = {
-            entitySet
-        };
-
-        const result = await invokeBlockAction<Guid>("CreateGridEntitySet", args);
-
-        if (!result.isSuccess || !result.data) {
-            return await alert(result.errorMessage || "Unable to create entity set.");
-        }
-
-        const finalUrl = makeUrlRedirectSafe(url.replace("{EntitySetId}", `${result.data}`));
-
-        window.location.href = finalUrl;
-    }
-
+    /**
+     * Called when the {@link gridState.sortedRows} value has changed. Update
+     * all the visible row information.
+     */
     function onSortedRowsChanged(): void {
         updateVisibleRows();
         updatePageCount();
         updatePagerMessage();
     }
+
+    // #endregion
 
     watch([quickFilterValue, columnFilterValues], () => {
         currentPage.value = 1;

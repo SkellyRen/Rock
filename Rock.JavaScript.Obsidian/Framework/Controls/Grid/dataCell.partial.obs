@@ -12,22 +12,26 @@
     import { ColumnDefinition, IGridState } from "@Obsidian/Types/Controls/grid";
 
     const props = defineProps({
+        /** The column definition of this cell. */
         column: {
             type: Object as PropType<ColumnDefinition>,
             required: true
         },
 
+        /** The data row that contains the value to be displayed. */
         row: {
             type: Object as PropType<Record<string, unknown>>,
             required: true
         },
 
+        /** This grid this cell belongs to. */
         grid: {
             type: Object as PropType<IGridState>,
             required: true
         }
     });
 
+    /** Contains any additional CSS classes for the td element. */
     const additionalItemClass = computed((): string => {
         let classes = props.column.itemClass ?? "";
 

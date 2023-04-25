@@ -27,196 +27,38 @@ import { DayOfWeek, RockDateTime } from "@Obsidian/Utility/rockDateTime";
 import { resolveMergeFields } from "@Obsidian/Utility/lava";
 import { deepEqual } from "@Obsidian/Utility/util";
 import { AttributeFieldDefinitionBag } from "@Obsidian/ViewModels/Core/Grid/attributeFieldDefinitionBag";
+import { GridEntitySetBag } from "@Obsidian/ViewModels/Core/Grid/gridEntitySetBag";
+import { GridEntitySetItemBag } from "@Obsidian/ViewModels/Core/Grid/gridEntitySetItemBag";
 import { Guid } from "@Obsidian/Types";
 import mitt, { Emitter } from "mitt";
 
-type GridEvents = {
-    rowsChanged: IGridState;
-
-    filteredRowsChanged: IGridState;
-
-    sortedRowsChanged: IGridState;
-
-    visibleColumnsChanged: IGridState;
-
-    selectedKeysChanged: IGridState;
-
-    isFilteredChanged: IGridState;
-
-    isSortedChanged: IGridState;
-};
-
-// #region Entity Sets
-
-type GridEntitySetItemBag = {
-    entityKey?: string;
-
-    order?: number;
-
-    additionalMergeValues?: Record<string, unknown>;
-};
-
-type GridEntitySetBag = {
-    entityTypeKey?: string;
-
-    items?: GridEntitySetItemBag[];
-};
-
-export type GridCommunicationBag = {
-    mergeFields?: string[];
-
-    fromUrl?: string;
-
-    recipients?: GridEntitySetItemBag[];
-};
+// #region Internal Types
 
 /**
- * Gets the entity set bag that can be send to the server to create an entity
- * set representing the selected items in the grid.
- *
- * @param grid The grid state that will be used as the source data.
- * @param keyFields The fields to use for the entity keys. This is only used when
- * populating the item entityKey value. It is not used to detect selection state.
- * If multiple keys are specified then an {@link GridEntitySetItemBag} will be
- * created for each key.
- * @param options The options that describe how the entity set should be generated.
- *
- * @returns A new instance of {@link GridEntitySetBag} that contains the data.
+ * Defines the grid event names and the parameter they are passed.
  */
-export async function getEntitySetBag(grid: IGridState, keyFields: string[], options?: EntitySetOptions): Promise<GridEntitySetBag> {
-    const selectedKeys = grid.selectedKeys;
-    const entitySetItemLookup: Record<string, GridEntitySetItemBag> = {};
-    let itemOrder = 0;
-    const entitySetBag: GridEntitySetBag = {
-        entityTypeKey: options?.entityTypeGuid ?? grid.entityTypeGuid,
-        items: []
-    };
+type GridEvents = {
+    /** Called when the {@link IGridState.rows} value has changed. */
+    rowsChanged: IGridState;
 
-    function processRow(row: Record<string, unknown>): void {
-        const rowKey = grid.getRowKey(row);
+    /** Called when the {@link IGridState.filteredRows} value has changed. */
+    filteredRowsChanged: IGridState;
 
-        // If we have any selected keys but the row isn't one of them then
-        // skip it.
-        if (selectedKeys.length > 0) {
-            if (!rowKey || !selectedKeys.includes(rowKey)) {
-                return;
-            }
-        }
+    /** Called when the {@link IGridState.sortedRows} value has changed. */
+    sortedRowsChanged: IGridState;
 
-        const entityKeyValues: (string | undefined)[] = [];
-        const mergeValues: Record<string, unknown> = {};
+    /** Called when the {@link IGridState.visibleColumns} value has changed. */
+    visibleColumnsChanged: IGridState;
 
-        // Search each of the key fields we were told to check and look
-        // for any entity keys.
-        for (const key of keyFields) {
-            const keyValue = row[key];
+    /** Called when the {@link IGridState.selectedKeys} value has changed. */
+    selectedKeysChanged: IGridState;
 
-            if (typeof keyValue === "number" && keyValue !== 0) {
-                entityKeyValues.push(keyValue.toString());
-            }
-            else if (typeof keyValue === "string" && keyValue !== "") {
-                // For compatibility with legacy grid, check if we can split
-                // the string on the normal seperators.
-                const keyValues = keyValue.replace(/[\s|,;]+/, ",").split(",");
+    /** Called when the {@link IGridState.isFiltered} value has changed. */
+    isFilteredChanged: IGridState;
 
-                for (const kv of keyValues) {
-                    if (kv !== "" && !entityKeyValues.includes(kv)) {
-                        entityKeyValues.push(kv);
-                    }
-                }
-            }
-        }
-
-        if (keyFields.length === 0) {
-            // We just want the merge fields, so put in a bogus key.
-            entityKeyValues.push(undefined);
-        }
-
-        // Get any additional merge values requested.
-        if (options?.mergeFields) {
-            for (const mergeKey of Object.keys(options.mergeFields)) {
-                mergeValues[options.mergeFields[mergeKey]] = toRaw(row[mergeKey]);
-            }
-        }
-
-        // Get any additional merge column values requested.
-        if (options?.mergeColumns) {
-            for (const mergeKey of Object.keys(options.mergeColumns)) {
-                const column = grid.columns.find(c => c.name === mergeKey);
-
-                if (column) {
-                    if (options?.purpose === "export") {
-                        mergeValues[options.mergeColumns[mergeKey]] = column.exportValue(row, column, grid);
-                    }
-                    else {
-                        const cellProps = {
-                            column,
-                            row,
-                            grid
-                        };
-
-                        mergeValues[options.mergeColumns[mergeKey]] = extractText(column.formatComponent, cellProps);
-                    }
-                }
-            }
-        }
-
-        // Get any custom merge values that should be added.
-        if (options?.additionalMergeFieldsFactory) {
-            const additionalValues = options.additionalMergeFieldsFactory(row, grid);
-
-            for (const key of Object.keys(additionalValues)) {
-                mergeValues[key] = additionalValues[key];
-            }
-        }
-
-        // Create (or update) all the entity set item bags for the entity
-        // keys that we found in this row.
-        for (const entityKey of entityKeyValues) {
-            let item = entityKey ? entitySetItemLookup[entityKey] : undefined;
-
-            if (!item) {
-                item = {
-                    entityKey: entityKey,
-                    order: itemOrder++,
-                    additionalMergeValues: { ...mergeValues }
-                };
-
-                entitySetBag.items?.push(item);
-
-                if (entityKey) {
-                    entitySetItemLookup[entityKey] = item;
-                }
-            }
-
-            if (options?.purpose === "communication") {
-                // We do something special when building an entity set
-                // for use in a communication. Each person can only exist
-                // in the set once, but might have different merge values
-                // that came from different rows. So a special key of
-                // "AdditionalFields" is used which is an array that contains
-                // the merge values of each row this entity showed up in.
-                if (!item.additionalMergeValues) {
-                    item.additionalMergeValues = {};
-                }
-
-                let rows = item.additionalMergeValues["AdditionalFields"] as Record<string, unknown>[];
-
-                if (!rows) {
-                    rows = item.additionalMergeValues["AdditionalFields"] = [];
-                }
-
-                rows.push({ ...mergeValues });
-            }
-        }
-    }
-
-    const worker = new BackgroundItemsFunctionWorker(grid.getSortedRows(), processRow);
-
-    await worker.run();
-
-    return entitySetBag;
-}
+    /** Called when the {@link IGridState.isSorted} value has changed. */
+    isSortedChanged: IGridState;
+};
 
 // #endregion
 
@@ -689,6 +531,160 @@ export function dateFilterMatches(needle: unknown, haystack: unknown): boolean {
 
 // #endregion
 
+// #region Entity Sets
+
+/**
+ * Gets the entity set bag that can be send to the server to create an entity
+ * set representing the selected items in the grid.
+ *
+ * @param grid The grid state that will be used as the source data.
+ * @param keyFields The fields to use for the entity keys. This is only used when
+ * populating the item entityKey value. It is not used to detect selection state.
+ * If multiple keys are specified then an {@link GridEntitySetItemBag} will be
+ * created for each key.
+ * @param options The options that describe how the entity set should be generated.
+ *
+ * @returns A new instance of {@link GridEntitySetBag} that contains the data.
+ */
+export async function getEntitySetBag(grid: IGridState, keyFields: string[], options?: EntitySetOptions): Promise<GridEntitySetBag> {
+    const selectedKeys = grid.selectedKeys;
+    const entitySetItemLookup: Record<string, GridEntitySetItemBag> = {};
+    let itemOrder = 0;
+    const entitySetBag: GridEntitySetBag = {
+        entityTypeKey: options?.entityTypeGuid ?? grid.entityTypeGuid,
+        items: []
+    };
+
+    function processRow(row: Record<string, unknown>): void {
+        const rowKey = grid.getRowKey(row);
+
+        // If we have any selected keys but the row isn't one of them then
+        // skip it.
+        if (selectedKeys.length > 0) {
+            if (!rowKey || !selectedKeys.includes(rowKey)) {
+                return;
+            }
+        }
+
+        const entityKeyValues: (string | undefined)[] = [];
+        const mergeValues: Record<string, unknown> = {};
+
+        // Search each of the key fields we were told to check and look
+        // for any entity keys.
+        for (const key of keyFields) {
+            const keyValue = row[key];
+
+            if (typeof keyValue === "number" && keyValue !== 0) {
+                entityKeyValues.push(keyValue.toString());
+            }
+            else if (typeof keyValue === "string" && keyValue !== "") {
+                // For compatibility with legacy grid, check if we can split
+                // the string on the normal seperators.
+                const keyValues = keyValue.replace(/[\s|,;]+/, ",").split(",");
+
+                for (const kv of keyValues) {
+                    if (kv !== "" && !entityKeyValues.includes(kv)) {
+                        entityKeyValues.push(kv);
+                    }
+                }
+            }
+        }
+
+        if (keyFields.length === 0) {
+            // We just want the merge fields, so put in a bogus key.
+            entityKeyValues.push(undefined);
+        }
+
+        // Get any additional merge values requested.
+        if (options?.mergeFields) {
+            for (const mergeKey of Object.keys(options.mergeFields)) {
+                mergeValues[options.mergeFields[mergeKey]] = toRaw(row[mergeKey]);
+            }
+        }
+
+        // Get any additional merge column values requested.
+        if (options?.mergeColumns) {
+            for (const mergeKey of Object.keys(options.mergeColumns)) {
+                const column = grid.columns.find(c => c.name === mergeKey);
+
+                if (column) {
+                    if (options?.purpose === "export") {
+                        mergeValues[options.mergeColumns[mergeKey]] = column.exportValue(row, column, grid);
+                    }
+                    else {
+                        const cellProps = {
+                            column,
+                            row,
+                            grid
+                        };
+
+                        mergeValues[options.mergeColumns[mergeKey]] = extractText(column.formatComponent, cellProps);
+                    }
+                }
+            }
+        }
+
+        // Get any custom merge values that should be added.
+        if (options?.additionalMergeFieldsFactory) {
+            const additionalValues = options.additionalMergeFieldsFactory(row, grid);
+
+            for (const key of Object.keys(additionalValues)) {
+                mergeValues[key] = additionalValues[key];
+            }
+        }
+
+        // Create (or update) all the entity set item bags for the entity
+        // keys that we found in this row.
+        for (const entityKey of entityKeyValues) {
+            let item = entityKey ? entitySetItemLookup[entityKey] : undefined;
+
+            if (!item) {
+                item = {
+                    entityKey: entityKey,
+                    order: itemOrder++,
+                    additionalMergeValues: { ...mergeValues }
+                };
+
+                entitySetBag.items?.push(item);
+
+                if (entityKey) {
+                    entitySetItemLookup[entityKey] = item;
+                }
+            }
+
+            if (options?.purpose === "communication") {
+                // We do something special when building an entity set
+                // for use in a communication. Each person can only exist
+                // in the set once, but might have different merge values
+                // that came from different rows. So a special key of
+                // "AdditionalFields" is used which is an array that contains
+                // the merge values of each row this entity showed up in.
+                if (!item.additionalMergeValues) {
+                    item.additionalMergeValues = {};
+                }
+
+                let rows = item.additionalMergeValues["AdditionalFields"] as Record<string, unknown>[];
+
+                if (!rows) {
+                    rows = item.additionalMergeValues["AdditionalFields"] = [];
+                }
+
+                rows.push({ ...mergeValues });
+            }
+        }
+    }
+
+    // Because we might be dealing with large data sets and might be pulling
+    // formatted data from components, use a worker so the UI doesn't freeze.
+    const worker = new BackgroundItemsFunctionWorker(grid.getSortedRows(), processRow);
+
+    await worker.run();
+
+    return entitySetBag;
+}
+
+// #endregion
+
 // #region Functions
 
 /**
@@ -1080,6 +1076,8 @@ export class GridCache implements IGridCache {
     /** The private cache data storage. */
     private cacheData: Record<string, unknown> = {};
 
+    // #region IGridCache Implementation
+
     public clear(): void {
         this.cacheData = {};
     }
@@ -1121,6 +1119,8 @@ export class GridCache implements IGridCache {
 
         return value;
     }
+
+    // #endregion
 }
 
 /**
@@ -1171,6 +1171,29 @@ export class GridRowCache implements IGridRowCache {
         }
     }
 
+    /**
+     * Removes the cached values for a row.
+     *
+     * @param rowKey The key that identifies the row.
+     * @param key The key inside the row cache to be removed or `undefined` to remove all cached data for the row.
+     */
+    public removeByRowKey(rowKey: string, key: string | undefined): void {
+        const cacheRow = this.cache.get<GridCache>(rowKey);
+
+        if (!cacheRow) {
+            return;
+        }
+
+        if (!key) {
+            cacheRow.clear();
+        }
+        else {
+            cacheRow.remove(key);
+        }
+    }
+
+    // #region IGridRowCache Implementation
+
     public clear(): void {
         this.cache.clear();
     }
@@ -1184,18 +1207,7 @@ export class GridRowCache implements IGridRowCache {
             return;
         }
 
-        const cacheRow = this.cache.get<GridCache>(rowKey);
-
-        if (!cacheRow) {
-            return;
-        }
-
-        if (!key) {
-            cacheRow.clear();
-        }
-        else {
-            cacheRow.remove(key);
-        }
+        this.removeByRowKey(rowKey, key);
     }
 
     public get<T = unknown>(row: Record<string, unknown>, key: string): T | undefined {
@@ -1229,6 +1241,8 @@ export class GridRowCache implements IGridRowCache {
 
         return this.cache.getOrAdd(rowKey, () => new GridCache()).addOrReplace<T>(key, value);
     }
+
+    // #endregion
 }
 
 /**
@@ -1445,9 +1459,9 @@ export class GridState implements IGridState {
     // #region Properties
 
     private internalRows: Record<string, unknown>[] = [];
-    public internalFilteredRows: ReadonlyArray<Record<string, unknown>> = [];
-    public internalSortedRows: ReadonlyArray<Record<string, unknown>> = [];
-    public internalVisibleColumns: ReadonlyArray<ColumnDefinition>;
+    private internalFilteredRows: ReadonlyArray<Record<string, unknown>> = [];
+    private internalSortedRows: ReadonlyArray<Record<string, unknown>> = [];
+    private internalVisibleColumns: ReadonlyArray<ColumnDefinition>;
     private internalSelectedKeys: string[] = [];
     private internalIsFiltered: boolean = false;
     private internalIsSorted: boolean = false;
@@ -1580,7 +1594,7 @@ export class GridState implements IGridState {
 
     public readonly cache: IGridCache = new GridCache();
 
-    public readonly rowCache: IGridRowCache;
+    public readonly rowCache: GridRowCache;
 
     public readonly itemTerm: string;
 
@@ -1650,10 +1664,8 @@ export class GridState implements IGridState {
 
             if (!this.rowReactiveTracker[key]) {
                 this.emitter.emit("rowsChanged", this);
-                console.log("Row added", rows[i]);
             }
             else if (this.rowReactiveTracker[key] !== JSON.stringify(rows[i])) {
-                console.log("Row updated", rows[i]);
                 this.rowReactiveTracker[key] = JSON.stringify(rows[i]);
                 this.rowCache.remove(rows[i]);
             }
@@ -1664,8 +1676,7 @@ export class GridState implements IGridState {
         const oldKeys = Object.keys(this.rowReactiveTracker);
         for (let i = 0; i < oldKeys.length; i++) {
             if (!knownKeys.includes(oldKeys[i])) {
-                console.log("Removed row id", oldKeys[i]);
-                // TODO: Remove the cache data for a row by it's key.
+                this.rowCache.removeByRowKey(oldKeys[i], undefined);
                 delete this.rowReactiveTracker[oldKeys[i]];
                 this.emitter.emit("rowsChanged", this);
             }
@@ -1684,7 +1695,6 @@ export class GridState implements IGridState {
             return;
         }
 
-        const start = Date.now();
         const columns = this.visibleColumns;
         const quickFilterRawValue = this.quickFilter.toLowerCase();
 
@@ -1724,8 +1734,6 @@ export class GridState implements IGridState {
         });
 
         this.filteredRows = result;
-
-        console.log(`Filtering took ${Date.now() - start}ms.`);
 
         this.updateSortedRows();
     }
@@ -1801,9 +1809,7 @@ export class GridState implements IGridState {
      * tracked by the Grid and updates the {@link sortedRows} property.
      */
     private updateSortedRows(): void {
-        const start = Date.now();
         this.sortedRows = this.sortRows(this.filteredRows);
-        console.log(`updatedSortedRows took ${Date.now() - start}ms.`);
     }
 
     // #endregion

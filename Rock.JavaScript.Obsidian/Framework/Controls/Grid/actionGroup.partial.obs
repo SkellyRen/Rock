@@ -10,6 +10,7 @@
     import ActionButton from "./actionButton.partial.obs";
 
     const props = defineProps({
+        /** The array of grid actions that should be displayed in this group. */
         gridActions: {
             type: Array as PropType<GridAction[]>,
             default: []

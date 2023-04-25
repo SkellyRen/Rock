@@ -15,13 +15,18 @@
 
     const isChecked = ref(false);
 
+    /**
+     * Called when the checkbox value has been changed by the individual.
+     */
     function onValueChange(): void {
         isChecked.value = !isChecked.value;
 
         if (!isChecked.value) {
+            // Deselect all selected rows.
             props.grid.selectedKeys = [];
         }
         else {
+            // Select all rows that have a key.
             props.grid.selectedKeys = props.grid.rows
                 .map(r => props.grid.getRowKey(r))
                 .filter(k => k !== undefined) as string[];

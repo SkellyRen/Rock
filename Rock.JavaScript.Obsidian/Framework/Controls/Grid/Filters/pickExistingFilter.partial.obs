@@ -26,42 +26,55 @@
     import { ref, watch, computed } from "vue";
     import { standardFilterProps } from "@Obsidian/Core/Controls/grid";
     import { ListItemBag } from "@Obsidian/ViewModels/Utility/listItemBag";
+    import { PickExistingSearchBag } from "@Obsidian/Types/Controls/grid";
+
+    /** A single distinct value that was found. */
+    type DistinctValue = {
+        /** The first row found for the unique value. */
+        row: Record<string, unknown>;
+
+        /** The sort value from the row. */
+        sortValue?: string | number;
+
+        /** The quick filter value from the row. */
+        quickFilterValue: string;
+
+        /** The value used to filter rows for this distinct value. */
+        filterValue: unknown;
+
+        /** Will be `true` if this distinct value is currently selected, otherwise `false`. */
+        selected: boolean
+    };
 
     const props = defineProps(standardFilterProps);
 
     const emit = defineEmits<{
-        (e: "update:modelValue", value: unknown): void
+        (e: "update:modelValue", value: PickExistingSearchBag | undefined): void
     }>();
 
-    type PickExistingSearchBag = {
-        method: PickExistingFilterMethod;
-
-        value?: unknown[];
-    };
-
-    type DistinctValue = {
-        row: Record<string, unknown>;
-
-        sortValue?: string | number;
-
-        quickFilterValue: string;
-
-        filterValue: unknown;
-
-        selected: boolean
-    };
+    // #region Values
 
     const distinctValues = getDistinctValues();
     const searchMethod = ref(PickExistingFilterMethod.Any.toString());
+
+    /**
+     * The search value is used to filter which items are displayed to be
+     * selected. It is not the current selection.
+     */
     const searchValue = ref("");
 
-    const searchTypeItems = ref<ListItemBag[]>(Object.keys(PickExistingFilterMethodDescription).map(n => {
+    const searchTypeItems: ListItemBag[] = Object.keys(PickExistingFilterMethodDescription).map(n => {
         return {
             value: n,
             text: PickExistingFilterMethodDescription[n]
         };
-    }));
+    });
 
+    // #endregion
+
+    // #region Computed Values
+
+    /** The values to be displayed to the user based on their search value. */
     const displayedValues = computed((): DistinctValue[] => {
         let values = distinctValues;
 
@@ -71,9 +84,19 @@
             values = values.filter(v => v.quickFilterValue.includes(lowerSearchValue));
         }
 
+        // Only show up to 50 items, otherwise the list is just huge.
         return values.slice(0, 50);
     });
 
+    // #endregion
+
+    // #region Functions
+
+    /**
+     * Gets the distinct values from the entire grid. This checks each row
+     * and compares the distinct value to see if we already have it recorded
+     * and then builds an array of all the distinct values.
+     */
     function getDistinctValues(): DistinctValue[] {
         const valueRows: Record<string | number, DistinctValue> = {};
         const field = props.column.field;
@@ -84,49 +107,72 @@
         }
 
         for (let i = 0; i < rows.length; i++) {
+            // Get the unique value for the cell.
             const value = props.column.uniqueValue(rows[i], props.column, props.grid);
 
-            if (value && valueRows[value] === undefined) {
-                const quickFilterValue = props.column.quickFilterValue(rows[i], props.column, props.grid) ?? "";
-                let filterValue = props.column.filterValue(rows[i], props.column, props.grid);
+            // If we don't have a unique value, then we can't do anything with
+            // it. If we already have recorded this unique value then skip
+            // any futher occurrences of it.
+            if (!value || valueRows[value] !== undefined) {
+                continue;
+            }
 
-                if (filterValue === undefined) {
-                    continue;
+            // Get the quick filter and filter values.
+            const quickFilterValue = props.column.quickFilterValue(rows[i], props.column, props.grid) ?? "";
+            let filterValue = props.column.filterValue(rows[i], props.column, props.grid);
+
+            // If we don't have a filter value, we can't actually filter on
+            // this item. This means we can't filter on things like NULL.
+            if (filterValue === undefined) {
+                continue;
+            }
+
+            // Store the distinct value in an object. This is much faster than
+            // storing in an array and then searching the array to see if we
+            // already have this unique value.
+            valueRows[value] = {
+                row: rows[i],
+                selected: false,
+                sortValue: props.column.sortValue?.(rows[i], props.column, props.grid) ?? "",
+                quickFilterValue: quickFilterValue.toLowerCase(),
+                filterValue
+            };
+        }
+
+        // Return just the values from the object. Sort them by the sort value
+        // so things feel like they are in some semblance of order.
+        return [...Object.values(valueRows)]
+            .sort((a, b) => {
+                if (a.sortValue === undefined && b.sortValue === undefined) {
+                    return 0;
+                }
+                else if (a.sortValue === undefined) {
+                    return -1;
+                }
+                else if (b.sortValue === undefined) {
+                    return 1;
                 }
 
-                valueRows[value] = {
-                    row: rows[i],
-                    selected: false,
-                    sortValue: props.column.sortValue?.(rows[i], props.column, props.grid) ?? "",
-                    quickFilterValue: quickFilterValue.toLowerCase(),
-                    filterValue
-                };
-            }
-        }
-
-        return Object.values(valueRows);
+                if (a.sortValue < b.sortValue) {
+                    return -1;
+                }
+                else if (a.sortValue > b.sortValue) {
+                    return 1;
+                }
+                else {
+                    return 0;
+                }
+            });
     }
 
-    function onSelected(value: DistinctValue, event: Event): void {
-        const selected = (event.target as HTMLInputElement).checked;
-
-        if (value.selected !== selected) {
-            value.selected = selected;
-
-            updateModelValue();
-        }
-    }
-
+    /**
+     * Constructs and emits the new modelValue for the component.
+     */
     function updateModelValue(): void {
-        const values: unknown[] = [];
-
-        if (props.column.field) {
-            for (const value of distinctValues) {
-                if (value.selected) {
-                    values.push(props.column.filterValue(value.row, props.column, props.grid));
-                }
-            }
-        }
+        // Find all selected values and put them in our values array.
+        const values: unknown[] = distinctValues
+            .filter(v => v.selected)
+            .map(v => v.filterValue);
 
         const searchBag: PickExistingSearchBag = {
             method: Number(searchMethod.value) as PickExistingFilterMethod,
@@ -136,10 +182,14 @@
         emit("update:modelValue", values.length > 0 ? searchBag : undefined);
     }
 
+    /**
+     * Updates our internal values based on the current modelValue property.
+     */
     function updateSearchValues(): void {
         if (props.modelValue && typeof props.modelValue === "object") {
             const modelSearchBag = props.modelValue as Partial<PickExistingSearchBag>;
 
+            // If we got invalid data, then deselect everything.
             if (!Array.isArray(modelSearchBag.value) || !props.column.field) {
                 for (const value of distinctValues) {
                     value.selected = false;
@@ -159,11 +209,35 @@
             }
         }
 
+        // We got nothing, so set initial values.
         searchMethod.value = PickExistingFilterMethod.Any.toString();
         for (const value of distinctValues) {
             value.selected = false;
         }
     }
+
+    // #endregion
+
+    // #region Event Handlers
+
+    /**
+     * Called when the individual selects or deselects one of the checkboxes
+     * for a value.
+     *
+     * @param value The distinct value that was selected.
+     * @param event The event that triggered the selection.
+     */
+    function onSelected(value: DistinctValue, event: Event): void {
+        const selected = (event.target as HTMLInputElement).checked;
+
+        if (value.selected !== selected) {
+            value.selected = selected;
+
+            updateModelValue();
+        }
+    }
+
+    // #endregion
 
     watch(() => props.modelValue, () => updateSearchValues());
     watch([searchMethod, searchValue], () => updateModelValue());

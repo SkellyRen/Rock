@@ -5,11 +5,11 @@
                       :showBlankItem="false"
                       :items="searchTypeItems" />
 
-        <div v-if="showFirstValue" class="mb-2">
+        <div v-if="isFirstValueVisible" class="mb-2">
             <DatePicker v-model="searchValue" :container="popupContainerElement" />
         </div>
 
-        <div v-if="showSecondValue" class="mb-2">
+        <div v-if="isSecondValueVisible" class="mb-2">
             <DatePicker v-model="secondSearchValue" :container="popupContainerElement" />
         </div>
     </div>
@@ -22,38 +22,42 @@
     import { ListItemBag } from "@Obsidian/ViewModels/Utility/listItemBag";
     import { DateFilterMethod, DateFilterMethodDescription } from "@Obsidian/Enums/Controls/Grid/dateFilterMethod";
     import { standardFilterProps } from "@Obsidian/Core/Controls/grid";
-
-    type DateSearchBag = {
-        method: DateFilterMethod;
-
-        value?: string;
-
-        secondValue?: string;
-    };
+    import { DateSearchBag } from "@Obsidian/Types/Controls/grid";
 
     const props = defineProps(standardFilterProps);
 
     const emit = defineEmits<{
-        (e: "update:modelValue", value: unknown): void
+        (e: "update:modelValue", value: DateSearchBag | undefined): void
     }>();
+
+    // #region Values
 
     const searchMethod = ref(DateFilterMethod.Equals.toString());
     const searchValue = ref<string | null>(null);
     const secondSearchValue = ref<string | null>(null);
     const filterBodyElement = ref<HTMLElement | null>(null);
 
-    const searchTypeItems = ref<ListItemBag[]>(Object.keys(DateFilterMethodDescription).map(n => {
+    const searchTypeItems: ListItemBag[] = Object.keys(DateFilterMethodDescription).map(n => {
         return {
             value: n,
             text: DateFilterMethodDescription[n]
         };
-    }));
+    });
 
+    // #endregion
+
+    // #region Computed Values
+
+    /** Contains the element to place the date picker popup into. */
     const popupContainerElement = computed((): HTMLElement | null => {
         return filterBodyElement.value?.closest(".grid-filter-popup") ?? null;
     });
 
-    const showFirstValue = computed((): boolean => {
+    /**
+     * Determines if the first user value should be visible for the current
+     * filtering method.
+     */
+    const isFirstValueVisible = computed((): boolean => {
         return searchMethod.value === DateFilterMethod.Equals.toString()
             || searchMethod.value === DateFilterMethod.DoesNotEqual.toString()
             || searchMethod.value === DateFilterMethod.Before.toString()
@@ -61,12 +65,23 @@
             || searchMethod.value === DateFilterMethod.Between.toString();
     });
 
-    const showSecondValue = computed((): boolean => {
+    /**
+     * Determines if the second user value should be visible for the current
+     * filtering method.
+     */
+    const isSecondValueVisible = computed((): boolean => {
         return searchMethod.value === DateFilterMethod.Between.toString();
     });
 
+    // #endregion
+
+    // #region Functions
+
+    /**
+     * Constructs and emits the new modelValue for the component.
+     */
     function updateModelValue(): void {
-        if (searchValue.value === null && showFirstValue.value) {
+        if (searchValue.value === null && isFirstValueVisible.value) {
             emit("update:modelValue", undefined);
             return;
         }
@@ -80,6 +95,9 @@
         emit("update:modelValue", searchBag);
     }
 
+    /**
+     * Updates our internal values based on the current modelValue property.
+     */
     function updateSearchValues(): void {
         if (props.modelValue && typeof props.modelValue === "object") {
             const modelSearchBag = props.modelValue as Partial<DateSearchBag>;
@@ -96,6 +114,8 @@
         searchMethod.value = DateFilterMethod.Equals.toString();
         searchValue.value = null;
     }
+
+    // #endregion
 
     watch(() => props.modelValue, () => updateSearchValues());
     watch([searchMethod, searchValue, secondSearchValue], () => updateModelValue());

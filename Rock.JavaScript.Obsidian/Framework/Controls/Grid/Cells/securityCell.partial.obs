@@ -22,22 +22,32 @@
     const props = defineProps(standardCellProps);
     const isDisabled = ref(false);
 
+    /** Contains the title that will be used for the modal window. */
     const itemTitle = computed((): string => {
         const itemTitleProp = props.column.props.itemTitle as ((row: Record<string, unknown>, grid: IGridState) => string) | string;
 
+        // Check if the itemTitle property was defined on the column, if not
+        // use an empty string. Otherwise use the value.
         if (!itemTitleProp) {
             return "";
         }
         else if (typeof itemTitleProp === "string") {
+            // They provided a plain string, use it as a field name.
             const titleValue = props.row[itemTitleProp];
 
             return typeof titleValue === "string" ? titleValue : "";
         }
         else {
+            // They provided a function we should call to determine the title.
             return itemTitleProp(props.row, props.grid);
         }
     });
 
+    /**
+     * Called when the individual clicks on the security icon.
+     *
+     * @param event The event that triggered us.
+     */
     async function onClick(event: Event): Promise<void> {
         const key = props.grid.getRowKey(props.row);
 
@@ -46,6 +56,7 @@
             event.target.blur();
         }
 
+        // Make sure we have enough information to open the dialog.
         if (!key || !props.grid.entityTypeGuid) {
             return;
         }

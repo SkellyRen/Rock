@@ -5,12 +5,12 @@
                       :showBlankItem="false"
                       :items="searchTypeItems" />
 
-        <NumberBox v-if="showFirstValue"
+        <NumberBox v-if="isFirstValueVisible"
                    inputClasses="mb-2"
                    v-model="searchValue"
                    :placeholder="firstValuePlaceholder" />
 
-        <NumberBox v-if="showSecondValue"
+        <NumberBox v-if="isSecondValueVisible"
                    inputClasses="mb-2"
                    v-model="secondSearchValue"
                    placeholder="to" />
@@ -24,33 +24,36 @@
     import { ListItemBag } from "@Obsidian/ViewModels/Utility/listItemBag";
     import { NumberFilterMethod, NumberFilterMethodDescription } from "@Obsidian/Enums/Controls/Grid/numberFilterMethod";
     import { standardFilterProps } from "@Obsidian/Core/Controls/grid";
-
-    type NumberSearchBag = {
-        method: NumberFilterMethod;
-
-        value?: number;
-
-        secondValue?: number;
-    };
+    import { NumberSearchBag } from "@Obsidian/Types/Controls/grid";
 
     const props = defineProps(standardFilterProps);
 
     const emit = defineEmits<{
-        (e: "update:modelValue", value: unknown): void
+        (e: "update:modelValue", value: NumberSearchBag | undefined): void
     }>();
+
+    // #region Values
 
     const searchMethod = ref(NumberFilterMethod.Equals.toString());
     const searchValue = ref<number | null>(null);
     const secondSearchValue = ref<number | null>(null);
 
-    const searchTypeItems = ref<ListItemBag[]>(Object.keys(NumberFilterMethodDescription).map(n => {
+    const searchTypeItems: ListItemBag[] = Object.keys(NumberFilterMethodDescription).map(n => {
         return {
             value: n,
             text: NumberFilterMethodDescription[n]
         };
-    }));
+    });
 
-    const showFirstValue = computed((): boolean => {
+    // #endregion
+
+    // #region Computed Values
+
+    /**
+     * Determines if the first user value should be visible for the current
+     * filtering method.
+     */
+    const isFirstValueVisible = computed((): boolean => {
         return searchMethod.value === NumberFilterMethod.Equals.toString()
             || searchMethod.value === NumberFilterMethod.DoesNotEqual.toString()
             || searchMethod.value === NumberFilterMethod.GreaterThan.toString()
@@ -61,18 +64,32 @@
             || searchMethod.value === NumberFilterMethod.TopN.toString();
     });
 
+    /**
+     * Determines if the second user value should be visible for the current
+     * filtering method.
+     */
+    const isSecondValueVisible = computed((): boolean => {
+        return searchMethod.value === NumberFilterMethod.Between.toString();
+    });
+
+    /**
+     * The placeholder text to use for the first value.
+     */
     const firstValuePlaceholder = computed((): string => {
         return searchMethod.value === NumberFilterMethod.Between.toString()
             ? "from"
             : "value";
     });
 
-    const showSecondValue = computed((): boolean => {
-        return searchMethod.value === NumberFilterMethod.Between.toString();
-    });
+    // #endregion
 
+    // #region Functions
+
+    /**
+     * Constructs and emits the new modelValue for the component.
+     */
     function updateModelValue(): void {
-        if (searchValue.value === null && showFirstValue.value) {
+        if (searchValue.value === null && isFirstValueVisible.value) {
             emit("update:modelValue", undefined);
             return;
         }
@@ -86,6 +103,9 @@
         emit("update:modelValue", searchBag);
     }
 
+    /**
+     * Updates our internal values based on the current modelValue property.
+     */
     function updateSearchValues(): void {
         if (props.modelValue && typeof props.modelValue === "object") {
             const modelSearchBag = props.modelValue as Partial<NumberSearchBag>;
@@ -102,6 +122,8 @@
         searchMethod.value = NumberFilterMethod.Equals.toString();
         searchValue.value = null;
     }
+
+    // #endregion
 
     watch(() => props.modelValue, () => updateSearchValues());
     watch([searchMethod, searchValue, secondSearchValue], () => updateModelValue());

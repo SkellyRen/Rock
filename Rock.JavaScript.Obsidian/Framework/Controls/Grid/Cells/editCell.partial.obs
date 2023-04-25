@@ -23,23 +23,24 @@
             event.target.blur();
         }
 
-        if (!key) {
+        // Make sure we have valid data to work with.
+        if (!key || typeof props.column.props.onClick !== "function") {
             return;
         }
 
-        if (typeof props.column.props.onClick !== "function") {
-            return;
-        }
-
+        // Disable the button until we have finished processing.
         isDisabled.value = true;
+
         try {
             const result = props.column.props.onClick(key);
 
+            // If the onClick function is asynchronous, wait for it to complete.
             if (isPromise(result)) {
                 await result;
             }
         }
         finally {
+            // Re-enable the button once we are all done.
             isDisabled.value = false;
         }
     }

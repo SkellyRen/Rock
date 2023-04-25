@@ -16,8 +16,14 @@
 //
 
 import { Component, PropType } from "vue";
-import { Guid } from "..";
+import { Guid } from "@Obsidian/Types";
 import { RockDateTime } from "@Obsidian/Utility/rockDateTime";
+import { DateFilterMethod } from "@Obsidian/Enums/Controls/Grid/dateFilterMethod";
+import { NumberFilterMethod } from "@Obsidian/Enums/Controls/Grid/numberFilterMethod";
+import { PickExistingFilterMethod } from "@Obsidian/Enums/Controls/Grid/pickExistingFilterMethod";
+import { TextFilterMethod } from "@Obsidian/Enums/Controls/Grid/textFilterMethod";
+
+// #region Entity Sets
 
 /** The purpose of the entity set. This activates special logic. */
 export type EntitySetPurpose = "communication" | "export";
@@ -65,6 +71,8 @@ export type EntitySetOptions = {
      */
     purpose?: EntitySetPurpose;
 };
+
+// #endregion
 
 // #region Caching
 
@@ -520,6 +528,68 @@ export type StandardFilterProps = {
 
 // #endregion
 
+// #region Column Filter Types
+
+/**
+ * Defines the structure of the date column search bag.
+ *
+ * @private This is an internal type and should not be used by plugins.
+ */
+export type DateSearchBag = {
+    /** The filtering method to use. */
+    method: DateFilterMethod;
+
+    /** The first value to use when filtering rows. */
+    value?: string;
+
+    /** The second value to use when filtering rows. */
+    secondValue?: string;
+};
+
+/**
+ * Defines the structure of the number column search bag.
+ *
+ * @private This is an internal type and should not be used by plugins.
+ */
+export type NumberSearchBag = {
+    /** The filtering method to use. */
+    method: NumberFilterMethod;
+
+    /** The first value to use when filtering rows. */
+    value?: number;
+
+    /** The second value to use when filtering rows. */
+    secondValue?: number;
+};
+
+/**
+ * Defines the structure of the pick existing filter search bag.
+ *
+ * @private This is an internal type and should not be used by plugins.
+ */
+export type PickExistingSearchBag = {
+    /** The filtering method to use. */
+    method: PickExistingFilterMethod;
+
+    /** The value to use when filtering rows. */
+    value?: unknown[];
+};
+
+/**
+ * Defines the structure of the text column search bag.
+ *
+ * @private This is an internal type and should not be used by plugins.
+ */
+type TextSearchBag = {
+    /** The filtering method to use. */
+    method: TextFilterMethod;
+
+    /** The value to use when filtering. */
+    value?: string;
+};
+
+// #endregion
+
 /** Defines a single action related to a Grid control. */
 export type GridAction = {
     /**
@@ -664,6 +734,9 @@ export type ColumnSort = {
     isDescending: boolean;
 };
 
+/**
+ * The events that can be generated for grid property values changing.
+ */
 export type GridPropertyChangedEvents =
     "rowsChanged" |
     "filteredRowsChanged" |

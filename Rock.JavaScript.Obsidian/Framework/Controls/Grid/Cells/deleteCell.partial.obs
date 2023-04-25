@@ -24,16 +24,17 @@
             event.target.blur();
         }
 
-        if (!key) {
+        // Make sure we have valid data to work with.
+        if (!key || typeof props.column.props.onClick !== "function") {
             return;
         }
 
-        if (typeof props.column.props.onClick !== "function") {
-            return;
-        }
-
+        // Disable the button until the action completes.
         isDisabled.value = true;
+
         try {
+            // Unless we have been requested to disable confirmation, show
+            // a standard delete confirmation.
             if (props.column.props.disableConfirmation !== false) {
                 const result = await confirmDelete(props.grid.itemTerm);
 
@@ -44,11 +45,13 @@
 
             const result = props.column.props.onClick(key);
 
+            // If the onClick function is asynchronous, wait for it.
             if (isPromise(result)) {
                 await result;
             }
         }
         finally {
+            // Re-enable the button at the end.
             isDisabled.value = false;
         }
     }

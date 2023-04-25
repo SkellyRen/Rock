@@ -20,6 +20,14 @@ import { Component, defineComponent, PropType } from "vue";
 import BooleanCell from "../Cells/booleanCell.partial.obs";
 import { ColumnDefinition, ExportValueFunction } from "@Obsidian/Types/Controls/grid";
 
+/**
+ * Gets the value to use when exporting a cell of this column.
+ *
+ * @param row The row that will be exported.
+ * @param column The column that will be exported.
+ *
+ * @returns A boolean value or undefined if the cell has no value.
+ */
 function getExportValue(row: Record<string, unknown>, column: ColumnDefinition): boolean | undefined {
     if (!column.field) {
         return undefined;

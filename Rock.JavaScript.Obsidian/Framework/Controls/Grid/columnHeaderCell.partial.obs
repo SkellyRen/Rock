@@ -6,18 +6,16 @@
         <span v-if="isSortAscending" class="grid-sort-direction"><i class="fa fa-sort-alpha-up"></i></span>
         <span v-else-if="isSortDescending" class="grid-sort-direction"><i class="fa fa-sort-alpha-down"></i></span>
 
-        <button v-if="hasFilter"
+        <button v-if="isFilterVisible"
                 ref="filterButtonElement"
-                :class="buttonCssClass"
+                :class="filterButtonCssClass"
                 @click.prevent="onFilterClick">
             <i class="fa fa-filter "></i>
         </button>
 
-        <div v-if="false" ref="resizeHandleElement" class="resize-handle"></div>
-
-        <div v-if="isFilterVisible" ref="filterElement" class="grid-filter-popup">
+        <div v-if="isFilterOpen" ref="filterElement" class="grid-filter-popup">
             <div class="grid-filter-popup-content">
-                <component :is="column.filter!.component" v-model="internalFilterValue" :column="column" :rows="rows" :grid="grid" />
+                <component :is="column.filter!.component" v-model="internalFilterValue" :column="column" :grid="grid" />
             </div>
 
             <div class="actions">
@@ -34,6 +32,7 @@
     import { ColumnDefinition, IGridState } from "@Obsidian/Types/Controls/grid";
 
     const props = defineProps({
+        /** The currently selected filter value for the column. */
         filterValue: {
             type: Object as PropType<unknown>,
             required: false
@@ -45,16 +44,13 @@
             default: 0
         },
 
+        /** The column that should be displayed. */
         column: {
             type: Object as PropType<ColumnDefinition>,
             required: true
         },
 
-        rows: {
-            type: Array as PropType<ReadonlyArray<Record<string, unknown>>>,
-            required: true
-        },
-
+        /** The grid state representing the entire grid. */
         grid: {
             type: Object as PropType<IGridState>,
             required: true
@@ -66,40 +62,60 @@
         (event: "update:sortDirection", value: number): void
     }>();
 
+    // #region Values
+
     const internalFilterValue = ref(props.filterValue);
     const sortDirection = useVModelPassthrough(props, "sortDirection", emit);
-    const isFilterVisible = ref(false);
+    const isFilterOpen = ref(false);
     const filterElement = ref<HTMLElement | null>(null);
     const filterButtonElement = ref<HTMLElement | null>(null);
-    const resizeHandleElement = ref<HTMLElement | null>(null);
     const columnHeaderElement = ref<HTMLElement | null>(null);
-    let resizePositionX = 0;
-    let resizeWidth = 0;
 
-    const hasFilter = computed((): boolean => {
+    // #endregion
+
+    // #region Computed Values
+
+    /** Will be `true` if we have a filter and it should be visible. */
+    const isFilterVisible = computed((): boolean => {
         return props.column.filter !== undefined && isFilteringEnabled.value;
     });
 
+    /** Will be `true` if sorting is enabled on the grid. */
     const isSortingEnabled = computed((): boolean => {
+        // Sorting is not supported if re-ordering is enabled.
         return !props.grid.columns.some(c => c.name === "__reorder");
     });
 
+    /** Will be `true` if filtering is enabled on the grid. */
     const isFilteringEnabled = computed((): boolean => {
+        // Filtering is not supported if re-ordering is enabled.
         return !props.grid.columns.some(c => c.name === "__reorder");
     });
 
-    const buttonCssClass = computed((): string => {
-        return internalFilterValue.value !== undefined ? "btn-grid-column-filter active" : "btn-grid-column-filter";
+    /** The CSS classes to apply to the filter button */
+    const filterButtonCssClass = computed((): string => {
+        return internalFilterValue.value !== undefined
+            ? "btn-grid-column-filter active"
+            : "btn-grid-column-filter";
     });
 
+    /**
+     * Will be `true` if the sort direction is ascending.
+     */
     const isSortAscending = computed((): boolean => {
         return sortDirection.value > 0 && isSortingEnabled.value;
     });
 
+    /**
+     * Will be `true` if the sort direction is descending.
+     */
     const isSortDescending = computed((): boolean => {
         return sortDirection.value < 0 && isSortingEnabled.value;
     });
 
+    /**
+     * Additional CSS classes that should be applied to the header.
+     */
     const additionalHeaderClass = computed((): string => {
         let classes = props.column.headerClass ?? "";
 
@@ -116,6 +132,7 @@
         return classes.trim();
     });
 
+    /** The CSS classes that should be applied to the title element. */
     const titleClass = computed((): string => {
         let classValue = "grid-column-title";
 
@@ -126,6 +143,17 @@
         return classValue;
     });
 
+    // #endregion
+
+    // #region Event Handlers
+
+    /**
+     * Called whenever the mouse is clicked down anywhere on the page. This is
+     * used to automatically close the filter popup if the click wasn't inside
+     * the popup somewhere.
+     *
+     * @param ev The mouse event that triggered this call.
+     */
     const onMouseDownEvent = (ev: MouseEvent): void => {
         if (ev.target && ev.target instanceof HTMLElement) {
             if (filterElement.value && filterElement.value.contains(ev.target)) {
@@ -137,57 +165,44 @@
             }
         }
 
-        isFilterVisible.value = false;
+        isFilterOpen.value = false;
         internalFilterValue.value = props.filterValue;
     };
 
+    /**
+     * Called when the filter icon in the cell header is clicked.
+     */
     const onFilterClick = (): void => {
-        isFilterVisible.value = !isFilterVisible.value;
+        isFilterOpen.value = !isFilterOpen.value;
     };
 
+    /**
+     * Called when the "clear" button inside the filter popup is clicked.
+     */
     const onFilterClearClick = (): void => {
-        isFilterVisible.value = false;
+        isFilterOpen.value = false;
         internalFilterValue.value = undefined;
         emit("update:filterValue", internalFilterValue.value);
     };
 
+    /**
+     * Called when the "apply" button inside the filter popup is clicked.
+     * Close the popup and apply the filter value to the grid.
+     */
     const onFilterApplyClick = (): void => {
-        isFilterVisible.value = false;
+        isFilterOpen.value = false;
         emit("update:filterValue", internalFilterValue.value);
     };
 
-    const onResizeMouseDown = (e: MouseEvent): void => {
-        if (!columnHeaderElement.value) {
-            return;
-        }
-
-        resizePositionX = e.pageX;
-        resizeWidth = columnHeaderElement.value.clientWidth;
-
-        document.body.addEventListener("mousemove", onResizeMouseMove);
-        document.body.addEventListener("mouseup", onResizeMouseUp);
-    };
-
-    const onResizeMouseUp = (): void => {
-        document.body.removeEventListener("mousemove", onResizeMouseMove);
-        document.body.removeEventListener("mouseup", onResizeMouseUp);
-    };
-
-    const onResizeMouseMove = (e: MouseEvent): void => {
-        if (!columnHeaderElement.value) {
-            return;
-        }
-
-        const changeAmount = resizePositionX - e.pageX;
-
-        columnHeaderElement.value.style.width = `${resizeWidth - changeAmount}px`;
-    };
-
+    /**
+     * Called when the sort icon in the column header is clicked.
+     */
     const onSortClick = (): void => {
         if (!isSortingEnabled.value) {
             return;
         }
 
+        // Toggle the filtering direction.
         if (sortDirection.value > 0) {
             sortDirection.value = -1;
         }
@@ -196,11 +211,16 @@
         }
     };
 
-    watch(isFilterVisible, () => {
-        if (isFilterVisible.value) {
+    // #endregion
+
+    // Whenever the filter is open, register our mouse down event listener
+    // on the whole document. When the filter closes, remove the listener.
+    watch(isFilterOpen, () => {
+        if (isFilterOpen.value) {
             document.addEventListener("mousedown", onMouseDownEvent);
 
             nextTick(() => {
+                // TODO: Make filter components do default focus.
                 // Hack until this is handled by a filter component.
                 filterElement.value?.querySelector("input")?.focus();
             });
@@ -208,13 +228,5 @@
         else {
             document.removeEventListener("mousedown", onMouseDownEvent);
         }
-    });
-
-    watch(resizeHandleElement, () => {
-        if (!resizeHandleElement.value) {
-            return;
-        }
-
-        resizeHandleElement.value.addEventListener("mousedown", onResizeMouseDown);
     });
 </script>

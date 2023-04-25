@@ -7,7 +7,6 @@
     import { RockDateTime } from "@Obsidian/Utility/rockDateTime";
     import { computed } from "vue";
 
-
     const props = defineProps(standardCellProps);
 
     const formattedValue = computed(() => {

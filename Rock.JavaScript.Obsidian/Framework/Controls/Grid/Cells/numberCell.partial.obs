@@ -8,6 +8,7 @@
 
     const props = defineProps(standardCellProps);
 
+    /** Contains the human friendly formatted value of th enumber. */
     const formattedValue = computed((): string => {
         if (!props.column.field) {
             return "";

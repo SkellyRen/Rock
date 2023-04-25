@@ -4,7 +4,15 @@ import { Component, PropType, defineComponent } from "vue";
 import TextCell from "../Cells/textCell.partial";
 import { ColumnDefinition, ColumnFilter, ExportValueFunction } from "@Obsidian/Types/Controls/grid";
 
-function getTextValue(row: Record<string, unknown>, column: ColumnDefinition): string | undefined {
+/**
+ * Gets the value to use when quick filtering a cell of this column.
+ *
+ * @param row The row that will be filtered.
+ * @param column The column that will be filtered.
+ *
+ * @returns A string value or undefined if the cell has no value.
+ */
+function getQuickFilterValue(row: Record<string, unknown>, column: ColumnDefinition): string | undefined {
     if (!column.field) {
         return undefined;
     }
@@ -37,7 +45,7 @@ export default defineComponent({
 
         exportValue: {
             type: Function as PropType<ExportValueFunction>,
-            default: getTextValue
+            default: getQuickFilterValue
         }
     }
 });

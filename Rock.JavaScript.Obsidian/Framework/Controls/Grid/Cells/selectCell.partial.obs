@@ -13,12 +13,18 @@
 
     const props = defineProps(standardCellProps);
 
+    const isChecked = ref(false);
+
+    /**
+     * Contains the key of the row we represent.
+     */
     const rowKey = computed((): string | undefined => {
         return props.grid.getRowKey(props.row);
     });
 
-    const isChecked = ref(rowKey.value ? props.grid.selectedKeys.includes(rowKey.value) : false);
-
+    /**
+     * Called when the value of the checkbox has been changed by the individual.
+     */
     function onValueChange(): void {
         if (rowKey.value === undefined) {
             return;
@@ -27,18 +33,28 @@
         const index = props.grid.selectedKeys.indexOf(rowKey.value);
 
         if (index !== -1) {
+            // Remove the key from the list of selected keys.
             props.grid.selectedKeys = props.grid.selectedKeys
                 .filter(k => k !== rowKey.value);
         }
         else {
+            // Add the key to the list of selected keys.
             props.grid.selectedKeys = [rowKey.value, ...props.grid.selectedKeys];
         }
     }
 
+    /**
+     * Called when the grid's selected keys has been modified.
+     */
     function onSelectedKeysChanged(): void {
         isChecked.value = rowKey.value ? props.grid.selectedKeys.includes(rowKey.value) : false;
     }
 
-    onBeforeUnmount(() => props.grid.off("selectedKeysChanged", onSelectedKeysChanged));
+    onBeforeUnmount(() => {
+        props.grid.off("selectedKeysChanged", onSelectedKeysChanged);
+    });
+
     props.grid.on("selectedKeysChanged", onSelectedKeysChanged);
+
+    isChecked.value = rowKey.value ? props.grid.selectedKeys.includes(rowKey.value) : false;
 </script>

@@ -11,11 +11,18 @@
     import { PropType } from "vue";
 
     const props = defineProps({
+        /**
+         * The currently selected page size value. This is the number of
+         * rows to display per page.
+         */
         modelValue: {
             type: Number as PropType<number>,
             required: true
         },
 
+        /**
+         * The list of available page sizes that the individual can pick from.
+         */
         pageSizes: {
             type: Array as PropType<number[]>,
             default: []
@@ -26,13 +33,34 @@
         (event: "update:modelValue", value: number): void,
     }>();
 
+    // #region Values
+
     const pageSize = useVModelPassthrough(props, "modelValue", emit);
 
-    const getPageSizeClass = (size: number): string | undefined => {
-        return pageSize.value === size ? "active" : undefined;
-    };
+    // #endregion
 
-    const onPageSizeClick = (size: number): void => {
+    // #region Functions
+
+    /**
+     * Gets the CSS class to be applied to a specific page size button. This
+     * helps us toggle the selected state of the button.
+     */
+    function getPageSizeClass(size: number): string | undefined {
+        return pageSize.value === size ? "active" : undefined;
+    }
+
+    // #endregion
+
+    // #region Event Handlers
+
+    /**
+     * Called when the individual clicks one of the page sizes.
+     *
+     * @param size The page size represented by the button.
+     */
+    function onPageSizeClick(size: number): void {
         pageSize.value = size;
-    };
+    }
+
+    // #endregion
 </script>

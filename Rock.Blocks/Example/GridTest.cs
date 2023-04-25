@@ -15,7 +15,6 @@
 // </copyright>
 //
 
-using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data.Entity;
@@ -23,12 +22,11 @@ using System.Linq;
 
 using Rock.Attribute;
 using Rock.Data;
-using Rock.Drawing;
 using Rock.Model;
 using Rock.Obsidian.UI;
+using Rock.ViewModels.Core.Grid;
 using Rock.ViewModels.Utility;
 using Rock.Web.Cache;
-using Rock.Web.UI;
 
 namespace Rock.Blocks.Example
 {
@@ -159,7 +157,7 @@ namespace Rock.Blocks.Example
 
             // Determine the entity type of the items this entity set will represent.
             var entityType = entitySet.EntityTypeKey.IsNotNullOrWhiteSpace()
-                ? EntityTypeCache.Get( entitySet.EntityTypeKey, false )
+                ? EntityTypeCache.Get( entitySet.EntityTypeKey.AsGuid() )
                 : null;
 
             // Create the basic entity set, expire in 5 minutes.
@@ -309,31 +307,6 @@ namespace Rock.Blocks.Example
                 // Todo: Change to IdKey.
                 return ActionOk( rockCommunication.Id.ToString() );
             }
-        }
-
-        public class GridEntitySetBag
-        {
-            public string EntityTypeKey { get; set; }
-
-            public List<GridEntitySetItemBag> Items { get; set; }
-        }
-
-        public class GridCommunicationBag
-        {
-            public List<GridEntitySetItemBag> Recipients { get; set; }
-
-            public List<string> MergeFields { get; set; }
-
-            public string FromUrl { get; set; }
-        }
-
-        public class GridEntitySetItemBag
-        {
-            public string EntityKey { get; set; }
-
-            public int Order { get; set; }
-
-            public Dictionary<string, object> AdditionalMergeValues { get; set; }
         }
     }
 }

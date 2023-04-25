@@ -21,6 +21,14 @@ import { RockDateTime } from "@Obsidian/Utility/rockDateTime";
 import { Component, defineComponent, PropType } from "vue";
 import DateColumnCell from "../Cells/dateCell.partial.obs";
 
+/**
+ * Gets the value to use when exporting a cell of this column.
+ *
+ * @param row The row that will be exported.
+ * @param column The column that will be exported.
+ *
+ * @returns A RockDateTime value or undefined if the cell has no value.
+ */
 function getExportValue(row: Record<string, unknown>, column: ColumnDefinition): RockDateTime | undefined {
     if (!column.field) {
         return undefined;
@@ -35,6 +43,29 @@ function getExportValue(row: Record<string, unknown>, column: ColumnDefinition):
     return RockDateTime.parseISO(value) ?? undefined;
 }
 
+/**
+ * Gets the value to use when performing quick filtering of a cell in this
+ * column.
+ *
+ * @param row The row that will be filtered.
+ * @param column The column that will be filtered.
+ *
+ * @returns A string value or undefined if the cell has no compatible value.
+ */
+function getQuickFilterValue(row: Record<string, unknown>, column: ColumnDefinition): string | undefined {
+    if (!column.field) {
+        return undefined;
+    }
+
+    const value = row[column.field];
+
+    if (typeof value !== "string") {
+        return undefined;
+    }
+
+    return RockDateTime.parseISO(value)?.toASPString("d");
+}
+
 
 export default defineComponent({
     props: {
@@ -47,19 +78,7 @@ export default defineComponent({
 
         quickFilterValue: {
             type: Object as PropType<QuickFilterValueFunction | string>,
-            default: (r: Record<string, unknown>, c: ColumnDefinition) => {
-                if (!c.field) {
-                    return undefined;
-                }
-
-                const value = r[c.field];
-
-                if (typeof value !== "string") {
-                    return undefined;
-                }
-
-                return RockDateTime.parseISO(value)?.toASPString("d");
-            }
+            default: getQuickFilterValue
         },
 
         exportValue: {

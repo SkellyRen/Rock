@@ -26,6 +26,9 @@ export default defineComponent({
             default: "grid-columncommand"
         },
 
+        /**
+         * Called when the edit button has been clicked.
+         */
         onClick: {
             type: Function as PropType<((key: string) => void) | ((key: string) => Promise<void>)>,
             required: false

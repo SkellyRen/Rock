@@ -92,24 +92,31 @@ export {
     TextFilter
 };
 
+/** A column filter that can be used with date values. */
 export const dateValueFilter: ColumnFilter = {
     component: DateFilter,
 
     matches: dateFilterMatches
 };
 
+/** A column filter that can be used with numeric values. */
 export const numberValueFilter: ColumnFilter = {
     component: NumberFilter,
 
     matches: numberFilterMatches
 };
 
+/** A column filter that performs simple substring matching. */
 export const textValueFilter: ColumnFilter = {
      component: TextFilter,
 
      matches: textFilterMatches
 };
 
+/**
+ * A column filter that can displays unique value and let's the individual
+ * pick one or more values to use in filtering.
+ */
 export const pickExistingValueFilter: ColumnFilter = {
     component: PickExistingFilter,
 

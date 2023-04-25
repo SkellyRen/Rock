@@ -19,7 +19,7 @@
                 {{ row.name.firstName }} {{ row.name.lastName }}
             </template>
             <template #condensed="{ row }">
-                {{ row.name.firstName }}
+                {{ row.name.firstName.substring(0, 1) }} {{ row.name.lastName }}
             </template>
             <template #export="{ row }">
                 Export for: {{  row.name.lastName }}
