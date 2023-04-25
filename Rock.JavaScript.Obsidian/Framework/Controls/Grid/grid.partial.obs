@@ -1,6 +1,6 @@
 <!-- Copyright by the Spark Development Network; Licensed under the Rock Community License -->
 <template>
-    <table class="grid-table table table-bordered table-striped table-hover table-obsidian" :class="{ 'table-sticky': props.stickyHeader }">
+    <table class="grid-table table table-bordered table-striped table-hover table-obsidian" :class="{ 'table-sticky': isStickyHeader }">
         <thead>
             <FilterHeaderRow v-model:quickFilterValue="quickFilterValue"
                              :grid="gridState"
@@ -467,7 +467,6 @@ table.table-obsidian th.grid-error > .alert {
 
     // #region Values
 
-    const customGridActions = ref<GridAction[]>([]);
     const currentPage = ref(1);
     const pageSize = ref(50);
     const pageSizes = [50, 500, 5000];
@@ -524,6 +523,10 @@ table.table-obsidian th.grid-error > .alert {
         // those values. Otherwise, determine it automatically.
         if (props.showLaunchWorkflow === true || props.showLaunchWorkflow === false) {
             return props.showLaunchWorkflow;
+        }
+        else if (props.definition?.enableLaunchWorkflow !== undefined) {
+            // Administrator has set it explicitly.
+            return props.definition.enableLaunchWorkflow;
         }
         else {
             // Show if we have a keyField and we have an entityTypeGuid.
@@ -696,10 +699,29 @@ table.table-obsidian th.grid-error > .alert {
             });
         }
 
-        // Append the custom actions.
-        actions.push(...customGridActions.value);
+        // Append the custom actions defined in the block settings.
+        if (props.definition?.customActions) {
+            for (const action of props.definition.customActions) {
+                if (!action.iconCssClass || !action.route) {
+                    continue;
+                }
+
+                actions.push({
+                    handler: () => onCustomRoute(action.route ?? ""),
+                    iconCssClass: action.iconCssClass,
+                    tooltip: action.description ?? undefined
+                });
+            }
+        }
 
         return actions;
+    });
+
+    /**
+     * Contains `true` if the sticky header should be enabled on this grid.
+     */
+    const isStickyHeader = computed((): boolean => {
+        return props.stickyHeader || props.definition?.enableStickyHeader === true;
     });
 
     // #endregion
@@ -713,7 +735,7 @@ table.table-obsidian th.grid-error > .alert {
     function createGridState(): GridState {
         const state = new GridState(
             getColumnDefinitions(slots["default"]?.() ?? []),
-            props.definition ?? {},
+            props.definition,
             props.liveUpdates ?? false,
             props.itemTerm || "item",
             props.entityTypeGuid);
@@ -1196,6 +1218,32 @@ table.table-obsidian th.grid-error > .alert {
         }
 
         await createCommunicationAndRedirect(communicationBag, url);
+    }
+
+    /**
+     * Called when a custom grid action has been clicked.
+     */
+    async function onCustomRoute(url: string): Promise<void> {
+        if (!props.keyField || !url) {
+            return;
+        }
+
+        const options: EntitySetOptions = {
+            entityTypeGuid: props.entityTypeGuid
+        };
+
+        let fixedUrl: string;
+
+        if (url.includes("{0}")) {
+            fixedUrl = url.replace(/\{0\}/g, "{EntitySetId}");
+        }
+        else {
+            fixedUrl = url.includes("?")
+                ? `${url}&EntitySetId={EntitySetId}`
+                : `${url}?EntitySetId={EntitySetId}`;
+        }
+
+        await createEntitySetAndRedirect([props.keyField], fixedUrl, options);
     }
 
     /**

@@ -53,5 +53,27 @@ namespace Rock.ViewModels.Core.Grid
         /// </summary>
         /// <value>The definitions of any custom columns.</value>
         public List<CustomColumnDefinitionBag> CustomColumns { get; set; }
+
+        /// <summary>
+        /// Gets or sets the custom actions that should be added to the grid.
+        /// </summary>
+        /// <value>The custom actions.</value>
+        public List<CustomActionBag> CustomActions { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether the sticky header should
+        /// be enabled. This is additive, if the developer has explicitely turned
+        /// off sticky headers then they will not be enabled by this.
+        /// </summary>
+        /// <value><c>true</c> if sticky headers should be enabled; otherwise, <c>false</c>.</value>
+        public bool EnableStickyHeader { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether the launch workflow action
+        /// should be included. This is additive, if the developer has explicitely
+        /// turned off launch workflows then they will not be enabled by this.
+        /// </summary>
+        /// <value><c>true</c> if the launch workflow action should be enabled; otherwise, <c>false</c>.</value>
+        public bool EnableLaunchWorkflow { get; set; }
     }
 }

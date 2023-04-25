@@ -46,7 +46,7 @@
                     <asp:Panel ID="pnlCustomGridTab" runat="server" Visible="false">
                         <Rock:Toggle ID="tglEnableStickyHeader" runat="server" Label="Enable Sticky Header" OnText="Yes" OffText="No" Checked="false" Help="If set to yes, all the table headers will stay at the top of the window when scrolling." />
 
-                        <Rock:PanelWidget runat="server" Title="Custom Actions">
+                        <Rock:PanelWidget ID="pwCustomActions" runat="server" Title="Custom Actions">
                             <Rock:NotificationBox runat="server" Text="This feature requires that the grid know the entity type of the items displayed. If this information is not available, then the action buttons will not be displayed. Action buttons are also not displayed if the person does not have permission to visit the destination route or the route does not exist." />
                             <Rock:Toggle ID="tglEnableDefaultWorkflowLauncher" runat="server" Label="Enable Workflow Launcher" OnText="Yes" OffText="No" Help="If set to yes, the workflow launcher button will be enabled for the grid." />
                             <Rock:RockControlWrapper ID="rcwCustomActions" runat="server" Label="Custom Actions">

@@ -41,23 +41,18 @@ namespace Rock.Blocks.Example
     [IconCssClass( "fa fa-list" )]
 
     [Rock.SystemGuid.EntityTypeGuid( "1934a378-57d6-44d0-b7cd-4443f347a1ee" )]
+    [CustomizedGrid]
     public class GridTest : RockObsidianBlockType
     {
         public override string BlockFileUrl => $"{base.BlockFileUrl}.obs";
 
         public override object GetObsidianBlockInitialization()
         {
-            var sw = System.Diagnostics.Stopwatch.StartNew();
             var builder = GetGridBuilder( GetGridAttributes() );
-            sw.Stop();
-
-            sw.Restart();
-            builder.BuildDefinition();
-            sw.Stop();
 
             return new
             {
-                GridDefinition = GetGridBuilder( GetGridAttributes() ).BuildDefinition()
+                GridDefinition = builder.BuildDefinition()
             };
         }
 
@@ -102,8 +97,8 @@ namespace Rock.Blocks.Example
             // PersonIds (to avoid a SQL Expression limit error).
             while ( personIds.Any() )
             {
-                var personIdsChunk = personIds.Take( 1000 );
-                personIds = personIds.Skip( 1000 ).ToList();
+                var personIdsChunk = personIds.Take( 1_000 );
+                personIds = personIds.Skip( 1_000 ).ToList();
 
                 var chunkedPrimaryAliasIds = personAliasService.Queryable()
                     .Where( pa => pa.PersonId == pa.AliasPersonId && personIdsChunk.Contains( pa.PersonId ) )

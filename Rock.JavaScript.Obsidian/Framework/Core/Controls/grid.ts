@@ -1560,7 +1560,7 @@ export class GridState implements IGridState {
      * @param itemTerm The word or phrase that describes each row.
      * @param entityTypeGuid The unique identifier of the entity type this grid represents, or `undefined`.
      */
-    constructor(columns: ColumnDefinition[], gridDefinition: GridDefinitionBag, liveUpdates: boolean, itemTerm: string, entityTypeGuid: Guid | undefined) {
+    constructor(columns: ColumnDefinition[], gridDefinition: GridDefinitionBag | undefined, liveUpdates: boolean, itemTerm: string, entityTypeGuid: Guid | undefined) {
         this.rowCache = new GridRowCache(undefined);
         this.columns = [...columns];
         this.liveUpdates = liveUpdates;
@@ -1568,7 +1568,7 @@ export class GridState implements IGridState {
         this.entityTypeGuid = entityTypeGuid;
 
         // If we have custom columns, append them as the last data columns.
-        if (gridDefinition.customColumns && gridDefinition.customColumns.length > 0) {
+        if (gridDefinition?.customColumns && gridDefinition.customColumns.length > 0) {
             insertCustomColumns(this.columns, gridDefinition.customColumns);
         }
 

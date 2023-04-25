@@ -18,6 +18,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text.RegularExpressions;
 
 using Rock.Attribute;
@@ -27,6 +28,7 @@ using Rock.Net;
 using Rock.ViewModels.Core.Grid;
 using Rock.Web.Cache;
 using Rock.Web.UI;
+using Rock.Web.UI.Controls;
 
 namespace Rock.Obsidian.UI
 {
@@ -145,12 +147,21 @@ namespace Rock.Obsidian.UI
             // Add all the action URLs for the current site.
             AddDefaultGridActionUrls( builder, block );
 
-            // Add any custom columns that are defined.
+            // Add any custom columns that are defined in the block settings.
             AddCustomGridColumns( builder, block );
+
+            // Add any custom actions that are defined in the block settings.
+            AddCustomGridActions( builder, block );
 
             return builder;
         }
 
+        /// <summary>
+        /// Adds the default grid action urls relative to the specified block.
+        /// </summary>
+        /// <typeparam name="T">The type of the source collection that will be used to populate the grid.</typeparam>
+        /// <param name="builder">The <see cref="GridBuilder{T}"/> to add the field to.</param>
+        /// <param name="block">The block that is displaying this grid.</param>
         private static void AddDefaultGridActionUrls<T>( GridBuilder<T> builder, IRockBlockType block )
         {
             builder.AddDefinitionAction( definition =>
@@ -189,9 +200,61 @@ namespace Rock.Obsidian.UI
             } );
         }
 
+        /// <summary>
+        /// Adds the custom grid actions that are defined in the block settings.
+        /// </summary>
+        /// <typeparam name="T">The type of the source collection that will be used to populate the grid.</typeparam>
+        /// <param name="builder">The <see cref="GridBuilder{T}"/> to add the field to.</param>
+        /// <param name="block">The block that is displaying this grid.</param>
+        private static void AddCustomGridActions<T>( GridBuilder<T> builder, IRockBlockType block )
+        {
+            var customizedGrid = block.GetType().GetCustomAttribute<CustomizedGridAttribute>();
+
+            if ( customizedGrid == null )
+            {
+                return;
+            }
+
+            var enableStickyHeaders = block.BlockCache.GetAttributeValue( CustomGridOptionsConfig.EnableStickyHeadersAttributeKey ).AsBoolean();
+            var enableLaunchWorkflow = block.BlockCache.GetAttributeValue( CustomGridOptionsConfig.EnableDefaultWorkflowLauncherAttributeKey ).AsBoolean();
+            var customActions = block.BlockCache.GetAttributeValue( CustomGridOptionsConfig.CustomActionsConfigsAttributeKey ).FromJsonOrNull<List<CustomActionConfig>>();
+
+            builder.AddDefinitionAction( definition =>
+            {
+                definition.EnableStickyHeader = customizedGrid.IsStickyHeaderSupported && enableStickyHeaders;
+                definition.EnableLaunchWorkflow = !customizedGrid.IsCustomActionsSupported || enableLaunchWorkflow;
+
+                if ( customizedGrid.IsCustomActionsSupported && customActions != null && customActions.Any() )
+                {
+                    if ( definition.CustomActions == null )
+                    {
+                        definition.CustomActions = new List<CustomActionBag>();
+                    }
+
+                    foreach ( var customAction in customActions )
+                    {
+                        definition.CustomActions.Add( new CustomActionBag
+                        {
+                            Description = customAction.HelpText,
+                            IconCssClass = customAction.IconCssClass,
+                            Route = customAction.Route
+                        } );
+                    }
+                }
+            } );
+        }
+
+        /// <summary>
+        /// Adds the default grid columns that are defined in the block settings.
+        /// </summary>
+        /// <typeparam name="T">The type of the source collection that will be used to populate the grid.</typeparam>
+        /// <param name="builder">The <see cref="GridBuilder{T}"/> to add the field to.</param>
+        /// <param name="block">The block that is displaying this grid.</param>
         private static void AddCustomGridColumns<T>( GridBuilder<T> builder, IRockBlockType block )
         {
-            if ( !( block is ICustomGridColumns ) )
+            var customizedGrid = block.GetType().GetCustomAttribute<CustomizedGridAttribute>();
+
+            if ( customizedGrid == null || !customizedGrid.IsCustomColumnsSupported )
             {
                 return;
             }
@@ -231,6 +294,13 @@ namespace Rock.Obsidian.UI
             } );
         }
 
+        /// <summary>
+        /// Gets the custom column text.
+        /// </summary>
+        /// <param name="row">The row to use as the merge field.</param>
+        /// <param name="template">The lava template.</param>
+        /// <param name="requestContext">The request context.</param>
+        /// <returns>A string that contains the resolved text.</returns>
         private static string GetCustomColumnText( object row, string template, RockRequestContext requestContext )
         {
             var mergeFields = requestContext.GetCommonMergeFields();
