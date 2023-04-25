@@ -20,12 +20,14 @@ using System.Data.Entity;
 using System.Linq;
 #if WEBFORMS
 using System.Web.UI;
+using Newtonsoft.Json.Linq;
 #endif
 using Rock.Attribute;
 using Rock.Constants;
 using Rock.Data;
 using Rock.Model;
 using Rock.Reporting;
+using Rock.ViewModels.Utility;
 using Rock.Web.Cache;
 using Rock.Web.UI.Controls;
 
@@ -73,6 +75,109 @@ namespace Rock.Field.Types
         #endregion
 
         #region EditControl
+
+        /// <inheritdoc/>
+        public override string GetPublicValue( string privateValue, Dictionary<string, string> privateConfigurationValues )
+        {
+            var categories = GetCategories( privateValue );
+
+            return categories.Select( c => c.Name ).JoinStrings( "," );
+        }
+
+        private List<CategoryCache> GetCategories( string privateValue )
+        {
+            if ( string.IsNullOrWhiteSpace( privateValue ) )
+            {
+                return new List<CategoryCache>();
+            }
+
+            var guids = privateValue.SplitDelimitedValues().AsGuidList();
+
+            if ( guids.Count == 0 )
+            {
+                return new List<CategoryCache>();
+            }
+
+            var categories = guids.ConvertAll( c => CategoryCache.Get( c ) )
+                .ToList();
+
+            return categories;
+        }
+
+        /// <inheritdoc/>
+        public override string GetPrivateEditValue( string publicValue, Dictionary<string, string> privateConfigurationValues )
+        {
+            if ( string.IsNullOrWhiteSpace( publicValue ) )
+            {
+                return string.Empty;
+            }
+
+            var token = JToken.Parse( publicValue );
+
+            if ( token is JArray )
+            {
+                var categoryValues = publicValue.FromJsonOrNull<List<ListItemBag>>();
+                return categoryValues.ConvertAll( c => c.Value ).AsDelimited( "," );
+            }
+            else if ( token is JObject )
+            {
+                var categoryValue = publicValue.FromJsonOrNull<ListItemBag>();
+                return categoryValue.Value;
+            }
+
+            return string.Empty;
+        }
+
+        /// <inheritdoc/>
+        public override string GetPublicEditValue( string privateValue, Dictionary<string, string> privateConfigurationValues )
+        {
+            var categories = GetCategories( privateValue ).ConvertAll( c => new ListItemBag() { Text = c.Name, Value = c.Guid.ToString() } );
+
+            return categories.ToCamelCaseJson( false, true );
+        }
+
+        /// <inheritdoc/>
+        public override Dictionary<string, string> GetPrivateConfigurationValues( Dictionary<string, string> publicConfigurationValues )
+        {
+            var privateConfigurationValues = base.GetPrivateConfigurationValues( publicConfigurationValues );
+
+            if ( publicConfigurationValues.ContainsKey( ENTITY_TYPE_NAME_KEY ) )
+            {
+                var entityTypeNameValue = privateConfigurationValues[ENTITY_TYPE_NAME_KEY].FromJsonOrNull<ListItemBag>();
+                if ( entityTypeNameValue != null )
+                {
+                    var entityType = EntityTypeCache.Get( entityTypeNameValue.Value.AsGuid() );
+
+                    if ( entityType != null )
+                    {
+                        privateConfigurationValues[ENTITY_TYPE_NAME_KEY] = entityType.Id.ToString();
+                    }
+                }
+            }
+
+            return privateConfigurationValues;
+        }
+
+        /// <inheritdoc/>
+        public override Dictionary<string, string> GetPublicConfigurationValues( Dictionary<string, string> privateConfigurationValues, ConfigurationValueUsage usage, string value )
+        {
+            var publicConfigurationValues = base.GetPublicConfigurationValues( privateConfigurationValues, usage, value );
+
+            if ( publicConfigurationValues.ContainsKey( ENTITY_TYPE_NAME_KEY ) && int.TryParse( publicConfigurationValues[ENTITY_TYPE_NAME_KEY], out int entityTypeId ) )
+            {
+                var entityType = EntityTypeCache.Get( entityTypeId );
+                if ( entityType != null )
+                {
+                    publicConfigurationValues[ENTITY_TYPE_NAME_KEY] = new ListItemBag()
+                    {
+                        Text = entityType.FriendlyName,
+                        Value = entityType.Guid.ToString()
+                    }.ToCamelCaseJson( false, true );
+                }
+            }
+
+            return publicConfigurationValues;
+        }
 
         #endregion
 
