@@ -803,11 +803,14 @@ namespace RockWeb.Blocks.Core
 
             foreach ( var item in rptCustomActions.Items.OfType<RepeaterItem>() )
             {
+                var rtbName = item.FindControl( "rtbName" ) as RockTextBox;
                 var rtbRoute = item.FindControl( "rtbRoute" ) as RockTextBox;
                 var rtbIcon = item.FindControl( "rtbIcon" ) as RockTextBox;
                 var rtbHelp = item.FindControl( "rtbHelp" ) as RockTextBox;
 
-                var config = new CustomActionConfig {
+                var config = new CustomActionConfig
+                {
+                    Name = rtbName.Text,
                     Route = rtbRoute.Text,
                     IconCssClass = rtbIcon.Text,
                     HelpText = rtbHelp.Text
@@ -860,6 +863,9 @@ namespace RockWeb.Blocks.Core
             {
                 return;
             }
+
+            var rtbName = e.Item.FindControl( "rtbName" ) as RockTextBox;
+            rtbName.Text = config.Name;
 
             var rtbRoute = e.Item.FindControl( "rtbRoute" ) as RockTextBox;
             rtbRoute.Text = config.Route;

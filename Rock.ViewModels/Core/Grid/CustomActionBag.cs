@@ -23,6 +23,13 @@ namespace Rock.ViewModels.Core.Grid
     public class CustomActionBag
     {
         /// <summary>
+        /// Gets or sets the name of the action. This should be one or two words
+        /// that quickly describe the action.
+        /// </summary>
+        /// <value>The name of the action.</value>
+        public string Name { get; set; }
+
+        /// <summary>
         /// Gets or sets the route. If the route includes <c>{0}</c> then it
         /// will be replaced with the entity set identifier. Otherwise the a
         /// query string parameter of <c>EntitySetId</c> will be appended to

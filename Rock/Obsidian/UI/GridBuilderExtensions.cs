@@ -264,6 +264,7 @@ namespace Rock.Obsidian.UI
                         {
                             Description = customAction.HelpText,
                             IconCssClass = customAction.IconCssClass,
+                            Name = customAction.Name,
                             Route = customAction.Route
                         } );
                     }

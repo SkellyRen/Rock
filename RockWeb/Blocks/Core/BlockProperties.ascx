@@ -58,6 +58,9 @@
                                             <div class="col-md-11">
                                                 <div class="row">
                                                     <div class="col-md-6">
+                                                        <Rock:RockTextBox ID="rtbName" runat="server" Label="Name" Help="The name of the action. This should be one or two words." />
+                                                    </div>
+                                                    <div class="col-md-6">
                                                         <Rock:RockTextBox ID="rtbRoute" runat="server" Label="Route" Help="The route that the user is directed to after clicking the action button. This will be formatted using an EntitySetId in position {0}. If position {0} is not included in this value, then the EntitySetId will be included as a query parameter. Example: /CustomLaunchRoute/{0}" />
                                                     </div>
                                                     <div class="col-md-6">

@@ -33,6 +33,12 @@ export type CustomActionBag = {
     iconCssClass?: string | null;
 
     /**
+     * Gets or sets the name of the action. This should be one or two words
+     * that quickly describe the action.
+     */
+    name?: string | null;
+
+    /**
      * Gets or sets the route. If the route includes {0} then it
      * will be replaced with the entity set identifier. Otherwise the a
      * query string parameter of EntitySetId will be appended to
