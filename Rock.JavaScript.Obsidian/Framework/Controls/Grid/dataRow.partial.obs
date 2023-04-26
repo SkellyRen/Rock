@@ -1,3 +1,4 @@
+<!-- Copyright by the Spark Development Network; Licensed under the Rock Community License -->
 <template>
     <tr ref="rowElement" :title="tooltipText">
         <DataCell v-for="column in props.columns"

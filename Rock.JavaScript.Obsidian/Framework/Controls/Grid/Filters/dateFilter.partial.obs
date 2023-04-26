@@ -1,3 +1,4 @@
+<!-- Copyright by the Spark Development Network; Licensed under the Rock Community License -->
 <template>
     <div ref="filterBodyElement" class="grid-filter-popup-body">
         <DropDownList v-model="searchMethod"

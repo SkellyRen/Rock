@@ -1,3 +1,4 @@
+<!-- Copyright by the Spark Development Network; Licensed under the Rock Community License -->
 <template>
     <ul v-if="pageSizes" class="grid-pagesize pagination pagination-sm">
         <li v-for="size in pageSizes" :class="getPageSizeClass(size)">

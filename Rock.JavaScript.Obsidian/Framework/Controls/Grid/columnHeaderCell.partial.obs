@@ -1,3 +1,4 @@
+<!-- Copyright by the Spark Development Network; Licensed under the Rock Community License -->
 <template>
     <th ref="columnHeaderElement" class="grid-column-header" :class="additionalHeaderClass">
         <component v-if="column.headerComponent" :is="column.headerComponent" :column="column" :grid="grid" />
