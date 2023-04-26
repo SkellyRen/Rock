@@ -596,7 +596,7 @@ export type GridAction = {
      * The title of the action, this should be a very short (one or two words)
      * description of the action that will be performed, such as "Delete".
      */
-    title?: string;
+    title: string;
 
     /**
      * The tooltip to display for this action.

@@ -624,14 +624,16 @@ table.table-obsidian th.grid-error > .alert {
      * for the individual to interact with.
      */
     const gridActions = computed((): GridAction[] => {
-        const actions: GridAction[] = [];
+        const actions: (GridAction & { isPrimary?: boolean })[] = [];
 
         // Append the add item action.
         if (props.onAddItem) {
             actions.push({
+                buttonCssClass: "btn-add",
                 handler: props.onAddItem,
                 iconCssClass: "fa fa-plus-circle",
-                buttonCssClass: "btn-add",
+                isPrimary: true,
+                title: "Add item",
                 tooltip: "Add a new item."
             });
         }
@@ -641,6 +643,7 @@ table.table-obsidian th.grid-error > .alert {
             actions.push({
                 handler: onMergeTemplate,
                 iconCssClass: "fa fa-files-o",
+                title: "Merge Template",
                 tooltip: "Merge Records into Merge Template"
             });
         }
@@ -650,6 +653,7 @@ table.table-obsidian th.grid-error > .alert {
             actions.push({
                 handler: onExport,
                 iconCssClass: "fa fa-table",
+                title: "Export",
                 tooltip: "Export to Excel"
             });
         }
@@ -659,6 +663,7 @@ table.table-obsidian th.grid-error > .alert {
             actions.push({
                 handler: onLaunchWorkflow,
                 iconCssClass: "fa fa-cog",
+                title: "Launch Workflow",
                 tooltip: "Launch Workflow"
             });
         }
@@ -668,6 +673,7 @@ table.table-obsidian th.grid-error > .alert {
             actions.push({
                 handler: onBulkUpdate,
                 iconCssClass: "fa fa-truck",
+                title: "Bulk Update",
                 tooltip: "Bulk Update"
             });
         }
@@ -677,6 +683,7 @@ table.table-obsidian th.grid-error > .alert {
             actions.push({
                 handler: onPersonMerge,
                 iconCssClass: "fa fa-users",
+                title: "Merge Person Records",
                 tooltip: "Merge Person Records"
             });
         }
@@ -686,6 +693,7 @@ table.table-obsidian th.grid-error > .alert {
             actions.push({
                 handler: onPersonMerge,
                 iconCssClass: "fa fa-sign-in-alt",
+                title: "Merge Business Records",
                 tooltip: "Merge Business Records"
             });
         }
@@ -695,6 +703,7 @@ table.table-obsidian th.grid-error > .alert {
             actions.push({
                 handler: onCommunicate,
                 iconCssClass: "fa fa-comment",
+                title: "Communicate",
                 tooltip: "Communicate"
             });
         }
@@ -709,6 +718,7 @@ table.table-obsidian th.grid-error > .alert {
                 actions.push({
                     handler: () => onCustomRoute(action.route ?? ""),
                     iconCssClass: action.iconCssClass,
+                    title: action.name || "Custom Action",
                     tooltip: action.description ?? undefined
                 });
             }
@@ -1034,7 +1044,11 @@ table.table-obsidian th.grid-error > .alert {
         if (props.mergeTemplateAsPerson && props.personKeyField) {
             await createEntitySetAndRedirect([props.personKeyField], url, undefined);
         }
+        else if (props.entityTypeGuid) {
+            await createEntitySetAndRedirect([props.keyField], url, undefined);
+        }
         else {
+            console.log("Performing long merge");
             // Find all columns that aren't special columns and include them in
             // the additional merge fields.
             const mergeColumns: Record<string, string> = {};

@@ -17,7 +17,9 @@
                     </div>
                 </div>
 
-                <ActionGroup :gridActions="gridActions" />
+                <ActionGroup :gridActions="primaryGridActions" />
+                <PopupActionGroup v-if="hasSecondaryActions"
+                                  :gridActions="secondaryGridActions" />
             </div>
         </th>
     </tr>
@@ -28,6 +30,7 @@
     import TextBox from "@Obsidian/Controls/textBox";
     import { PropType, computed, ref } from "vue";
     import ActionGroup from "./actionGroup.partial.obs";
+    import PopupActionGroup from "./popupActionGroup.partial.obs";
     import { GridAction, IGridState } from "@Obsidian/Types/Controls/grid";
 
     const props = defineProps({
@@ -39,7 +42,7 @@
 
         /** The array of grid actions that will be displayed. */
         gridActions: {
-            type: Array as PropType<GridAction[]>,
+            type: Array as PropType<(GridAction & { isPrimary?: boolean })[]>,
             default: []
         },
 
@@ -79,6 +82,18 @@
         return {
             width: `${isSearchVisible.value ? 100 : 0}%`
         };
+    });
+
+    const primaryGridActions = computed((): GridAction[] => {
+        return props.gridActions.filter(a => a.isPrimary === true);
+    });
+
+    const secondaryGridActions = computed((): GridAction[] => {
+        return props.gridActions.filter(a => a.isPrimary !== true);
+    });
+
+    const hasSecondaryActions = computed((): boolean => {
+        return secondaryGridActions.value.length > 0;
     });
 
     // #endregion
