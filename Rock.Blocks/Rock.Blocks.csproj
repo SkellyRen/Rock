@@ -61,6 +61,8 @@
     </Compile>
     <Compile Include="Engagement\SignUp\SignUpDetail.cs" />
     <Compile Include="Group\GroupAttendanceDetail.cs" />
+    <Compile Include="RockObsidianEntityListBlockType.cs" />
+    <Compile Include="RockObsidianListBlockType.cs" />
     <Compile Include="Security\AccountEntry.cs" />
     <Compile Include="Cms\ContentCollectionDetail.cs" />
     <Compile Include="Cms\ContentCollectionView.cs" />

@@ -101,12 +101,26 @@ namespace Rock.Obsidian.UI
         /// <param name="attributes">The attributes that should be added to the grid definition.</param>
         /// <returns>A reference to the original <see cref="GridBuilder{T}"/> object that can be used to chain calls.</returns>
         public static GridBuilder<T> AddAttributeFields<T>( this GridBuilder<T> builder, IEnumerable<AttributeCache> attributes )
+            where T : IHasAttributes
         {
             if ( !typeof( IHasAttributes ).IsAssignableFrom( typeof( T ) ) )
             {
                 throw new Exception( $"The type '{typeof( T ).FullName}' does not support attributes." );
             }
 
+            return builder.AddAttributeFieldsFrom( item => ( IHasAttributes ) item, attributes );
+        }
+
+        /// <summary>
+        /// Adds a set of attribute field to the grid definition.
+        /// </summary>
+        /// <typeparam name="T">The type of the source collection that will be used to populate the grid.</typeparam>
+        /// <param name="builder">The <see cref="GridBuilder{T}"/> to add the field to.</param>
+        /// <param name="selector">The expression to call to get the <see cref="IHasAttributes"/> object from the item.</param>
+        /// <param name="attributes">The attributes that should be added to the grid definition.</param>
+        /// <returns>A reference to the original <see cref="GridBuilder{T}"/> object that can be used to chain calls.</returns>
+        public static GridBuilder<T> AddAttributeFieldsFrom<T>( this GridBuilder<T> builder, Func<T, IHasAttributes> selector, IEnumerable<AttributeCache> attributes )
+        {
             foreach ( var attribute in attributes )
             {
                 var key = attribute.Key;
@@ -114,9 +128,9 @@ namespace Rock.Obsidian.UI
 
                 builder.AddField( fieldKey, item =>
                 {
-                    var attributeRow = item as IHasAttributes;
+                    var attributesItem = selector( item );
 
-                    return attributeRow.GetAttributeCondensedHtmlValue( key );
+                    return attributesItem.GetAttributeCondensedHtmlValue( key );
                 } );
 
                 builder.AddDefinitionAction( definition =>
@@ -226,6 +240,9 @@ namespace Rock.Obsidian.UI
 
                 if ( customizedGrid.IsCustomActionsSupported && customActions != null && customActions.Any() )
                 {
+                    // Only initialize a new collection if we need to, so we
+                    // don't wipe out any custom actions the block might have
+                    // added itself.
                     if ( definition.CustomActions == null )
                     {
                         definition.CustomActions = new List<CustomActionBag>();
@@ -233,6 +250,16 @@ namespace Rock.Obsidian.UI
 
                     foreach ( var customAction in customActions )
                     {
+                        if ( customAction.Route.IsNullOrWhiteSpace() )
+                        {
+                            continue;
+                        }
+
+                        if ( !IsAuthorizedForRoute( block.RequestContext, customAction.Route ) )
+                        {
+                            continue;
+                        }
+
                         definition.CustomActions.Add( new CustomActionBag
                         {
                             Description = customAction.HelpText,

@@ -576,18 +576,8 @@ namespace Rock
                     disposeOfContext = true;
                 }
 
-                // Dynamically get the IService for the entity type and then get a queryable to load the entities.
-                var entityService = Rock.Reflection.GetServiceForEntityType( entityType.GetEntityType(), dbContext );
-                var asQueryableMethod = entityService?.GetType().GetMethod( "Queryable", Array.Empty<Type>() );
-
-                // If the entity service is null, then the entity type is not a valid IEntity type.
-                if ( asQueryableMethod == null )
-                {
-                    return entityIds;
-                }
-
                 // Get a queryable for the IEntity type.
-                var entityQry = ( IQueryable<IEntity> ) asQueryableMethod.Invoke( entityService, Array.Empty<object>() );
+                var entityQry = GetQueryableForEntityType( entityType.GetEntityType(), dbContext );
 
                 while ( guidsToLookup.Any() )
                 {
@@ -624,6 +614,28 @@ namespace Rock
             }
 
             return entityIds;
+        }
+
+        /// <summary>
+        /// Gets the queryable for the entity type.
+        /// </summary>
+        /// <param name="entityType">Type of the entity.</param>
+        /// <param name="dbContext">The database context.</param>
+        /// <returns>An <see cref="IQueryable{IEntity}"/> that can be used to load entities; or <c>null</c> if the operation was not supported.</returns>
+        internal static IQueryable<IEntity> GetQueryableForEntityType( Type entityType, Data.DbContext dbContext )
+        {
+            // Dynamically get the IService for the entity type and then get a queryable to load the entities.
+            var entityService = Rock.Reflection.GetServiceForEntityType( entityType, dbContext );
+            var asQueryableMethod = entityService?.GetType().GetMethod( "Queryable", Array.Empty<Type>() );
+
+            // If the entity service is null, then the entity type is not a valid IEntity type.
+            if ( asQueryableMethod == null )
+            {
+                return null;
+            }
+
+            // Get a queryable for the IEntity type.
+            return ( IQueryable<IEntity> ) asQueryableMethod.Invoke( entityService, Array.Empty<object>() );
         }
 
         // Cache the ServiceType that we found when doing reflection. Doing reflection each time could take a few milliseconds,

@@ -15,7 +15,6 @@
 // </copyright>
 //
 
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data.Entity;
 using System.Linq;
@@ -24,16 +23,13 @@ using Rock.Attribute;
 using Rock.Data;
 using Rock.Model;
 using Rock.Obsidian.UI;
-using Rock.ViewModels.Core.Grid;
 using Rock.ViewModels.Utility;
-using Rock.Web.Cache;
 
 namespace Rock.Blocks.Example
 {
     /// <summary>
     /// Allows testing the new Grid component.
     /// </summary>
-    /// <seealso cref="Rock.Blocks.RockObsidianBlockType" />
 
     [DisplayName( "Grid Test" )]
     [Category( "Example" )]
@@ -42,13 +38,20 @@ namespace Rock.Blocks.Example
 
     [Rock.SystemGuid.EntityTypeGuid( "1934a378-57d6-44d0-b7cd-4443f347a1ee" )]
     [CustomizedGrid]
-    public class GridTest : RockObsidianBlockType
+    public class GridTest : RockObsidianEntityListBlockType<PrayerRequest>
     {
+        #region Properties
+
         public override string BlockFileUrl => $"{base.BlockFileUrl}.obs";
 
+        #endregion
+
+        #region Methods
+
+        /// <inheritdoc/>
         public override object GetObsidianBlockInitialization()
         {
-            var builder = GetGridBuilder( GetGridAttributes() );
+            var builder = GetGridBuilder();
 
             return new
             {
@@ -56,18 +59,20 @@ namespace Rock.Blocks.Example
             };
         }
 
-        private List<AttributeCache> GetGridAttributes()
+        /// <inheritdoc/>
+        protected override IQueryable<PrayerRequest> GetListQueryable( RockContext rockContext )
         {
-            var entityTypeId = EntityTypeCache.GetId<PrayerRequest>().Value;
+            var count = RequestContext.GetPageParameter( "count" )?.AsIntegerOrNull() ?? 10_000;
 
-            return AttributeCache.GetByEntityTypeQualifier( entityTypeId, string.Empty, string.Empty, false )
-                .Where( a => a.IsGridColumn )
-                .OrderBy( a => a.Order )
-                .ThenBy( a => a.Name )
-                .ToList();
+            return base.GetListQueryable( rockContext ).Take( count );
         }
 
-        private GridBuilder<PrayerRequest> GetGridBuilder( List<AttributeCache> gridAttributes )
+        /// <summary>
+        /// Gets the grid builder that will be used to construct the definition
+        /// and the final row data.
+        /// </summary>
+        /// <returns>A <see cref="GridBuilder{T}"/> instance that will handle building the grid data.</returns>
+        protected override GridBuilder<PrayerRequest> GetGridBuilder()
         {
             return new GridBuilder<PrayerRequest>()
                 .WithBlock( this )
@@ -85,223 +90,13 @@ namespace Rock.Blocks.Example
                     Value = pr.IsUrgent == true ? "#900000" : "#009000",
                     Text = pr.IsUrgent != true ? "Closed" : "Open"
                 } )
-                .AddAttributeFields( gridAttributes );
+                .AddAttributeFields( GetGridAttributes() );
         }
 
-        private static Dictionary<int, int> GetPrimaryAliasIds( RockContext rockContext, List<int> personIds )
-        {
-            var personAliasIdLookup = new Dictionary<int, int>();
-            var personAliasService = new PersonAliasService( rockContext );
+        #endregion
 
-            // Get the data in chunks just in case we have a large list of
-            // PersonIds (to avoid a SQL Expression limit error).
-            while ( personIds.Any() )
-            {
-                var personIdsChunk = personIds.Take( 1_000 );
-                personIds = personIds.Skip( 1_000 ).ToList();
+        #region Block Actions
 
-                var chunkedPrimaryAliasIds = personAliasService.Queryable()
-                    .Where( pa => pa.PersonId == pa.AliasPersonId && personIdsChunk.Contains( pa.PersonId ) )
-                    .Select( pa => new
-                    {
-                        pa.Id,
-                        pa.PersonId
-                    } )
-                    .ToList();
-
-                foreach ( var aliasId in chunkedPrimaryAliasIds )
-                {
-                    personAliasIdLookup.AddOrIgnore( aliasId.PersonId, aliasId.Id );
-                }
-            }
-
-            return personAliasIdLookup;
-        }
-
-        [BlockAction]
-        public BlockActionResult GetGridData()
-        {
-            using ( var rockContext = new RockContext() )
-            {
-                var count = RequestContext.GetPageParameter( "count" )?.AsIntegerOrNull() ?? 10_000;
-
-                var gridAttributes = GetGridAttributes();
-                var gridAttributeIds = gridAttributes.Select( a => a.Id ).ToList();
-
-                var prayerRequests = new PrayerRequestService( rockContext )
-                    .Queryable()
-                    .AsNoTracking()
-                    .Take( count )
-                    .ToList();
-
-                Helper.LoadFilteredAttributes( prayerRequests, rockContext, a => gridAttributeIds.Contains( a.Id ) );
-
-                var data = GetGridBuilder( gridAttributes ).Build( prayerRequests );
-
-                return ActionOk( data );
-            }
-        }
-
-        [BlockAction]
-        public BlockActionResult CreateGridEntitySet( GridEntitySetBag entitySet )
-        {
-            if ( entitySet == null )
-            {
-                return ActionBadRequest( "No entity set data was provided." );
-            }
-
-            // Determine the entity type of the items this entity set will represent.
-            var entityType = entitySet.EntityTypeKey.IsNotNullOrWhiteSpace()
-                ? EntityTypeCache.Get( entitySet.EntityTypeKey.AsGuid() )
-                : null;
-
-            // Create the basic entity set, expire in 5 minutes.
-            var rockEntitySet = new EntitySet()
-            {
-                EntityTypeId = entityType?.Id,
-                ExpireDateTime = RockDateTime.Now.AddMinutes( 5 )
-            };
-
-            var entitySetItems = new List<EntitySetItem>();
-
-            using ( var rockContext = new RockContext() )
-            {
-                if ( entityType != null )
-                {
-                    // We have an entity type. Lookup all the identifiers from the
-                    // supplied entity keys.
-                    var entityKeys = entitySet.Items.Select( i => i.EntityKey ).ToList();
-                    var entityIdLookup = Rock.Reflection.GetEntityIdsForEntityType( entityType, entityKeys, true, rockContext );
-
-                    // Create an entity set item for each item that was provided.
-                    // If we couldn't find an identifier, then skip it.
-                    foreach ( var item in entitySet.Items )
-                    {
-                        if ( !entityIdLookup.TryGetValue( item.EntityKey, out var entityId ) )
-                        {
-                            continue;
-                        }
-
-                        entitySetItems.Add( new EntitySetItem
-                        {
-                            EntityId = entityId,
-                            AdditionalMergeValues = item.AdditionalMergeValues
-                        } );
-                    }
-                }
-                else
-                {
-                    // Non entity type, so just stuff the merge values into the item.
-                    entitySetItems.AddRange( entitySet.Items.Select( i => new EntitySetItem
-                    {
-                        EntityId = 0,
-                        AdditionalMergeValues = i.AdditionalMergeValues
-                    } ) );
-                }
-
-                // Return an error if we couldn't create any items.
-                if ( !entitySetItems.Any() )
-                {
-                    return ActionBadRequest( "No entities were found to create the set." );
-                }
-
-                // Create the entity set first so we can get the identifier.
-                var entitySetService = new EntitySetService( rockContext );
-                entitySetService.Add( rockEntitySet );
-                rockContext.SaveChanges();
-
-                // Use the entity set identifier to populate all the items.
-                entitySetItems.ForEach( a =>
-                {
-                    a.EntitySetId = rockEntitySet.Id;
-                } );
-
-                // Insert everything at once, bypassing EF.
-                rockContext.BulkInsert( entitySetItems );
-
-                // Todo: Change to IdKey.
-                return ActionOk( rockEntitySet.Id.ToString() );
-            }
-        }
-
-        [BlockAction]
-        public BlockActionResult CreateGridCommunication( GridCommunicationBag communication )
-        {
-            if ( communication == null )
-            {
-                return ActionBadRequest( "No communication data was provided." );
-            }
-
-            using ( var rockContext = new RockContext() )
-            {
-                var currentPersonAliasId = RequestContext.CurrentPerson?.PrimaryAliasId;
-
-                // Lookup all the identifiers from the supplied entity keys.
-                var personKeys = communication.Recipients.Select( i => i.EntityKey ).ToList();
-                var personIdLookup = Rock.Reflection.GetEntityIdsForEntityType( EntityTypeCache.Get<Person>(), personKeys, true, rockContext );
-
-                if ( personIdLookup.Count == 0 )
-                {
-                    return ActionBadRequest( "Grid has no recipients." );
-                }
-
-                // Create the blank communication to be filled in later.
-                var communicationRockContext = new RockContext();
-                var communicationService = new CommunicationService( communicationRockContext );
-                var rockCommunication = new Rock.Model.Communication
-                {
-                    IsBulkCommunication = true,
-                    Status = Model.CommunicationStatus.Transient,
-                    AdditionalMergeFields = communication.MergeFields,
-                    SenderPersonAliasId = currentPersonAliasId,
-                    UrlReferrer = communication.FromUrl
-                };
-
-                // Save communication to get the Id.
-                communicationService.Add( rockCommunication );
-                communicationRockContext.SaveChanges();
-
-                // Get the primary aliases
-                var personAliasIdLookup = GetPrimaryAliasIds( rockContext, personIdLookup.Values.ToList() );
-
-                var currentDateTime = RockDateTime.Now;
-                var communicationRecipientList = new List<CommunicationRecipient>( communication.Recipients.Count );
-
-                foreach ( var item in communication.Recipients )
-                {
-                    if ( !personIdLookup.TryGetValue( item.EntityKey, out var personId ) )
-                    {
-                        continue;
-                    }
-
-                    if (!personAliasIdLookup.TryGetValue( personId, out var personAliasId ) )
-                    {
-                        continue;
-                    }
-
-                    // NOTE: Set CreatedDateTime, ModifiedDateTime, etc. manually
-                    // since we are using BulkInsert.
-                    var recipient = new CommunicationRecipient
-                    {
-                        CommunicationId = rockCommunication.Id,
-                        PersonAliasId = personAliasId,
-                        AdditionalMergeValues = item.AdditionalMergeValues,
-                        CreatedByPersonAliasId = currentPersonAliasId,
-                        ModifiedByPersonAliasId = currentPersonAliasId,
-                        CreatedDateTime = currentDateTime,
-                        ModifiedDateTime = currentDateTime
-                    };
-
-                    communicationRecipientList.Add( recipient );
-                }
-
-                // BulkInsert to quickly insert the CommunicationRecipient records. Note: This is much faster, but will bypass EF and Rock processing.
-                var communicationRecipientRockContext = new RockContext();
-                communicationRecipientRockContext.BulkInsert( communicationRecipientList );
-
-                // Todo: Change to IdKey.
-                return ActionOk( rockCommunication.Id.ToString() );
-            }
-        }
+        #endregion
     }
 }
