@@ -40,7 +40,9 @@
                       :columns="visibleColumnDefinitions"
                       :rows="visibleRows"
                       :grid="gridState"
-                      :tooltipField="tooltipField" />
+                      :tooltipField="tooltipField"
+                      :isSelectable="isSelectionEnabled"
+                      @click="onRowClick" />
         </tbody>
 
         <tfoot>
@@ -450,9 +452,20 @@ table.table-obsidian th.grid-error > .alert {
 
         /**
          * The function to call in response to the add button being clicked.
+         * Providing this function will automatically enable the add button.
          */
         onAddItem: {
             type: Function as PropType<(() => void | Promise<void>)>,
+            required: false
+        },
+
+        /**
+         * The function to call in response to a row being clicked. This
+         * requires that an keyField be specified. Providing this function will
+         * automatically enable row selection.
+         */
+        onSelectItem: {
+            type: Function as PropType<((key: string) => void | Promise<void>)>,
             required: false
         }
     });
@@ -480,6 +493,7 @@ table.table-obsidian th.grid-error > .alert {
     const visibleColumnDefinitions = shallowRef<ReadonlyArray<ColumnDefinition>>(gridState.visibleColumns);
     const dragOptions = ref<IDragSourceOptions | undefined>();
     const reorderColumn: ColumnDefinition | undefined = gridState.columns.find(c => c.name === "__reorder");
+    const isRowSelectionInProgress = ref(false);
 
     // #endregion
 
@@ -731,6 +745,14 @@ table.table-obsidian th.grid-error > .alert {
      */
     const isStickyHeader = computed((): boolean => {
         return props.stickyHeader || props.definition?.enableStickyHeader === true;
+    });
+
+    /**
+     * Contains `true` if row selection is enabled on this grid.
+     */
+    const isSelectionEnabled = computed((): boolean => {
+        console.log("isSelectoinEnabled", !!props.onSelectItem);
+        return !!props.onSelectItem;
     });
 
     // #endregion
@@ -1267,6 +1289,34 @@ table.table-obsidian th.grid-error > .alert {
         updateVisibleRows();
         updatePageCount();
         updatePagerMessage();
+    }
+
+    /**
+     * Called when a row has been clicked if selection is enabled.
+     *
+     * @param key The key of the row that was clicked.
+     */
+    async function onRowClick(key: string): Promise<void> {
+        if (!props.onSelectItem || isRowSelectionInProgress.value) {
+            return;
+        }
+
+        // It's possible for row selection to be an async process. For example
+        // the block might need to call an API endpoint in order to determine
+        // what to do. In this case we need to make sure that only one select
+        // action is running at any given time.
+        isRowSelectionInProgress.value = true;
+
+        try {
+            const returnValue = props.onSelectItem(key);
+
+            if (isPromise(returnValue)) {
+                await returnValue;
+            }
+        }
+        finally {
+            isRowSelectionInProgress.value = false;
+        }
     }
 
     // #endregion

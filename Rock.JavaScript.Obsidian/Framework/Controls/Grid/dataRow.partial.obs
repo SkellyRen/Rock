@@ -1,10 +1,12 @@
 <!-- Copyright by the Spark Development Network; Licensed under the Rock Community License -->
 <template>
-    <tr ref="rowElement" :title="tooltipText">
+    <tr :title="tooltipText">
         <DataCell v-for="column in props.columns"
                   :column="column"
                   :row="props.row"
-                  :grid="props.grid" />
+                  :grid="props.grid"
+                  :isSelectable="isSelectable"
+                  @click="onCellClick" />
     </tr>
 </template>
 
@@ -40,10 +42,18 @@
         tooltipField: {
             type: String as PropType<string>,
             required: false
+        },
+
+        /** True if this row is selectable. */
+        isSelectable: {
+            type: Boolean as PropType<boolean>,
+            default: false
         }
     });
 
-    const rowElement = ref<HTMLElement | null>(null);
+    const emit = defineEmits<{
+        (e: "click", key: string): void
+    }>();
 
     /** Contains the text to display in the tooltip for the entire row. */
     const tooltipText = computed((): string | undefined => {
@@ -66,4 +76,16 @@
             return undefined;
         }
     });
+
+    /**
+     * Called when a cell is clicked. Check if we have a valid row key and
+     * then emit our own clicked event with it.
+     */
+    function onCellClick(): void {
+        const rowKey = props.grid.getRowKey(props.row);
+
+        if (rowKey) {
+            emit("click", rowKey);
+        }
+    }
 </script>

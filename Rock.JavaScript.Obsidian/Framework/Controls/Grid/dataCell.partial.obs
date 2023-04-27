@@ -1,6 +1,6 @@
 <!-- Copyright by the Spark Development Network; Licensed under the Rock Community License -->
 <template>
-    <td :class="additionalItemClass">
+    <td :class="additionalItemClass" @click="onClick">
         <component :is="props.column.formatComponent"
                    :row="props.row"
                    :column="props.column"
@@ -29,8 +29,18 @@
         grid: {
             type: Object as PropType<IGridState>,
             required: true
+        },
+
+        /** True if this cell is selectable. */
+        isSelectable: {
+            type: Boolean as PropType<boolean>,
+            default: false
         }
     });
+
+    const emit = defineEmits<{
+        (e: "click"): void
+    }>();
 
     /** Contains any additional CSS classes for the td element. */
     const additionalItemClass = computed((): string => {
@@ -46,6 +56,33 @@
             }
         }
 
+        if (isSelectable.value) {
+            classes += " grid-select-cell";
+        }
+
         return classes.trim();
     });
+
+    /**
+     * Contains `true` if this cell should be considered selectable by the
+     * individual and emit the clicked event.
+     */
+    const isSelectable = computed((): boolean => {
+        return props.isSelectable && !props.column.name.startsWith("__");
+    });
+
+    /**
+     * Called when the cell has been clicked if selection has been enabled.
+     */
+    function onClick(ev: Event): void {
+        if (!isSelectable.value) {
+            return;
+        }
+
+        ev.stopPropagation();
+
+        if (props.isSelectable) {
+            emit("click");
+        }
+    }
 </script>

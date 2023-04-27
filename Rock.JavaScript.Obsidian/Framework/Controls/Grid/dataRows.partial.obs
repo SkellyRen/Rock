@@ -5,7 +5,9 @@
              :columns="props.columns"
              :row="row"
              :grid="props.grid"
-             :tooltipField="props.tooltipField" />
+             :tooltipField="props.tooltipField"
+             :isSelectable="isSelectable"
+             @click="onRowClick" />
 </template>
 
 <script setup lang="ts">
@@ -40,6 +42,25 @@
         tooltipField: {
             type: String as PropType<string>,
             required: false
+        },
+
+        /** True if any data row is selectable. */
+        isSelectable: {
+            type: Boolean as PropType<boolean>,
+            default: false
         }
     });
+
+    const emit = defineEmits<{
+        (e: "click", key: string): void
+    }>();
+
+    /**
+     * Called when a single row has been clicked.
+     *
+     * @param key The key of the row that was clicked.
+     */
+    function onRowClick(key: string): void {
+        emit("click", key);
+    }
 </script>

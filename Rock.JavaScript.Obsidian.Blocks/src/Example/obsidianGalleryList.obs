@@ -7,7 +7,8 @@
           itemTerm="Person"
           tooltipField="email"
           :entityTypeGuid="EntityType.Person"
-          @addItem="onAddPerson">
+          @addItem="onAddPerson"
+          @selectItem="onSelectItem">
         <SelectColumn />
 
         <Column name="name"
@@ -87,6 +88,9 @@
 
     const attributeFields = configuration.gridDefinition.attributeFields ?? [];
 
+    /**
+     * Called when the grid is requesting the row data be loaded.
+     */
     const loadGridData = async (): Promise<GridDataBag> => {
         const result = await invokeBlockAction<GridDataBag>("GetGridData");
 
@@ -98,14 +102,35 @@
         }
     };
 
+    /**
+     * Called when a row has been selected by the person.
+     *
+     * @param key The key of the row that was selected.
+     */
+    function onSelectItem(key: string): void {
+        window.location.href = `/Person/${key}`;
+    }
+
+    /**
+     * Called when a row's edit button has been clicked by the person.
+     *
+     * @param key The key of the row that should be edited.
+     */
     function onEditClick(key: string): void {
         window.location.href = `/Person/${key}`;
     }
 
+    /**
+     * Called when a row's delete button has been clicked by the person. This
+     * happens only if they have confirmed the delete action.
+     */
     async function onDeleteClick(): Promise<void> {
         await alert("Deleting is not supported for this sample grid.");
     }
 
+    /**
+     * Called when the Add button has been clicked by the person.
+     */
     function onAddPerson(): void {
         window.location.href = "/NewFamily";
     }
