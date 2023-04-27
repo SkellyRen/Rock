@@ -70,12 +70,11 @@ namespace Rock
                 using( var rockContext = new RockContext() )
                 {
                     // We want to use the recipient person guid to get the avatar view for the person.
-                    // If there isn't one
                     var photoUrl = new PersonService( rockContext )
                         .Queryable()
                         .FirstOrDefault( p => p.Guid == response.RecipientPersonGuid.Value )?.PhotoUrl;
 
-                    // Update the photo URL to use the avatar.
+                    // Update the photo URL to use the avatar if there is one.
                     if( photoUrl.IsNotNullOrWhiteSpace() )
                     {
                         bag.PhotoUrl = $"{publicUrl}{photoUrl}";
