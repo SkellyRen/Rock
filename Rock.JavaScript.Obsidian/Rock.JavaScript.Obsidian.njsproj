@@ -692,6 +692,7 @@
     <TypeScriptCompile Include="Framework\ViewModels\Blocks\Group\GroupScheduleToolbox\contentBag.d.ts" />
     <TypeScriptCompile Include="Framework\ViewModels\Blocks\Group\GroupScheduleUnavailability\contentBag.d.ts" />
     <TypeScriptCompile Include="Framework\ViewModels\Blocks\Group\landingPageContentBag.d.ts" />
+    <TypeScriptCompile Include="Framework\ViewModels\Blocks\listBlockBox.d.ts" />
     <TypeScriptCompile Include="Framework\ViewModels\Blocks\Security\AccountEntry\accountEntryAccountInfoBag.d.ts" />
     <TypeScriptCompile Include="Framework\ViewModels\Blocks\Security\AccountEntry\accountEntryCompletedStepBag.d.ts" />
     <TypeScriptCompile Include="Framework\ViewModels\Blocks\Security\AccountEntry\accountEntryConfirmationSentStepBag.d.ts" />

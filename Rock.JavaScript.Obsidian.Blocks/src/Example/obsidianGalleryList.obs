@@ -1,0 +1,112 @@
+<!-- Copyright by the Spark Development Network; Licensed under the Rock Community License -->
+<template>
+    <Grid :definition="configuration.gridDefinition"
+          :data="loadGridData"
+          keyField="guid"
+          personKeyField="guid"
+          itemTerm="Person"
+          tooltipField="email"
+          :entityTypeGuid="EntityType.Person"
+          @addItem="onAddPerson">
+        <SelectColumn />
+
+        <Column name="name"
+                title="Name"
+                sortValue="{{ row.lastName }} {{ row.nickName }}"
+                :filter="textValueFilter"
+                filterValue="{{ row.nickName }} {{ row.lastName }}"
+                quickFilterValue="{{ row.nickName }} {{  row.lastName }}">
+            <template #format="{ row }">
+                <div class="d-flex align-items-center">
+                    <img v-if="row.photoUrl"
+                         :src="row.photoUrl"
+                         class="mr-3"
+                         loading="lazy"
+                         style="width: 24px; height: 24px; border-radius: 12px;" />
+                    <span>
+                        {{ row.nickName }} {{ row.lastName }}
+                    </span>
+                </div>
+            </template>
+
+            <template #export="{ row }">
+                {{ row.nickName }} {{ row.lastName }}
+            </template>
+        </Column>
+
+        <DateColumn name="birthDate"
+                    title="Birth Date"
+                    field="birthDate"
+                    :filter="dateValueFilter"
+                    visiblePriority="md" />
+
+        <NumberColumn name="daysUntilBirthday"
+                      title="Days Until Birthday"
+                      field="daysUntilBirthday"
+                      :filter="numberValueFilter"
+                      visiblePriority="lg" />
+
+        <BooleanColumn name="isEmailActive"
+                       title="Email Active"
+                       field="isEmailActive"
+                       visiblePriority="sm" />
+
+        <TextColumn name="campus"
+                    title="Campus"
+                    field="campus"
+                    :filter="pickExistingValueFilter"
+                    visiblePriority="sm" />
+
+
+        <LabelColumn name="connectionStatus"
+                     title="Connection Status"
+                     field="connectionStatus"
+                     :filter="pickExistingValueFilter"
+                     visiblePriority="md" />
+
+        <AttributeColumns :attributes="attributeFields" />
+
+        <EditColumn @click="onEditClick" />
+
+        <SecurityColumn />
+
+        <DeleteColumn @click="onDeleteClick" />
+    </Grid>
+</template>
+
+<script setup lang="ts">
+    import { useConfigurationValues, useInvokeBlockAction } from "@Obsidian/Utility/block";
+    import { EntityType } from "@Obsidian/SystemGuids/entityType";
+    import { GridDataBag } from "@Obsidian/ViewModels/Core/Grid/gridDataBag";
+    import { GridDefinitionBag } from "@Obsidian/ViewModels/Core/Grid/gridDefinitionBag";
+    import Grid, { AttributeColumns, BooleanColumn, Column, DateColumn, dateValueFilter, DeleteColumn, EditColumn, LabelColumn, NumberColumn, numberValueFilter, pickExistingValueFilter, SecurityColumn, SelectColumn, TextColumn, textValueFilter } from "@Obsidian/Controls/grid";
+    import { alert } from "@Obsidian/Utility/dialogs";
+
+    const configuration = useConfigurationValues<{ gridDefinition: GridDefinitionBag }>();
+    const invokeBlockAction = useInvokeBlockAction();
+
+    const attributeFields = configuration.gridDefinition.attributeFields ?? [];
+
+    const loadGridData = async (): Promise<GridDataBag> => {
+        const result = await invokeBlockAction<GridDataBag>("GetGridData");
+
+        if (result.isSuccess && result.data) {
+            return result.data;
+        }
+        else {
+            throw new Error(result.errorMessage ?? "Unknown error while trying to load grid data.");
+        }
+    };
+
+    function onEditClick(key: string): void {
+        window.location.href = `/Person/${key}`;
+    }
+
+    async function onDeleteClick(): Promise<void> {
+        await alert("Deleting is not supported for this sample grid.");
+    }
+
+    function onAddPerson(): void {
+        window.location.href = "/NewFamily";
+    }
+</script>

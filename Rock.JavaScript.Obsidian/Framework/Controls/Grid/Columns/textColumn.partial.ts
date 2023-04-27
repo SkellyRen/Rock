@@ -15,11 +15,10 @@
 // </copyright>
 //
 
-import TextFilter from "../Filters/textFilter.partial.obs";
-import { standardColumnProps, textFilterMatches } from "@Obsidian/Core/Controls/grid";
+import { standardColumnProps } from "@Obsidian/Core/Controls/grid";
 import { Component, PropType, defineComponent } from "vue";
 import TextCell from "../Cells/textCell.partial";
-import { ColumnDefinition, ColumnFilter, ExportValueFunction } from "@Obsidian/Types/Controls/grid";
+import { ColumnDefinition, ExportValueFunction } from "@Obsidian/Types/Controls/grid";
 
 /**
  * Gets the value to use when quick filtering a cell of this column.
@@ -50,14 +49,6 @@ export default defineComponent({
         formatComponent: {
             type: Object as PropType<Component>,
             default: TextCell
-        },
-
-        filter: {
-            type: Object as PropType<ColumnFilter>,
-            default: {
-                component: TextFilter,
-                matches: textFilterMatches
-            } as ColumnFilter
         },
 
         exportValue: {

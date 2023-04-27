@@ -49,8 +49,7 @@
                       :pageCount="pageCount"
                       :pageSizes="pageSizes"
                       :message="pagerMessage"
-                      :visibleColumnCount="visibleColumnCount"
-                      :gridActions="gridActions" />
+                      :visibleColumnCount="visibleColumnCount" />
         </tfoot>
     </table>
 </template>
