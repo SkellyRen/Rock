@@ -23,27 +23,29 @@
                       :tooltipField="tooltipField" />
         </tbody>
 
-        <tbody v-else>
-            <tr v-if="loadingData">
+        <tbody v-else-if="loadingData">
+            <tr>
                 <td class="grid-error" :colspan="visibleColumnCount">
                     <LoadingIndicator />
                 </td>
             </tr>
+        </tbody>
 
-            <tr v-else-if="gridErrorMessage">
+        <tbody v-else-if="gridErrorMessage">
+            <tr>
                 <td class="grid-error" :colspan="visibleColumnCount">
                     <NotificationBox alertType="warning">{{ gridErrorMessage }}</NotificationBox>
                 </td>
             </tr>
+        </tbody>
 
-            <DataRows v-else
+        <VirtualDataRows v-else
                       :columns="visibleColumnDefinitions"
                       :rows="visibleRows"
                       :grid="gridState"
                       :tooltipField="tooltipField"
                       :isSelectable="isSelectionEnabled"
                       @click="onRowClick" />
-        </tbody>
 
         <tfoot>
             <PagerRow v-model:pageSize="pageSize"
@@ -226,6 +228,7 @@ table.table-obsidian th.grid-error > .alert {
     import DataRows from "./dataRows.partial.obs";
     import FilterHeaderRow from "./filterHeaderRow.partial.obs";
     import PagerRow from "./pagerRow.partial.obs";
+    import VirtualDataRows from "./virtualDataRows.partial.obs";
     import { computed, onUnmounted, PropType, ref, shallowRef, useSlots, watch } from "vue";
     import { asFormattedString } from "@Obsidian/Utility/numberUtils";
     import { pluralize } from "@Obsidian/Utility/stringUtils";

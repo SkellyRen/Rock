@@ -21,7 +21,7 @@
          * This may be different than the columns defined in the grid but
          * must be a subset of them.
          */
-         columns: {
+        columns: {
             type: Array as PropType<ReadonlyArray<ColumnDefinition>>,
             required: true
         },

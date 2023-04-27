@@ -1,0 +1,172 @@
+<template>
+    <tbody ref="element">
+        <tr :style="frontPadStyle" />
+        <DataRow v-for="row of virtualRows"
+                 :key="props.grid.getRowKey(row)"
+                 :columns="props.columns"
+                 :row="row"
+                 :grid="props.grid"
+                 :tooltipField="props.tooltipField"
+                 :isSelectable="isSelectable"
+                 monitorHeight
+                 @resize="onRowResize" />
+        <tr :style="backPadStyle" />
+    </tbody>
+</template>
+
+<script setup lang="ts">
+    import DataRow from "./dataRow.partial.obs";
+    import { ColumnDefinition, IGridState } from "@Obsidian/Types/Controls/grid";
+    import { PropType, computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
+    import Virtual, { Range } from "./virtual.partial";
+
+    const props = defineProps({
+        /**
+         * The array of columns that should be displayed in the data rows.
+         * This may be different than the columns defined in the grid but
+         * must be a subset of them.
+         */
+        columns: {
+            type: Array as PropType<ReadonlyArray<ColumnDefinition>>,
+            required: true
+        },
+
+        /** The rows that contain the data to be displayed. */
+        rows: {
+            type: Array as PropType<Record<string, unknown>[]>,
+            required: true
+        },
+
+        /** The grid that contains all the state information. */
+        grid: {
+            type: Object as PropType<IGridState>,
+            required: true
+        },
+
+        /** The field that will be used to display per-row tooltips. */
+        tooltipField: {
+            type: String as PropType<string>,
+            required: false
+        },
+
+        /** True if any data row is selectable. */
+        isSelectable: {
+            type: Boolean as PropType<boolean>,
+            default: false
+        }
+    });
+
+    const element = ref<HTMLElement>();
+    const range = ref<Range>({ start: 0, end: 0, padFront: 0, padBehind: 0 });
+    const virtual = installVirtual();
+    range.value = virtual.getRange();
+
+    const virtualRows = computed((): Record<string, unknown>[] => {
+        if (!range.value) {
+            return [];
+        }
+
+        const rows: Record<string, unknown>[] = [];
+
+        for (let index = range.value.start; index <= range.value.end; index++) {
+            rows.push(props.rows[index]);
+        }
+
+        return rows;
+    });
+
+    const frontPadStyle = computed((): Record<string, string> => {
+        return {
+            height: `${range.value.padFront}px`
+        };
+    });
+
+    const backPadStyle = computed((): Record<string, string> => {
+        return {
+            height: `${range.value.padBehind}px`
+        };
+    });
+
+    function getOffset(): number {
+        return document.documentElement.scrollTop || document.body.scrollTop;
+    }
+
+    function getClientSize(): number {
+        return document.documentElement.clientHeight || document.body.clientHeight;
+    }
+
+    function getScrollSize(): number {
+        return document.documentElement.scrollHeight || document.body.scrollHeight;
+    }
+
+    function installVirtual(): Virtual {
+        return new Virtual({
+            pageOffsetTop: 0,
+            keeps: 30,
+            estimateSize: 58,
+            buffer: Math.round(30 / 3),
+            uniqueIds: props.rows.map(r => props.grid.getRowKey(r)).filter(r => r !== undefined) as string[]
+        }, range => onRangeChanged(range));
+    }
+
+    function onRangeChanged(r: Range): void {
+        range.value = r;
+    }
+
+    function onScroll(): void {
+        const offset = getOffset();
+        const clientSize = getClientSize();
+        const scrollSize = getScrollSize();
+
+        // iOS scroll-spring-back behavior will make direciton mistake.
+        if (offset < 0 || (offset + clientSize > scrollSize + 1) || !scrollSize) {
+            return;
+        }
+
+        virtual.handleScroll(offset);
+    }
+
+    function onRowResize(key: string, size: number): void {
+        virtual.saveSize(key, size);
+    }
+
+    watch(() => props.rows, () => {
+        console.log("new rows", props.rows.length);
+        virtual.updateParam("uniqueIds", props.rows.map(r => props.grid.getRowKey(r)).filter(r => r !== undefined) as string[]);
+        virtual.handleDataSourcesChange();
+    });
+
+    onBeforeUnmount(() => {
+        document.removeEventListener("scroll", onScroll);
+    });
+
+    let pageOffsetTimeout: number | undefined;
+    let pageOffsetLastValue: number | undefined;
+
+    function updatePageOffset(): void {
+        if (element.value) {
+            const value = element.value.getBoundingClientRect().top + window.scrollY;
+
+            if (value !== pageOffsetLastValue) {
+                virtual.updateParam("pageOffsetTop", value);
+            }
+
+            pageOffsetTimeout = window.setTimeout(updatePageOffset, 100);
+        }
+    }
+
+    onMounted(() => {
+        document.addEventListener("scroll", onScroll, { passive: false });
+
+        if (element.value) {
+            updatePageOffset();
+        }
+    });
+
+    onBeforeUnmount(() => {
+        if (pageOffsetTimeout) {
+            window.clearTimeout(pageOffsetTimeout);
+            pageOffsetTimeout = undefined;
+        }
+    });
+</script>

@@ -1,6 +1,6 @@
 <!-- Copyright by the Spark Development Network; Licensed under the Rock Community License -->
 <template>
-    <tr :title="tooltipText">
+    <tr ref="element" :title="tooltipText">
         <DataCell v-for="column in props.columns"
                   :column="column"
                   :row="props.row"
@@ -11,7 +11,7 @@
 </template>
 
 <script setup lang="ts">
-    import { PropType, computed, ref } from "vue";
+    import { PropType, computed, onBeforeUnmount, onMounted, ref } from "vue";
     import DataCell from "./dataCell.partial.obs";
     import { ColumnDefinition, IGridState } from "@Obsidian/Types/Controls/grid";
 
@@ -21,7 +21,7 @@
          * This may be different than the columns defined in the grid but
          * must be a subset of them.
          */
-         columns: {
+        columns: {
             type: Array as PropType<ReadonlyArray<ColumnDefinition>>,
             required: true
         },
@@ -48,12 +48,21 @@
         isSelectable: {
             type: Boolean as PropType<boolean>,
             default: false
+        },
+
+        /** True if the height of the row is monitored. */
+        monitorHeight: {
+            type: Boolean as PropType<boolean>,
+            default: false
         }
     });
 
     const emit = defineEmits<{
-        (e: "click", key: string): void
+        (e: "click", key: string): void;
+        (e: "resize", key: string, size: number): void;
     }>();
+
+    const element = ref<HTMLElement>();
 
     /** Contains the text to display in the tooltip for the entire row. */
     const tooltipText = computed((): string | undefined => {
@@ -88,4 +97,27 @@
             emit("click", rowKey);
         }
     }
+
+    let resizeObserver: ResizeObserver | undefined;
+
+    onMounted(() => {
+        if (typeof ResizeObserver !== "undefined" && element.value) {
+            resizeObserver = new ResizeObserver(() => {
+                const rowKey = props.grid.getRowKey(props.row);
+
+                if (rowKey && element.value) {
+                    emit("resize", rowKey, element.value.offsetHeight);
+                }
+            });
+
+            resizeObserver.observe(element.value);
+        }
+    });
+
+    onBeforeUnmount(() => {
+        if (resizeObserver) {
+            resizeObserver.disconnect();
+            resizeObserver = undefined;
+        }
+    });
 </script>
