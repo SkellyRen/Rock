@@ -42,7 +42,7 @@ export const EditComponent = defineComponent({
         watch(() => internalValue.value, () => {
             emit("update:modelValue", JSON.stringify(internalValue.value));
         });
-        console.log("internal-value",internalValue.value);
+
         return {
             internalValue,
         };
