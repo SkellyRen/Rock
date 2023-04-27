@@ -79,9 +79,6 @@ export const ConfigurationComponent = defineComponent({
         const baseUrl = ref("");
         const baseUrlAliases = ref("");
 
-        console.log("color", props.modelValue[ConfigurationValueKey.Color]);
-        console.log("model-value", props.modelValue);
-
         /**
          * Update the modelValue property if any value of the dictionary has
          * actually changed. This helps prevent unwanted postbacks if the value
