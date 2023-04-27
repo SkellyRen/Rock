@@ -4,7 +4,7 @@
         <th class="grid-filter" :colspan="visibleColumnCount">
             <div class="d-flex">
                 <div class="grid-title">
-                    Group Members
+                    {{ props.grid.itemTerm }} List
                 </div>
 
                 <div v-if="isFilterable" class="grid-quick-filter grid-actions">
