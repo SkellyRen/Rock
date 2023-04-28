@@ -86,6 +86,9 @@ registerFieldType(FieldTypeGuids.GroupAndRole, new GroupAndRoleFieldType());
 import { GroupRoleFieldType } from "./groupRoleField.partial";
 registerFieldType(FieldTypeGuids.GroupRole, new GroupRoleFieldType());
 
+import { GroupLocationTypeFieldType } from "./groupLocationTypeField.partial";
+registerFieldType(FieldTypeGuids.GroupLocationType, new GroupLocationTypeFieldType());
+
 import { GroupMemberFieldType } from "./groupMemberField.partial";
 registerFieldType(FieldTypeGuids.GroupMember, new GroupMemberFieldType());
 
