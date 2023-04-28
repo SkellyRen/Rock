@@ -1,6 +1,5 @@
-/**
- * virtual list core calculating center
- */
+//
+// Much of this was adapted from MIT licensed https://github.com/tangbc/vue-virtual-scroll-list.
 
 const enum DirectionType {
     None = "",
