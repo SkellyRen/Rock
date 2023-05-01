@@ -754,7 +754,6 @@ table.table-obsidian th.grid-error > .alert {
      * Contains `true` if row selection is enabled on this grid.
      */
     const isSelectionEnabled = computed((): boolean => {
-        console.log("isSelectoinEnabled", !!props.onSelectItem);
         return !!props.onSelectItem;
     });
 
