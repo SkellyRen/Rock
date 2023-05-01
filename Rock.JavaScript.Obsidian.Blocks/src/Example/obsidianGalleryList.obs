@@ -6,6 +6,7 @@
           personKeyField="guid"
           itemTerm="Person"
           tooltipField="email"
+          stickyHeader
           :entityTypeGuid="EntityType.Person"
           @addItem="onAddPerson"
           @selectItem="onSelectItem">
