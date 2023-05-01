@@ -104,6 +104,9 @@ registerFieldType(FieldTypeGuids.IntegerRange, new IntegerRangeFieldType());
 import { KeyValueListFieldType } from "./keyValueListField.partial";
 registerFieldType(FieldTypeGuids.KeyValueList, new KeyValueListFieldType());
 
+import { LocationFieldType } from "./locationField.partial";
+registerFieldType(FieldTypeGuids.Location, new LocationFieldType());
+
 import { MemoFieldType } from "./memoField.partial";
 registerFieldType(FieldTypeGuids.Memo, new MemoFieldType());
 

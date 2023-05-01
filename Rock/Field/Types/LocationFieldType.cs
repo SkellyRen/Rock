@@ -25,6 +25,8 @@ using System.Web.UI.WebControls;
 using Rock.Attribute;
 using Rock.Data;
 using Rock.Model;
+using Rock.ViewModels.Controls;
+using Rock.ViewModels.Utility;
 using Rock.Web.Cache;
 using Rock.Web.UI.Controls;
 
@@ -44,7 +46,7 @@ namespace Rock.Field.Types
     /// <summary>
     /// Field used to save and display a location value
     /// </summary>
-    [RockPlatformSupport( Utility.RockPlatform.WebForms )]
+    [RockPlatformSupport( Utility.RockPlatform.WebForms, Utility.RockPlatform.Obsidian )]
     [Rock.SystemGuid.FieldTypeGuid( Rock.SystemGuid.FieldType.LOCATION )]
     public class LocationFieldType : FieldType, IEntityFieldType, IEntityReferenceFieldType
     {
@@ -52,6 +54,7 @@ namespace Rock.Field.Types
 
         private const string ALLOWED_PICKER_MODES = "allowedPickerModes";
         private const string CURRENT_PICKER_MODE = "currentPickerMode";
+        private const string PICKER_MODES = "pickerModes";
 
         #endregion Configuration
 
@@ -92,7 +95,135 @@ namespace Rock.Field.Types
 
         #endregion
 
-        #region Edit ControL
+        #region Edit Control
+
+        /// <inheritdoc />
+        public override string GetPublicValue( string privateValue, Dictionary<string, string> privateConfigurationValues )
+        {
+            return GetTextValue( privateValue, privateConfigurationValues );
+        }
+
+        /// <inheritdoc />
+        public override string GetPrivateEditValue( string publicValue, Dictionary<string, string> privateConfigurationValues )
+        {
+            if ( !string.IsNullOrWhiteSpace( publicValue ) )
+            {
+                var locationValue = publicValue.FromJsonOrNull<ListItemBag>();
+                if ( locationValue != null && !string.IsNullOrWhiteSpace( locationValue.Value ) )
+                {
+                    return locationValue.Value;
+                }
+
+                var addressValue = publicValue.FromJsonOrNull<AddressControlBag>();
+
+                if ( addressValue != null )
+                {
+                    // Check if we have any values.
+                    if ( !string.IsNullOrWhiteSpace( addressValue.Street1 )
+                         && !string.IsNullOrWhiteSpace( addressValue.Street2 )
+                         && !string.IsNullOrWhiteSpace( addressValue.City )
+                         && !string.IsNullOrWhiteSpace( addressValue.PostalCode ) )
+                    {
+                        var globalAttributesCache = GlobalAttributesCache.Get();
+
+                        using ( var rockContext = new RockContext() )
+                        {
+                            var locationService = new LocationService( rockContext );
+                            var location = locationService.Get( addressValue.Street1,
+                                addressValue.Street2,
+                                addressValue.City,
+                                addressValue.State,
+                                addressValue.PostalCode,
+                                addressValue.Country.IfEmpty( globalAttributesCache.OrganizationCountry ) );
+
+                            if ( location != null )
+                            {
+                                return location.Guid.ToString();
+                            }
+                        }
+                    }
+                }
+            }
+
+            return string.Empty;
+        }
+
+        /// <inheritdoc />
+        public override string GetPublicEditValue( string privateValue, Dictionary<string, string> privateConfigurationValues )
+        {
+            if ( !string.IsNullOrWhiteSpace( privateValue ) )
+            {
+                Guid? locationGuid = privateValue.AsGuidOrNull();
+                if ( locationGuid.HasValue )
+                {
+                    using ( var rockContext = new RockContext() )
+                    {
+                        var location = new LocationService( rockContext ).Get( locationGuid.Value );
+
+                        if ( location != null )
+                        {
+                            if ( location.IsNamedLocation )
+                            {
+                                return new ListItemBag()
+                                {
+                                    Text = location.Name,
+                                    Value = privateValue,
+                                }.ToCamelCaseJson( false, true );
+                            }
+                            else if ( !string.IsNullOrWhiteSpace( location.GetFullStreetAddress().Replace( ",", string.Empty ) ) )
+                            {
+                                return new AddressControlBag
+                                {
+                                    Street1 = location.Street1,
+                                    Street2 = location.Street2,
+                                    City = location.City,
+                                    State = location.State,
+                                    PostalCode = location.PostalCode,
+                                    Country = location.Country
+                                }.ToCamelCaseJson( false, true );
+                            }
+                        }
+                    }
+                }
+            }
+
+            return string.Empty;
+        }
+
+        /// <inheritdoc />
+        public override Dictionary<string, string> GetPrivateConfigurationValues( Dictionary<string, string> publicConfigurationValues )
+        {
+            var privateConfigurationValues = base.GetPrivateConfigurationValues( publicConfigurationValues );
+
+            privateConfigurationValues.Remove( PICKER_MODES );
+
+            return privateConfigurationValues;
+        }
+
+        /// <inheritdoc />
+        public override Dictionary<string, string> GetPublicConfigurationValues( Dictionary<string, string> privateConfigurationValues, ConfigurationValueUsage usage, string value )
+        {
+            var publicConfigurationValues = base.GetPublicConfigurationValues( privateConfigurationValues, usage, value );
+
+            publicConfigurationValues[PICKER_MODES] = GetLocationPickerModes().ToCamelCaseJson( false, true );
+
+            return publicConfigurationValues;
+        }
+
+        private List<ListItemBag> GetLocationPickerModes()
+        {
+            var locationTypes = ( LocationPickerMode[] ) Enum.GetValues( typeof( LocationPickerMode ) );
+            var locationModes = new List<ListItemBag>();
+            foreach ( LocationPickerMode locationType in locationTypes )
+            {
+                if ( locationType != LocationPickerMode.None && locationType != LocationPickerMode.All )
+                {
+                    locationModes.Add( new ListItemBag() { Text = locationType.ConvertToString(), Value = locationType.ConvertToInt().ToString() } );
+                }
+            }
+
+            return locationModes;
+        }
 
         #endregion
 
