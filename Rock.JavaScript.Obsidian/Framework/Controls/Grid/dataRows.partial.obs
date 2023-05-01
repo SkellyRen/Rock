@@ -1,12 +1,13 @@
 <!-- Copyright by the Spark Development Network; Licensed under the Rock Community License -->
 <template>
-    <DataRow v-for="row in props.rows"
+    <DataRow v-for="(row, index) in props.rows"
              :key="props.grid.getRowKey(row)"
              :columns="props.columns"
              :row="row"
              :grid="props.grid"
              :tooltipField="props.tooltipField"
              :isSelectable="isSelectable"
+             :isEven="(index + 1) % 2 === 0"
              @click="onRowClick" />
 </template>
 

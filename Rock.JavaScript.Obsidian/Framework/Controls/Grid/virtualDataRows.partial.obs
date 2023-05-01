@@ -1,16 +1,17 @@
 <template>
     <tbody ref="element">
-        <tr :style="frontPadStyle" />
-        <DataRow v-for="row of virtualRows"
+        <tr :style="beforePadStyle" />
+        <DataRow v-for="(row, index) of virtualRows"
                  :key="props.grid.getRowKey(row)"
                  :columns="props.columns"
                  :row="row"
                  :grid="props.grid"
                  :tooltipField="props.tooltipField"
                  :isSelectable="isSelectable"
+                 :isEven="(range.startIndex + index + 1) % 2 === 0"
                  monitorHeight
                  @resize="onRowResize" />
-        <tr :style="backPadStyle" />
+        <tr :style="afterPadStyle" />
     </tbody>
 </template>
 
@@ -18,7 +19,7 @@
     import DataRow from "./dataRow.partial.obs";
     import { ColumnDefinition, IGridState } from "@Obsidian/Types/Controls/grid";
     import { PropType, computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
-    import Virtual, { Range } from "./virtual.partial";
+    import VirtualScroller, { Range } from "./virtualScroller.partial";
 
     const props = defineProps({
         /**
@@ -56,117 +57,171 @@
         }
     });
 
-    const element = ref<HTMLElement>();
-    const range = ref<Range>({ start: 0, end: 0, padFront: 0, padBehind: 0 });
-    const virtual = installVirtual();
-    range.value = virtual.getRange();
+    // NOTE: Currently this only supports page scrolling. In the future
+    // we will probably need to find the nearest ancestor that is a scroll
+    // container and use it to determine scroll values. For example, a grid
+    // inside a modal.
 
+    // #region Values
+
+    const element = ref<HTMLElement>();
+    const range = ref<Range>({ startIndex: 0, endIndex: 0, padBefore: 0, padAfter: 0 });
+    let virtualScroller: VirtualScroller | undefined;
+
+    // #endregion
+
+    // #region Computed Values
+
+    /**
+     * Contains the set of virtual rows to be rendered in the DOM.
+     */
     const virtualRows = computed((): Record<string, unknown>[] => {
-        if (!range.value) {
+        const isInvalidRange = !range.value
+            || range.value.startIndex >= props.rows.length
+            || range.value.endIndex >= props.rows.length;
+
+        if (isInvalidRange) {
             return [];
         }
 
-        const rows: Record<string, unknown>[] = [];
-
-        for (let index = range.value.start; index <= range.value.end; index++) {
-            rows.push(props.rows[index]);
-        }
-
-        return rows;
+        return props.rows.slice(range.value.startIndex, range.value.endIndex);
     });
 
-    const frontPadStyle = computed((): Record<string, string> => {
+    /**
+     * Contains the CSS styles for the padding item before the rows.
+     */
+    const beforePadStyle = computed((): Record<string, string> => {
         return {
-            height: `${range.value.padFront}px`
+            height: `${range.value.padBefore}px`
         };
     });
 
-    const backPadStyle = computed((): Record<string, string> => {
+    /**
+     * Contains the CSS styles for the padding item after the rows.
+     */
+    const afterPadStyle = computed((): Record<string, string> => {
         return {
-            height: `${range.value.padBehind}px`
+            height: `${range.value.padAfter}px`
         };
     });
 
-    function getOffset(): number {
+    // #endregion
+
+    // #region Functions
+
+    /**
+     * Gets the current scroll offset.
+     */
+    function getScrollOffset(): number {
         return document.documentElement.scrollTop || document.body.scrollTop;
     }
 
-    function getClientSize(): number {
+    /**
+     * Gets the height of the visible area in the scrollable element.
+     */
+    function getClientHeight(): number {
         return document.documentElement.clientHeight || document.body.clientHeight;
     }
 
-    function getScrollSize(): number {
+    /**
+     * Gets the total height of the scrollable content.
+     */
+    function getScrollHeight(): number {
         return document.documentElement.scrollHeight || document.body.scrollHeight;
     }
 
-    function installVirtual(): Virtual {
-        return new Virtual({
-            pageOffsetTop: 0,
-            keeps: 30,
-            estimateSize: 58,
-            buffer: Math.round(30 / 3),
+    /**
+     * Create the virtual scroller we will use to calculate which items to
+     * display.
+     */
+    function createVirtualScroller(): VirtualScroller {
+        // In order to play it safe, use the maximum of either the screen width
+        // or screen height. This covers cases where the display gets rotated
+        // while we are on screen.
+        // Then take that number and divide by our estimated row height to get
+        // the number of rows we expect to be visible at one time.
+        const estimatedHeight = 58;
+        const largestEdge = Math.max(window.screen.width, window.screen.height);
+        const visibleCount = Math.floor(largestEdge / estimatedHeight);
+
+        return new VirtualScroller({
+            visibleCount,
+            bufferCount: Math.round(visibleCount / 3),
+            estimatedHeight,
             uniqueIds: props.rows.map(r => props.grid.getRowKey(r)).filter(r => r !== undefined) as string[]
         }, range => onRangeChanged(range));
     }
 
+    // #endregion
+
+    /**
+     * Called when the range of the virtual scroller has changed.
+     *
+     * @param r The new range value.
+     */
     function onRangeChanged(r: Range): void {
         range.value = r;
     }
 
+    /**
+     * Called whenever the element we are monitoring has scrolled.
+     */
     function onScroll(): void {
-        const offset = getOffset();
-        const clientSize = getClientSize();
-        const scrollSize = getScrollSize();
+        const offset = getScrollOffset();
+        const clientSize = getClientHeight();
+        const scrollSize = getScrollHeight();
 
-        // iOS scroll-spring-back behavior will make direciton mistake.
+        // If the scroll is outside the scrollable area, it is probably an
+        // overscroll like iOS bounce back effect. Ignore it.
         if (offset < 0 || (offset + clientSize > scrollSize + 1) || !scrollSize) {
             return;
         }
 
-        virtual.handleScroll(offset);
+        // Determine the offset inside the scrollable of our list. Meaning,
+        // the grid probably doesn't start at the top of the page. So if the
+        // grid starts 200 pixels down the page, our offset should be zero when
+        // they have scrolled down by 200 pixels. That is, the top edge of the
+        // grid is at the top edge of the scrollable.
+        const scrollableOffset = element.value
+            ? element.value.getBoundingClientRect().top + window.scrollY
+            : 0;
+
+        virtualScroller?.handleScroll(Math.floor(Math.max(0, offset - scrollableOffset)));
     }
 
-    function onRowResize(key: string, size: number): void {
-        virtual.saveSize(key, size);
+    /**
+     * Called when the height of an item/row has changed, for example by the
+     * width being changed causing text to wrap.
+     *
+     * @param key The key of the item whose height changed.
+     * @param height The new height of the item.
+     */
+    function onRowResize(key: string, height: number): void {
+        virtualScroller?.updateHeight(key, height);
     }
+
+    // #endregion
 
     watch(() => props.rows, () => {
-        console.log("new rows", props.rows.length);
-        virtual.updateParam("uniqueIds", props.rows.map(r => props.grid.getRowKey(r)).filter(r => r !== undefined) as string[]);
-        virtual.handleDataSourcesChange();
+        virtualScroller?.dataSourceChanged(props.rows.map(r => props.grid.getRowKey(r)).filter(r => r !== undefined) as string[]);
     });
 
     onBeforeUnmount(() => {
         document.removeEventListener("scroll", onScroll);
-    });
 
-    let pageOffsetTimeout: number | undefined;
-    let pageOffsetLastValue: number | undefined;
-
-    function updatePageOffset(): void {
-        if (element.value) {
-            const value = element.value.getBoundingClientRect().top + window.scrollY;
-
-            if (value !== pageOffsetLastValue) {
-                virtual.updateParam("pageOffsetTop", value);
-            }
-
-            pageOffsetTimeout = window.setTimeout(updatePageOffset, 100);
+        if (virtualScroller) {
+            virtualScroller.destroy();
+            virtualScroller = undefined;
         }
-    }
+    });
 
     onMounted(() => {
+        virtualScroller = createVirtualScroller();
+
+        if (getScrollOffset() > 0) {
+            onScroll();
+        }
+
         document.addEventListener("scroll", onScroll, { passive: false });
-
-        if (element.value) {
-            updatePageOffset();
-        }
-    });
-
-    onBeforeUnmount(() => {
-        if (pageOffsetTimeout) {
-            window.clearTimeout(pageOffsetTimeout);
-            pageOffsetTimeout = undefined;
-        }
     });
 </script>

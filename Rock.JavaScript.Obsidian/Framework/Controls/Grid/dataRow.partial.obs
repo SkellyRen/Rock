@@ -1,6 +1,6 @@
 <!-- Copyright by the Spark Development Network; Licensed under the Rock Community License -->
 <template>
-    <tr ref="element" :title="tooltipText">
+    <tr ref="element" :title="tooltipText" :class="rowClasses">
         <DataCell v-for="column in props.columns"
                   :column="column"
                   :row="props.row"
@@ -50,6 +50,12 @@
             default: false
         },
 
+        /** True if this row is an even numbered row. */
+        isEven: {
+            type: Boolean as PropType<boolean>,
+            default: false
+        },
+
         /** True if the height of the row is monitored. */
         monitorHeight: {
             type: Boolean as PropType<boolean>,
@@ -63,6 +69,10 @@
     }>();
 
     const element = ref<HTMLElement>();
+
+    const rowClasses = computed((): string => {
+        return props.isEven ? "grid-row-even" : "grid-row-odd";
+    });
 
     /** Contains the text to display in the tooltip for the entire row. */
     const tooltipText = computed((): string | undefined => {
