@@ -83,7 +83,6 @@
 </template>
 
 <script setup lang="ts">
-    import Skeleton from "@Obsidian/Controls/skeleton.obs";
     import { useConfigurationValues, useInvokeBlockAction } from "@Obsidian/Utility/block";
     import { EntityType } from "@Obsidian/SystemGuids/entityType";
     import { GridDataBag } from "@Obsidian/ViewModels/Core/Grid/gridDataBag";
