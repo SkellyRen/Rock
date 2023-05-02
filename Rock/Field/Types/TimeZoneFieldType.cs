@@ -16,11 +16,13 @@
 //
 using System;
 using System.Collections.Generic;
+using System.Linq;
 #if WEBFORMS
 using System.Web.UI;
 using System.Web.UI.WebControls;
 #endif
 using Rock.Attribute;
+using Rock.ViewModels.Utility;
 using Rock.Web.UI.Controls;
 
 namespace Rock.Field.Types
@@ -28,10 +30,26 @@ namespace Rock.Field.Types
     /// <summary>
     /// Field Type used to display a dropdown list of <see cref="System.TimeZoneInfo"/>
     /// </summary>
-    [RockPlatformSupport( Utility.RockPlatform.WebForms )]
+    [RockPlatformSupport( Utility.RockPlatform.WebForms, Utility.RockPlatform.Obsidian )]
     [Rock.SystemGuid.FieldTypeGuid( Rock.SystemGuid.FieldType.TIME_ZONE )]
     public class TimeZoneFieldType : FieldType
     {
+        #region Edit Control
+
+        /// <inheritdoc/>
+        public override Dictionary<string, string> GetPublicConfigurationValues( Dictionary<string, string> privateConfigurationValues, ConfigurationValueUsage usage, string value )
+        {
+            var publicConfigurationValues = base.GetPublicConfigurationValues( privateConfigurationValues, usage, value );
+
+            var timeZones = TimeZoneInfo.GetSystemTimeZones().Select( tz => new ListItemBag() { Text = tz.DisplayName, Value = tz.Id } );
+
+            publicConfigurationValues["timezones"] = timeZones.ToCamelCaseJson( false, true );
+
+            return publicConfigurationValues;
+        }
+
+        #endregion
+
         #region WebForms
 #if WEBFORMS
 
