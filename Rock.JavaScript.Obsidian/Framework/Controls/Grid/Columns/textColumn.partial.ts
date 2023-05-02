@@ -18,6 +18,7 @@
 import { standardColumnProps } from "@Obsidian/Core/Controls/grid";
 import { Component, PropType, defineComponent } from "vue";
 import TextCell from "../Cells/textCell.partial";
+import TextSkeletonCell from "../Cells/textSkeletonCell.partial.obs";
 import { ColumnDefinition, ExportValueFunction } from "@Obsidian/Types/Controls/grid";
 
 /**
@@ -49,6 +50,11 @@ export default defineComponent({
         formatComponent: {
             type: Object as PropType<Component>,
             default: TextCell
+        },
+
+        skeletonComponent: {
+            type: Object as PropType<Component>,
+            default: TextSkeletonCell
         },
 
         exportValue: {

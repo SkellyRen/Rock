@@ -440,6 +440,16 @@ type StandardColumnProps = {
     },
 
     /**
+     * Provides a custom component that will be used to render a skeleton of
+     * the cell during data loading operations. This is rearely needed as you
+     * can usually accomplish the same with a template.
+     */
+    skeletonComponent: {
+        type: PropType<Component>,
+        required: false
+    },
+
+    /**
      * If `true` then the column will not ever be rendered on screen. It may
      * still be included in exports and other operations.
      */
@@ -492,6 +502,21 @@ export type StandardCellProps = {
     /** The data object that represents the row for this cell. */
     row: {
         type: PropType<Record<string, unknown>>,
+        required: true
+    },
+
+    /** The grid this cell is being displayed inside of. */
+    grid: {
+        type: PropType<IGridState>,
+        required: true
+    }
+};
+
+/** The standard properties available on skeleton cells. */
+export type StandardSkeletonCellProps = {
+    /** The column definition that this cell is being displayed in. */
+    column: {
+        type: PropType<ColumnDefinition>,
         required: true
     },
 
@@ -651,6 +676,11 @@ export type ColumnDefinition = {
      * condensed grid cell.
      */
     condensedComponent: Component;
+
+    /**
+     * The component to use when displaying a skeleton of this column cell.
+     */
+    skeletonComponent?: Component;
 
     /** Gets the value to use when filtering on the quick filter. */
     quickFilterValue: QuickFilterValueFunction;

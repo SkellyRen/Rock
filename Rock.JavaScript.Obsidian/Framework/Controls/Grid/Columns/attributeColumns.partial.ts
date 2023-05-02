@@ -16,10 +16,11 @@
 //
 
 import PickExistingFilter from "../Filters/pickExistingFilter.partial.obs";
-import { defineComponent, PropType } from "vue";
+import { Component, defineComponent, PropType } from "vue";
 import { AttributeFieldDefinitionBag } from "@Obsidian/ViewModels/Core/Grid/attributeFieldDefinitionBag";
 import { ColumnFilter } from "@Obsidian/Types/Controls/grid";
 import { pickExistingFilterMatches } from "@Obsidian/Core/Controls/grid";
+import TextSkeletonCell from "../Cells/textSkeletonCell.partial.obs";
 
 export default defineComponent({
     props: {
@@ -39,6 +40,11 @@ export default defineComponent({
                 component: PickExistingFilter,
                 matches: pickExistingFilterMatches
             } as ColumnFilter
+        },
+
+        skeletonComponent: {
+            type: Object as PropType<Component>,
+            default: TextSkeletonCell
         }
     }
 });

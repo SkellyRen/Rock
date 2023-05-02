@@ -20,6 +20,7 @@ import { ColumnDefinition, ExportValueFunction, QuickFilterValueFunction } from 
 import { RockDateTime } from "@Obsidian/Utility/rockDateTime";
 import { Component, defineComponent, PropType } from "vue";
 import DateColumnCell from "../Cells/dateCell.partial.obs";
+import DateColumnSkeletonCell from "../Cells/dateSkeletonCell.partial.obs";
 
 /**
  * Gets the value to use when exporting a cell of this column.
@@ -74,6 +75,11 @@ export default defineComponent({
         formatComponent: {
             type: Object as PropType<Component>,
             default: DateColumnCell
+        },
+
+        skeletonComponent: {
+            type: Object as PropType<Component>,
+            default: DateColumnSkeletonCell
         },
 
         quickFilterValue: {

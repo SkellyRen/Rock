@@ -18,6 +18,7 @@
 import { standardColumnProps } from "@Obsidian/Core/Controls/grid";
 import { Component, defineComponent, PropType } from "vue";
 import LabelCell from "../Cells/labelCell.partial.obs";
+import LabelSkeletonCell from "../Cells/labelSkeletonCell.partial.obs";
 import { ColumnDefinition, ExportValueFunction, QuickFilterValueFunction, SortValueFunction } from "@Obsidian/Types/Controls/grid";
 import { ListItemBag } from "@Obsidian/ViewModels/Utility/listItemBag";
 
@@ -56,6 +57,11 @@ export default defineComponent({
         formatComponent: {
             type: Object as PropType<Component>,
             default: LabelCell
+        },
+
+        skeletonComponent: {
+            type: Object as PropType<Component>,
+            default: LabelSkeletonCell
         },
 
         quickFilterValue: {

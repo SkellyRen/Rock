@@ -18,6 +18,7 @@
 import { standardColumnProps } from "@Obsidian/Core/Controls/grid";
 import { Component, defineComponent, PropType } from "vue";
 import NumberCell from "../Cells/numberCell.partial.obs";
+import NumberSkeletonCell from "../Cells/numberSkeletonCell.partial.obs";
 import { ColumnDefinition, ExportValueFunction } from "@Obsidian/Types/Controls/grid";
 
 /**
@@ -49,6 +50,11 @@ export default defineComponent({
         formatComponent: {
             type: Object as PropType<Component>,
             default: NumberCell
+        },
+
+        skeletonComponent: {
+            type: Object as PropType<Component>,
+            default: NumberSkeletonCell
         },
 
         exportValue: {

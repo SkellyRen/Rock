@@ -20,14 +20,20 @@
                 quickFilterValue="{{ row.nickName }} {{  row.lastName }}">
             <template #format="{ row }">
                 <div class="d-flex align-items-center">
-                    <img v-if="row.photoUrl"
-                         :src="row.photoUrl"
-                         class="mr-3"
-                         loading="lazy"
-                         style="width: 24px; height: 24px; border-radius: 12px;" />
-                    <span>
+                    <div class="mr-3"
+                         :style="{ 'width': '24px', 'height': '24px', 'border-radius': '12px', 'background-image': `url('${row.photoUrl}')`, 'background-size': 'cover' }">
+                    </div>
+                    <div class="flex-grow-1">
                         {{ row.nickName }} {{ row.lastName }}
-                    </span>
+                    </div>
+                </div>
+            </template>
+
+            <template #skeleton>
+                <div class="d-flex align-items-center">
+                    <div class="mr-3 skeleton skeleton-xs"
+                         style="width: 24px; height: 24px; border-radius: 12px;" />
+                    <div class="skeleton skeleton-text skeleton-sm skeleton-rounded flex-grow-1" />
                 </div>
             </template>
 
@@ -77,6 +83,7 @@
 </template>
 
 <script setup lang="ts">
+    import Skeleton from "@Obsidian/Controls/skeleton.obs";
     import { useConfigurationValues, useInvokeBlockAction } from "@Obsidian/Utility/block";
     import { EntityType } from "@Obsidian/SystemGuids/entityType";
     import { GridDataBag } from "@Obsidian/ViewModels/Core/Grid/gridDataBag";
@@ -92,7 +99,7 @@
     /**
      * Called when the grid is requesting the row data be loaded.
      */
-    const loadGridData = async (): Promise<GridDataBag> => {
+    async function loadGridData(): Promise<GridDataBag> {
         const result = await invokeBlockAction<GridDataBag>("GetGridData");
 
         if (result.isSuccess && result.data) {
@@ -101,7 +108,7 @@
         else {
             throw new Error(result.errorMessage ?? "Unknown error while trying to load grid data.");
         }
-    };
+    }
 
     /**
      * Called when a row has been selected by the person.

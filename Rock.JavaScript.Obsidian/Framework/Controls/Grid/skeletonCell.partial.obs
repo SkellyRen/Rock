@@ -1,0 +1,47 @@
+<!-- Copyright by the Spark Development Network; Licensed under the Rock Community License -->
+<template>
+    <td :class="additionalItemClass">
+        <Skeleton v-if="props.column.skeletonComponent">
+            <component :is="props.column.skeletonComponent"
+                       :column="props.column"
+                       :grid="props.grid" />
+        </Skeleton>
+    </td>
+</template>
+
+<script setup lang="ts">
+    import Skeleton from "@Obsidian/Controls/skeleton.obs";
+    import { PropType, computed } from "vue";
+    import { ColumnDefinition, IGridState } from "@Obsidian/Types/Controls/grid";
+
+    const props = defineProps({
+        /** The column definition of this cell. */
+        column: {
+            type: Object as PropType<ColumnDefinition>,
+            required: true
+        },
+
+        /** This grid this cell belongs to. */
+        grid: {
+            type: Object as PropType<IGridState>,
+            required: true
+        }
+    });
+
+    /** Contains any additional CSS classes for the td element. */
+    const additionalItemClass = computed((): string => {
+        let classes = props.column.itemClass ?? "";
+
+        if (["sm", "md", "lg", "xl"].includes(props.column.visiblePriority)) {
+            // We don't have support for lg just yet, but it's coming.
+            if (props.column.visiblePriority === "xl") {
+                classes += ` d-none d-lg-table-cell`;
+            }
+            else {
+                classes += ` d-none d-${props.column.visiblePriority}-table-cell`;
+            }
+        }
+
+        return classes.trim();
+    });
+</script>

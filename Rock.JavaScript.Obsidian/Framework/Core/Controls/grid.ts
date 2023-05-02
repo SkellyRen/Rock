@@ -20,7 +20,7 @@ import { NumberFilterMethod } from "@Obsidian/Enums/Controls/Grid/numberFilterMe
 import { DateFilterMethod } from "@Obsidian/Enums/Controls/Grid/dateFilterMethod";
 import { PickExistingFilterMethod } from "@Obsidian/Enums/Controls/Grid/pickExistingFilterMethod";
 import { TextFilterMethod } from "@Obsidian/Enums/Controls/Grid/textFilterMethod";
-import { ColumnFilter, ColumnDefinition, IGridState, StandardFilterProps, StandardCellProps, IGridCache, IGridRowCache, ColumnSort, SortValueFunction, FilterValueFunction, QuickFilterValueFunction, UniqueValueFunction, StandardColumnProps, StandardHeaderCellProps, EntitySetOptions, ExportValueFunction } from "@Obsidian/Types/Controls/grid";
+import { ColumnFilter, ColumnDefinition, IGridState, StandardFilterProps, StandardCellProps, IGridCache, IGridRowCache, ColumnSort, SortValueFunction, FilterValueFunction, QuickFilterValueFunction, UniqueValueFunction, StandardColumnProps, StandardHeaderCellProps, EntitySetOptions, ExportValueFunction, StandardSkeletonCellProps } from "@Obsidian/Types/Controls/grid";
 import { ICancellationToken } from "@Obsidian/Utility/cancellation";
 import { extractText, getVNodeProp, getVNodeProps } from "@Obsidian/Utility/component";
 import { DayOfWeek, RockDateTime } from "@Obsidian/Utility/rockDateTime";
@@ -168,6 +168,11 @@ export const standardColumnProps: StandardColumnProps = {
         required: false
     },
 
+    skeletonComponent: {
+        type: Object as PropType<Component>,
+        required: false
+    },
+
     hideOnScreen: {
         type: Boolean as PropType<boolean>,
         required: false
@@ -206,6 +211,19 @@ export const standardCellProps: StandardCellProps = {
 
     row: {
         type: Object as PropType<Record<string, unknown>>,
+        required: true
+    },
+
+    grid: {
+        type: Object as PropType<IGridState>,
+        required: true
+    }
+};
+
+/** The standard properties available on skeleton cells. */
+export const standardSkeletonCellProps: StandardSkeletonCellProps = {
+    column: {
+        type: Object as PropType<ColumnDefinition>,
         required: true
     },
 
@@ -797,6 +815,7 @@ function getOrAddRowCacheValue<T>(row: Record<string, unknown>, column: ColumnDe
 function buildAttributeColumns(columns: ColumnDefinition[], node: VNode): void {
     const attributes = getVNodeProp<AttributeFieldDefinitionBag[]>(node, "attributes");
     const filter = getVNodeProp<ColumnFilter>(node, "filter");
+    const skeletonComponent = getVNodeProp<Component>(node, "skeletonComponent");
 
     if (!attributes) {
         return;
@@ -819,6 +838,7 @@ function buildAttributeColumns(columns: ColumnDefinition[], node: VNode): void {
             exportValue: (r, c) => c.field ? String(r[c.field]) : undefined,
             formatComponent: defaultCell,
             condensedComponent: defaultCell,
+            skeletonComponent,
             hideOnScreen: false,
             excludeFromExport: false,
             visiblePriority: "md",
@@ -893,6 +913,8 @@ function buildColumn(name: string, node: VNode): ColumnDefinition {
     const condensedComponent = condensedTemplate ?? getVNodeProp<Component>(node, "condensedComponent") ?? formatComponent;
     const headerTemplate = node.children?.["header"] as Component | undefined;
     const headerComponent = headerTemplate ?? getVNodeProp<Component>(node, "headerComponent");
+    const skeletonTemplate = node.children?.["skeleton"] as Component | undefined;
+    const skeletonComponent = skeletonTemplate ?? getVNodeProp<Component>(node, "skeletonComponent");
     const exportTemplate = node.children?.["export"] as Component | undefined;
     const filter = getVNodeProp<ColumnFilter>(node, "filter");
     const headerClass = getVNodeProp<string>(node, "headerClass");
@@ -1037,6 +1059,7 @@ function buildColumn(name: string, node: VNode): ColumnDefinition {
         formatComponent,
         condensedComponent,
         headerComponent,
+        skeletonComponent,
         filter,
         uniqueValue,
         sortValue,
