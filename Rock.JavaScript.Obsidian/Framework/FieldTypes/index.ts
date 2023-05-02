@@ -35,6 +35,9 @@ registerFieldType(FieldTypeGuids.Campus, new CampusFieldType());
 import { CampusesFieldType } from "./campusesField.partial";
 registerFieldType(FieldTypeGuids.Campuses, new CampusesFieldType());
 
+import { CategoriesFieldType } from "./categoriesField.partial";
+registerFieldType(FieldTypeGuids.Categories, new CategoriesFieldType());
+
 import { ColorFieldType } from "./colorField.partial";
 registerFieldType(FieldTypeGuids.Color, new ColorFieldType());
 
