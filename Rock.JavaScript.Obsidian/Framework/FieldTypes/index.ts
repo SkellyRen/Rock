@@ -134,6 +134,9 @@ registerFieldType(FieldTypeGuids.Schedules, new SchedulesFieldType());
 import { SingleSelectFieldType } from "./singleSelectField.partial";
 registerFieldType(FieldTypeGuids.SingleSelect, new SingleSelectFieldType());
 
+import { SocialMediaAccountFieldType } from "./socialMediaAccountField.partial";
+registerFieldType(FieldTypeGuids.SocialMediaAccount, new SocialMediaAccountFieldType());
+
 import { SSNFieldType } from "./ssnField.partial";
 registerFieldType(FieldTypeGuids.Ssn, new SSNFieldType());
 
