@@ -10,12 +10,20 @@
 <script setup lang="ts">
     import { isPromise } from "@Obsidian/Utility/promiseUtils";
     import { computed, PropType, ref } from "vue";
-    import { GridAction } from "@Obsidian/Types/Controls/grid";
+    import { GridAction, IGridState } from "@Obsidian/Types/Controls/grid";
 
     const props = defineProps({
         /** The action that should be displayed in this button. */
         action: {
             type: Object as PropType<GridAction>,
+            required: true
+        },
+
+        /**
+         * The grid state that this action belongs to.
+         */
+        grid: {
+            type: Object as PropType<IGridState>,
             required: true
         }
     });
@@ -45,7 +53,7 @@
             classes += ` ${props.action.buttonCssClass}`;
         }
 
-        if (isExecuting.value || props.action.disabled) {
+        if (isExecuting.value || props.action.disabled || !props.action.handler) {
             classes += " disabled";
         }
 
@@ -73,7 +81,7 @@
         isExecuting.value = true;
 
         try {
-            const result = props.action.handler();
+            const result = props.action.handler(props.grid);
 
             if (isPromise(result)) {
                 await result;

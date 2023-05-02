@@ -211,7 +211,7 @@ export interface IGridRowCache {
 // #region Functions and Callbacks
 
 /** A function that will be called in response to an action. */
-export type GridActionFunction = () => void | Promise<void>;
+export type GridActionFunction = (grid: IGridState) => void | Promise<void>;
 
 /**
  * A function that will be called to determine the value used when filtering
@@ -627,6 +627,12 @@ export type GridAction = {
      * The tooltip to display for this action.
      */
     tooltip?: string;
+
+    /**
+     * Should be `true` for actions that are primary. A primary action will
+     * be displayed more prominently than other actions.
+     */
+    isPrimary?: boolean;
 
     /**
      * The CSS class for the icon used when displaying this action.

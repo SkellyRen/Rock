@@ -8,6 +8,7 @@
           tooltipField="email"
           stickyHeader
           :entityTypeGuid="EntityType.Person"
+          :customActions="customActions"
           @addItem="onAddPerson"
           @selectItem="onSelectItem">
         <SelectColumn />
@@ -89,11 +90,20 @@
     import { GridDefinitionBag } from "@Obsidian/ViewModels/Core/Grid/gridDefinitionBag";
     import Grid, { AttributeColumns, BooleanColumn, Column, DateColumn, dateValueFilter, DeleteColumn, EditColumn, LabelColumn, NumberColumn, numberValueFilter, pickExistingValueFilter, SecurityColumn, SelectColumn, TextColumn, textValueFilter } from "@Obsidian/Controls/grid";
     import { alert } from "@Obsidian/Utility/dialogs";
+import { GridAction } from "@Obsidian/Types/Controls/grid";
 
     const configuration = useConfigurationValues<{ gridDefinition: GridDefinitionBag }>();
     const invokeBlockAction = useInvokeBlockAction();
 
     const attributeFields = configuration.gridDefinition.attributeFields ?? [];
+
+    const customActions: GridAction[] = [
+        {
+            title: "Custom Action",
+            tooltip: "This is an example of a custom block action.",
+            iconCssClass: "fa fa-key"
+        }
+    ];
 
     /**
      * Called when the grid is requesting the row data be loaded.

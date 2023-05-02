@@ -17,9 +17,11 @@
                     </div>
                 </div>
 
-                <ActionGroup :gridActions="primaryGridActions" />
+                <ActionGroup :gridActions="primaryGridActions"
+                             :grid="grid" />
                 <PopupActionGroup v-if="hasSecondaryActions"
-                                  :gridActions="secondaryGridActions" />
+                                  :gridActions="secondaryGridActions"
+                                  :grid="grid" />
             </div>
         </th>
     </tr>

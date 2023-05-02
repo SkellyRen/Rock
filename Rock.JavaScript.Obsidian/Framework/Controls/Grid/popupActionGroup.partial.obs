@@ -10,6 +10,7 @@
             ref="secondaryActionMenu">
             <PopupActionButton v-for="action in props.gridActions"
                                :action="action"
+                               :grid="grid"
                                @click="onActionClick" />
         </ul>
     </div>
@@ -22,12 +23,20 @@
 
 <script setup lang="ts">
     import PopupActionButton from "./popupActionButton.partial.obs";
-    import { GridAction } from "@Obsidian/Types/Controls/grid";
+    import { GridAction, IGridState } from "@Obsidian/Types/Controls/grid";
     import { PropType, ref } from "vue";
 
     const props = defineProps({
         gridActions: {
             type: Array as PropType<GridAction[]>,
+            required: true
+        },
+
+        /**
+         * The grid state that this action belongs to.
+         */
+         grid: {
+            type: Object as PropType<IGridState>,
             required: true
         }
     });

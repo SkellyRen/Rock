@@ -5,7 +5,9 @@
            :class="actionButtonClass"
            @click.prevent.stop="onActionClick">
             <i :class="actionIconClass"></i>
+
             <span class="ml-2 action-title flex-grow-1">{{ action.title }}</span>
+
             <span v-if="actionTooltip" class="ml-2">
                 <i class="fa fa-info-circle" :title="actionTooltip"></i>
             </span>
@@ -14,7 +16,7 @@
 </template>
 
 <script setup lang="ts">
-    import { GridAction } from "@Obsidian/Types/Controls/grid";
+    import { GridAction, IGridState } from "@Obsidian/Types/Controls/grid";
     import { isPromise } from "@Obsidian/Utility/promiseUtils";
     import { PropType, computed, ref } from "vue";
 
@@ -22,6 +24,14 @@
         /** The grid action to be represented by this button. */
         action: {
             type: Object as PropType<GridAction>,
+            required: true
+        },
+
+        /**
+         * The grid state that this action belongs to.
+         */
+         grid: {
+            type: Object as PropType<IGridState>,
             required: true
         }
     });
@@ -37,7 +47,7 @@
     const isExecuting = ref(false);
 
     const actionItemClass = computed((): string => {
-        return props.action.disabled || isExecuting.value ? "disabled" : "";
+        return props.action.disabled || isExecuting.value || !props.action.handler ? "disabled" : "";
     });
 
     const actionButtonClass = computed((): string => {
@@ -76,7 +86,7 @@
         isExecuting.value = true;
 
         try {
-            const result = props.action.handler();
+            const result = props.action.handler(props.grid);
 
             if (isPromise(result)) {
                 await result;

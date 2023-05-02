@@ -461,6 +461,15 @@ table.table-obsidian th.grid-error > .alert {
         },
 
         /**
+         * Any custom actions that should be available for the individual to
+         * see in the list of actions.
+         */
+        customActions: {
+            type: Array as PropType<GridAction[]>,
+            required: false
+        },
+
+        /**
          * The function to call in response to the add button being clicked.
          * Providing this function will automatically enable the add button.
          */
@@ -654,7 +663,7 @@ table.table-obsidian th.grid-error > .alert {
      * for the individual to interact with.
      */
     const gridActions = computed((): GridAction[] => {
-        const actions: (GridAction & { isPrimary?: boolean })[] = [];
+        const actions: GridAction[] = [];
 
         // Append the add item action.
         if (props.onAddItem) {
@@ -752,6 +761,10 @@ table.table-obsidian th.grid-error > .alert {
                     tooltip: action.description ?? undefined
                 });
             }
+        }
+
+        if (props.customActions && props.customActions.length > 0) {
+            actions.push(...props.customActions);
         }
 
         return actions;
