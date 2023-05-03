@@ -68,7 +68,7 @@ export default defineComponent({
 
     setup(props, { emit }) {
         const internalValue = ref(props.modelValue ?? null);
-
+console.log("allow-multiple", props.multiple);
         // Configure the item provider with our settings.
         const itemProvider = ref(new CategoryTreeItemProvider());
         itemProvider.value.rootCategoryGuid = props.rootCategoryGuid;

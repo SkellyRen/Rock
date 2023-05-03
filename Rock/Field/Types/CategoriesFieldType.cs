@@ -84,26 +84,6 @@ namespace Rock.Field.Types
             return categories.Select( c => c.Name ).JoinStrings( "," );
         }
 
-        private List<CategoryCache> GetCategories( string privateValue )
-        {
-            if ( string.IsNullOrWhiteSpace( privateValue ) )
-            {
-                return new List<CategoryCache>();
-            }
-
-            var guids = privateValue.SplitDelimitedValues().AsGuidList();
-
-            if ( guids.Count == 0 )
-            {
-                return new List<CategoryCache>();
-            }
-
-            var categories = guids.ConvertAll( c => CategoryCache.Get( c ) )
-                .ToList();
-
-            return categories;
-        }
-
         /// <inheritdoc/>
         public override string GetPrivateEditValue( string publicValue, Dictionary<string, string> privateConfigurationValues )
         {
@@ -136,48 +116,29 @@ namespace Rock.Field.Types
             return categories.ToCamelCaseJson( false, true );
         }
 
-        /// <inheritdoc/>
-        public override Dictionary<string, string> GetPrivateConfigurationValues( Dictionary<string, string> publicConfigurationValues )
+        /// <summary>
+        /// Gets the persisted categories.
+        /// </summary>
+        /// <param name="privateValue">The private value.</param>
+        /// <returns></returns>
+        private List<CategoryCache> GetCategories( string privateValue )
         {
-            var privateConfigurationValues = base.GetPrivateConfigurationValues( publicConfigurationValues );
-
-            if ( publicConfigurationValues.ContainsKey( ENTITY_TYPE_NAME_KEY ) )
+            if ( string.IsNullOrWhiteSpace( privateValue ) )
             {
-                var entityTypeNameValue = privateConfigurationValues[ENTITY_TYPE_NAME_KEY].FromJsonOrNull<ListItemBag>();
-                if ( entityTypeNameValue != null )
-                {
-                    var entityType = EntityTypeCache.Get( entityTypeNameValue.Value.AsGuid() );
-
-                    if ( entityType != null )
-                    {
-                        privateConfigurationValues[ENTITY_TYPE_NAME_KEY] = entityType.Name;
-                    }
-                }
+                return new List<CategoryCache>();
             }
 
-            return privateConfigurationValues;
-        }
+            var guids = privateValue.SplitDelimitedValues().AsGuidList();
 
-        /// <inheritdoc/>
-        public override Dictionary<string, string> GetPublicConfigurationValues( Dictionary<string, string> privateConfigurationValues, ConfigurationValueUsage usage, string value )
-        {
-            var publicConfigurationValues = base.GetPublicConfigurationValues( privateConfigurationValues, usage, value );
-
-            if ( publicConfigurationValues.ContainsKey( ENTITY_TYPE_NAME_KEY ) )
+            if ( guids.Count == 0 )
             {
-                var entityTypeName = publicConfigurationValues[ENTITY_TYPE_NAME_KEY];
-                var entityType = EntityTypeCache.Get( entityTypeName );
-                if ( entityType != null )
-                {
-                    publicConfigurationValues[ENTITY_TYPE_NAME_KEY] = new ListItemBag()
-                    {
-                        Text = entityType.FriendlyName,
-                        Value = entityType.Guid.ToString()
-                    }.ToCamelCaseJson( false, true );
-                }
+                return new List<CategoryCache>();
             }
 
-            return publicConfigurationValues;
+            var categories = guids.ConvertAll( c => CategoryCache.Get( c ) )
+                .ToList();
+
+            return categories;
         }
 
         #endregion
