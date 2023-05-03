@@ -1107,6 +1107,7 @@ table.table-obsidian th.grid-error > .alert {
         const exceljs = await import("@Obsidian/Libs/exceljs");
 
         const title = props.exportTitle || pluralize(gridState.itemTerm);
+        const filename = `${title.replace(/[^a-zA-Z0-9\-_]/g, "")}.xlsx`;
         const workbook = new exceljs.Workbook();
         workbook.created = new Date();
         workbook.modified = new Date();
@@ -1184,7 +1185,7 @@ table.table-obsidian th.grid-error > .alert {
         element.style.top = "-100px";
         element.style.left = "0px";
         element.href = url;
-        element.download = "test.xlsx";
+        element.download = filename;
         document.body.appendChild(element);
         element.click();
         document.body.removeChild(element);
