@@ -249,23 +249,7 @@ export type SortValueFunction = (row: Record<string, unknown>, column: ColumnDef
  *
  * @returns The value that will be used by the {@link ColumnFilterMatchesFunction} function.
  */
-export type FilterValueFunction = (row: Record<string, unknown>, column: ColumnDefinition, grid: IGridState) => unknown | undefined;
-
-/**
- * A function that will be called to determine the unique value of the cell.
- * This is used to differentiate two values that display the same but actually
- * represent two distinct things. For example, two people might have the same
- * name but a different identifier. But two dollar amounts of $10.23 and $10.23
- * should both return the same value from this function. This value will be
- * cached by the grid until the row is modified.
- *
- * @param row The data object that represents the row.
- * @param column The column definition for this operation.
- * @param grid The grid that owns this operation.
- *
- * @returns The value that uniquely identifies this cell.
- */
-export type UniqueValueFunction = (row: Record<string, unknown>, column: ColumnDefinition, grid: IGridState) => string | number | undefined;
+export type FilterValueFunction = (row: Record<string, unknown>, column: ColumnDefinition, grid: IGridState) => string | number | boolean | undefined;
 
 /**
  * A function that will be called to get the value to use when exporting the
@@ -375,21 +359,6 @@ type StandardColumnProps = {
      */
     filterValue: {
         type: PropType<(FilterValueFunction | string)>,
-        required: false
-    },
-
-    /**
-     * Specifies how to determine the unique value for cells in this column.
-     * This is used by some operations to find only the distinct values of
-     * the entire dataset. For example, two people might have the same name
-     * and thus look the same when displayed, but in reality they are different
-     * people so this method should return a unique value for each. If
-     * specified then the function will be passed the row and column definition
-     * and must return either a string, number or undefined. Otherwise the
-     * value of the row in `field` will be used to determine this value.
-     */
-    uniqueValue: {
-        type: PropType<UniqueValueFunction>,
         required: false
     },
 
@@ -690,14 +659,6 @@ export type ColumnDefinition = {
 
     /** Gets the value to use when filtering on the quick filter. */
     quickFilterValue: QuickFilterValueFunction;
-
-    /**
-     * Gets the unique value representation of the cell value. For example,
-     * two people might have the same display name so they will look identical.
-     * But in reality they have a different identifier and are two different
-     * people.
-     */
-    uniqueValue: UniqueValueFunction;
 
     /** Gets the value to use when sorting. */
     sortValue?: SortValueFunction;

@@ -99,7 +99,7 @@
      * and then builds an array of all the distinct values.
      */
     function getDistinctValues(): DistinctValue[] {
-        const valueRows: Record<string | number, DistinctValue> = {};
+        const valueRows = new Map<string | number | boolean, DistinctValue>();
         const field = props.column.field;
         const rows = props.grid.rows;
 
@@ -108,41 +108,32 @@
         }
 
         for (let i = 0; i < rows.length; i++) {
-            // Get the unique value for the cell.
-            const value = props.column.uniqueValue(rows[i], props.column, props.grid);
-
-            // If we don't have a unique value, then we can't do anything with
-            // it. If we already have recorded this unique value then skip
-            // any futher occurrences of it.
-            if (!value || valueRows[value] !== undefined) {
-                continue;
-            }
-
             // Get the quick filter and filter values.
             const quickFilterValue = props.column.quickFilterValue(rows[i], props.column, props.grid) ?? "";
-            let filterValue = props.column.filterValue(rows[i], props.column, props.grid);
+            const filterValue = props.column.filterValue(rows[i], props.column, props.grid);
 
-            // If we don't have a filter value, we can't actually filter on
-            // this item. This means we can't filter on things like NULL.
-            if (filterValue === undefined) {
+            // If we don't have a filter value, then we can't do anything with
+            // it. If we already have recorded this unique value then skip
+            // any futher occurrences of it.
+            if (filterValue === undefined || valueRows.has(filterValue)) {
                 continue;
             }
 
             // Store the distinct value in an object. This is much faster than
             // storing in an array and then searching the array to see if we
             // already have this unique value.
-            valueRows[value] = {
+            valueRows.set(filterValue, {
                 row: rows[i],
                 selected: false,
                 sortValue: props.column.sortValue?.(rows[i], props.column, props.grid) ?? "",
                 quickFilterValue: quickFilterValue.toLowerCase(),
                 filterValue
-            };
+            });
         }
 
         // Return just the values from the object. Sort them by the sort value
         // so things feel like they are in some semblance of order.
-        return [...Object.values(valueRows)]
+        return [...valueRows.values()]
             .sort((a, b) => {
                 if (a.sortValue === undefined && b.sortValue === undefined) {
                     return 0;

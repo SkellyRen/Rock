@@ -20,7 +20,7 @@ import { NumberFilterMethod } from "@Obsidian/Enums/Controls/Grid/numberFilterMe
 import { DateFilterMethod } from "@Obsidian/Enums/Controls/Grid/dateFilterMethod";
 import { PickExistingFilterMethod } from "@Obsidian/Enums/Controls/Grid/pickExistingFilterMethod";
 import { TextFilterMethod } from "@Obsidian/Enums/Controls/Grid/textFilterMethod";
-import { ColumnFilter, ColumnDefinition, IGridState, StandardFilterProps, StandardCellProps, IGridCache, IGridRowCache, ColumnSort, SortValueFunction, FilterValueFunction, QuickFilterValueFunction, UniqueValueFunction, StandardColumnProps, StandardHeaderCellProps, EntitySetOptions, ExportValueFunction, StandardSkeletonCellProps } from "@Obsidian/Types/Controls/grid";
+import { ColumnFilter, ColumnDefinition, IGridState, StandardFilterProps, StandardCellProps, IGridCache, IGridRowCache, ColumnSort, SortValueFunction, FilterValueFunction, QuickFilterValueFunction, StandardColumnProps, StandardHeaderCellProps, EntitySetOptions, ExportValueFunction, StandardSkeletonCellProps } from "@Obsidian/Types/Controls/grid";
 import { ICancellationToken } from "@Obsidian/Utility/cancellation";
 import { extractText, getVNodeProp, getVNodeProps } from "@Obsidian/Utility/component";
 import { DayOfWeek, RockDateTime } from "@Obsidian/Utility/rockDateTime";
@@ -135,11 +135,6 @@ export const standardColumnProps: StandardColumnProps = {
 
     filterValue: {
         type: Object as PropType<(FilterValueFunction | string)>,
-        required: false
-    },
-
-    uniqueValue: {
-        type: Function as PropType<UniqueValueFunction>,
         required: false
     },
 
@@ -830,7 +825,6 @@ function buildAttributeColumns(columns: ColumnDefinition[], node: VNode): void {
             name: attribute.name,
             title: attribute.title ?? undefined,
             field: attribute.name,
-            uniqueValue: (r, c) => c.field ? String(r[c.field]) : "",
             sortValue: (r, c) => c.field ? String(r[c.field]) : undefined,
             quickFilterValue: (r, c, g) => getOrAddRowCacheValue(r, c, "quickFilterValue", g, () => c.field ? String(r[c.field]) : undefined),
             filter,
@@ -866,7 +860,6 @@ function insertCustomColumns(columns: ColumnDefinition[], customColumns: CustomC
             name: customColumn.fieldName,
             title: customColumn.headerText ?? undefined,
             field: customColumn.fieldName,
-            uniqueValue: (r, c) => c.field ? String(r[c.field]) : "",
             sortValue: (r, c) => c.field ? String(r[c.field]) : undefined,
             quickFilterValue: (r, c, g) => getOrAddRowCacheValue(r, c, "quickFilterValue", g, () => c.field ? String(r[c.field]) : undefined),
             filter: undefined, // TODO: Fill this in somehow.
@@ -975,38 +968,26 @@ function buildColumn(name: string, node: VNode): ColumnDefinition {
 
     if (filterValue === undefined) {
         // One wasn't provided, so do our best to infer what it should be.
-        filterValue = (r, c): unknown => {
+        filterValue = (r, c): string | number | boolean | undefined => {
             if (!c.field) {
-                return undefined;
-            }
-
-            return r[c.field];
-        };
-    }
-    else if (typeof filterValue === "string") {
-        const template = filterValue;
-
-        filterValue = (row): unknown => {
-            return resolveMergeFields(template, { row });
-        };
-    }
-
-    // Get the function that will provide the unique value for a cell.
-    let uniqueValue = getVNodeProp<UniqueValueFunction>(node, "uniqueValue");
-
-    if (!uniqueValue) {
-        uniqueValue = (r, c) => {
-            if (!c.field || r[c.field] === undefined) {
                 return undefined;
             }
 
             const v = r[c.field];
 
-            if (typeof v === "string" || typeof v === "number") {
+            if (typeof v === "string" || typeof v === "number" || typeof v === "boolean") {
                 return v;
             }
+            else {
+                return undefined;
+            }
+        };
+    }
+    else if (typeof filterValue === "string") {
+        const template = filterValue;
 
-            return JSON.stringify(v);
+        filterValue = (row): string => {
+            return resolveMergeFields(template, { row });
         };
     }
 
@@ -1029,11 +1010,6 @@ function buildColumn(name: string, node: VNode): ColumnDefinition {
     }
 
     // Convert all the value functions into cached ones.
-    const uniqueValueFactory = uniqueValue;
-    uniqueValue = (r, c, g) => {
-        return getOrAddRowCacheValue(r, c, "uniqueValue", g, () => uniqueValueFactory(r, c, g));
-    };
-
     const sortValueFactory = sortValue;
     sortValue = (r, c, g) => {
         return sortValueFactory !== undefined
@@ -1061,7 +1037,6 @@ function buildColumn(name: string, node: VNode): ColumnDefinition {
         headerComponent,
         skeletonComponent,
         filter,
-        uniqueValue,
         sortValue,
         filterValue,
         quickFilterValue,
@@ -1513,7 +1488,6 @@ class BackgroundGridRowCacheWorker extends BackgroundWorker {
                     continue;
                 }
 
-                column.uniqueValue(row, column, this.grid);
                 column.sortValue?.(row, column, this.grid);
                 column.filterValue(row, column, this.grid);
                 column.quickFilterValue(row, column, this.grid);
