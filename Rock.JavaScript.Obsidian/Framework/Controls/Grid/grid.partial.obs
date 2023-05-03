@@ -242,7 +242,7 @@ table.table-obsidian th.grid-error > .alert {
     import { EntityType } from "@Obsidian/SystemGuids/entityType";
     import { alert } from "@Obsidian/Utility/dialogs";
     import { RockDateTime } from "@Obsidian/Utility/rockDateTime";
-    import { type Column, type Worksheet } from "@Obsidian/Libs/exceljs";
+    import { type Column, type Workbook, type Worksheet } from "@Obsidian/Libs/exceljs";
 
     /*
      * 8/17/2022 - DSH
@@ -691,10 +691,20 @@ table.table-obsidian th.grid-error > .alert {
         // Append the action for Export to Excel.
         if (isExportVisible.value) {
             actions.push({
-                handler: onExport,
-                iconCssClass: "fa fa-table",
-                title: "Export",
+                handler: onExportToExcel,
+                iconCssClass: "fa fa-file-excel",
+                title: "Export to Excel",
                 tooltip: "Export to Excel"
+            });
+        }
+
+        // Append the action for Export to Excel.
+        if (isExportVisible.value) {
+            actions.push({
+                handler: onExportToCsv,
+                iconCssClass: "fa fa-file-csv",
+                title: "Export to CSV",
+                tooltip: "Export to CSV"
             });
         }
 
@@ -862,6 +872,112 @@ table.table-obsidian th.grid-error > .alert {
 
             column.width = Math.min(80, Math.max(4, maxLength));
         }
+    }
+
+    /**
+     * Gets the workbook that will be used to export the data.
+     *
+     * @returns An object that contains the workbook as well as the raw row data.
+     */
+    async function getExportWorkbook(): Promise<{ workbook: Workbook, rowData: Record<string, unknown>[] }> {
+        // Find all columns that aren't special columns and include them in
+        // the additional merge fields.
+        const mergeColumns: Record<string, string> = {};
+        const dataColumns = gridState.columns
+            .filter(c => !c.name.startsWith("__") && !c.excludeFromExport);
+
+        for (const column of dataColumns) {
+            mergeColumns[column.name] = `${column.name[0].toUpperCase()}${column.name.substring(1)}`;
+        }
+
+        const options: EntitySetOptions = {
+            mergeColumns,
+            purpose: "export"
+        };
+
+        const entitySet = await getEntitySetBag(gridState, [], options);
+
+        const exceljs = await import("@Obsidian/Libs/exceljs");
+
+        const title = props.exportTitle || pluralize(gridState.itemTerm);
+        const workbook = new exceljs.Workbook();
+        workbook.created = new Date();
+        workbook.modified = new Date();
+        const worksheet = workbook.addWorksheet(title);
+
+        // Build the header row.
+        const columns: Column[] = [];
+        for (const key of Object.keys(mergeColumns)) {
+            const column = gridState.columns.find(c => c.name === key);
+
+            columns.push({
+                header: column?.title ?? key,
+                key: key
+            } as Column);
+        }
+
+        // Columns must be set all at once, you can't modify it in place.
+        worksheet.columns = columns;
+
+        // Build the data rows.
+        const rowData: Record<string, unknown>[] = [];
+        for (const item of (entitySet.items ?? [])) {
+            const row: Record<string, unknown> = {};
+
+            for (const key of Object.keys(mergeColumns)) {
+                let value = item.additionalMergeValues?.[mergeColumns[key]];
+
+                if (value instanceof RockDateTime) {
+                    // Excel is not timezone aware, so convert the date into
+                    // UTC format by stripping off the zone info.
+                    value = new Date(Date.UTC(value.year, value.month - 1, value.day, value.hour, value.minute, value.second));
+                }
+
+                row[key] = value;
+            }
+
+            rowData.push(row);
+        }
+        worksheet.addRows(rowData);
+
+        return {
+            workbook,
+            rowData
+        };
+    }
+
+    /**
+     * Triggers an automatic download of the workbook so it can be saved to
+     * the filesystem.
+     *
+     * @param workbook The workbook to be downloaded by the browser.
+     * @param title The title of the workbook, this is used as the base for the filename.
+     * @param format The format to use when downloading the workbook.
+     */
+    async function downloadWorkbook(workbook: Workbook, title: string, format: "csv" | "xlsx"): Promise<void> {
+        // Get the export data.
+        const buffer = format === "xlsx"
+            ? await workbook.xlsx.writeBuffer()
+            : await workbook.csv.writeBuffer();
+
+        // Create the URL that contains the file data.
+        const url = URL.createObjectURL(new Blob([buffer], {
+            type: "application/octet-stream"
+        }));
+
+        // Create a fake hyperlink to simulate an attempt to download a file.
+        const element = document.createElement("a");
+        element.innerText = "Download";
+        element.style.position = "absolute";
+        element.style.top = "-100px";
+        element.style.left = "0px";
+        element.href = url;
+        element.download = `${title.replace(/[^a-zA-Z0-9\-_]/g, "")}.${format}`;
+        document.body.appendChild(element);
+        element.click();
+        document.body.removeChild(element);
+
+        setTimeout(() => URL.revokeObjectURL(url), 100);
     }
 
     /**
@@ -1084,76 +1200,20 @@ table.table-obsidian th.grid-error > .alert {
     }
 
     /**
-     * Called when the export grid action has been clicked.
+     * Called when the export to excel grid action has been clicked.
      */
-    async function onExport(): Promise<void> {
-        // Find all columns that aren't special columns and include them in
-        // the additional merge fields.
-        const mergeColumns: Record<string, string> = {};
-        const dataColumns = gridState.columns
-            .filter(c => !c.name.startsWith("__") && !c.excludeFromExport);
-
-        for (const column of dataColumns) {
-            mergeColumns[column.name] = `${column.name[0].toUpperCase()}${column.name.substring(1)}`;
-        }
-
-        const options: EntitySetOptions = {
-            mergeColumns,
-            purpose: "export"
-        };
-
-        const entitySet = await getEntitySetBag(gridState, [], options);
-
-        const exceljs = await import("@Obsidian/Libs/exceljs");
-
+    async function onExportToExcel(): Promise<void> {
+        const { workbook, rowData } = await getExportWorkbook();
+        const worksheet = workbook.getWorksheet(1);
         const title = props.exportTitle || pluralize(gridState.itemTerm);
-        const filename = `${title.replace(/[^a-zA-Z0-9\-_]/g, "")}.xlsx`;
-        const workbook = new exceljs.Workbook();
-        workbook.created = new Date();
-        workbook.modified = new Date();
-        const worksheet = workbook.addWorksheet(title, {
-            views: [
-                {
-                    state: "frozen",
-                    ySplit: 3
-                }
-            ]
-        });
 
-        // Build the header row.
-        const columns: Column[] = [];
-        for (const key of Object.keys(mergeColumns)) {
-            const column = gridState.columns.find(c => c.name === key);
-
-            columns.push({
-                header: column?.title ?? key,
-                key: key
-            } as Column);
-        }
-
-        // Columns must be set all at once, you can't modify it in place.
-        worksheet.columns = columns;
-
-        // Build the data rows.
-        const rowData: Record<string, unknown>[] = [];
-        for (const item of (entitySet.items ?? [])) {
-            const row: Record<string, unknown> = {};
-
-            for (const key of Object.keys(mergeColumns)) {
-                let value = item.additionalMergeValues?.[mergeColumns[key]];
-
-                if (value instanceof RockDateTime) {
-                    // Excel is not timezone aware, so convert the date into
-                    // UTC format by stripping off the zone info.
-                    value = new Date(Date.UTC(value.year, value.month - 1, value.day, value.hour, value.minute, value.second));
-                }
-
-                row[key] = value;
+        // Freeze the header rows.
+        worksheet.views = [
+            {
+                state: "frozen",
+                ySplit: 3
             }
-
-            rowData.push(row);
-        }
-        worksheet.addRows(rowData);
+        ];
 
         // Calculate rough column width.
         autoFitExportColumns(worksheet, rowData);
@@ -1182,8 +1242,8 @@ table.table-obsidian th.grid-error > .alert {
             });
         });
 
-        worksheet.mergeCells(1, 1, 1, columns.length);
-        worksheet.mergeCells(2, 1, 2, columns.length);
+        worksheet.mergeCells(1, 1, 1, worksheet.columns.length);
+        worksheet.mergeCells(2, 1, 2, worksheet.columns.length);
 
         // Setup the filter functionality.
         worksheet.autoFilter = {
@@ -1193,30 +1253,22 @@ table.table-obsidian th.grid-error > .alert {
             },
             to: {
                 row: rowData.length + 3,
-                column: columns.length
+                column: worksheet.columns.length
             }
         };
 
-        // Create the URL that contains the file data.
-        const buffer = await workbook.xlsx.writeBuffer();
-        const blob = new Blob([buffer], {
-            type: "application/octet-stream"
-        });
-        const url = URL.createObjectURL(blob);
+        await downloadWorkbook(workbook, title, "xlsx");
+    }
 
-        // Create a fake hyperlink to simulate an attempt to download a file.
-        const element = document.createElement("a");
-        element.innerText = "Download";
-        element.style.position = "absolute";
-        element.style.top = "-100px";
-        element.style.left = "0px";
-        element.href = url;
-        element.download = filename;
-        document.body.appendChild(element);
-        element.click();
-        document.body.removeChild(element);
+    /**
+     * Called when the export to csv grid action has been clicked.
+     */
+    async function onExportToCsv(): Promise<void> {
+        const { workbook } = await getExportWorkbook();
 
-        setTimeout(() => URL.revokeObjectURL(url), 100);
+        const title = props.exportTitle || pluralize(gridState.itemTerm);
+
+        await downloadWorkbook(workbook, title, "csv");
     }
 
     /**
