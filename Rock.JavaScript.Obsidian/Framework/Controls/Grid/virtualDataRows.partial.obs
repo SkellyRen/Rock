@@ -10,7 +10,8 @@
                  :isSelectable="isSelectable"
                  :isEven="(range.startIndex + index + 1) % 2 === 0"
                  monitorHeight
-                 @resize="onRowResize" />
+                 @resize="onRowResize"
+                 @click="onRowClick" />
         <tr :style="afterPadStyle" />
     </tbody>
 </template>
@@ -56,6 +57,10 @@
             default: false
         }
     });
+
+    const emit = defineEmits<{
+        (e: "click", key: string): void
+    }>();
 
     // NOTE: Currently this only supports page scrolling. In the future
     // we will probably need to find the nearest ancestor that is a scroll
@@ -153,6 +158,17 @@
     }
 
     // #endregion
+
+    // #region Event Handlers
+
+    /**
+     * Called when a single row has been clicked.
+     *
+     * @param key The key of the row that was clicked.
+     */
+    function onRowClick(key: string): void {
+        emit("click", key);
+    }
 
     /**
      * Called when the range of the virtual scroller has changed.

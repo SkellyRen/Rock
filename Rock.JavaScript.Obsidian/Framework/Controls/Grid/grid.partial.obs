@@ -18,7 +18,8 @@
                       :columns="visibleColumnDefinitions"
                       :rows="visibleRows"
                       :grid="gridState"
-                      :tooltipField="tooltipField" />
+                      :tooltipField="tooltipField"
+                      @click="onRowClick" />
         </tbody>
 
         <tbody v-else-if="loadingData">
