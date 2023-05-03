@@ -35,7 +35,6 @@ export const EditComponent = defineComponent({
     setup(props, { emit }) {
 
         const internalValue = ref([] as ListItemBag[]);
-        const entityType = ref(JSON.stringify(props.configurationValues[ConfigurationValueKey.EntityTypeName] ?? "{}") as ListItemBag);
 
         watch(() => props.modelValue, () => {
             internalValue.value = JSON.parse(props.modelValue || "[]");
@@ -45,19 +44,20 @@ export const EditComponent = defineComponent({
             emit("update:modelValue", JSON.stringify(internalValue.value));
         });
 
-        watch(() => props.configurationValues, () => {
-            entityType.value = JSON.stringify(props.configurationValues[ConfigurationValueKey.EntityTypeName] ?? "{}") as ListItemBag;
+        const entityTypeGuid = computed((): string | null | undefined => {
+            const entityType = JSON.parse(props.configurationValues[ConfigurationValueKey.EntityTypeName] ?? "{}") as ListItemBag;
+            return entityType?.value;
         });
 
         return {
             internalValue,
-            entityType
+            entityTypeGuid
         };
     },
 
     template: `
     <CategoryPicker v-model="internalValue"
-        entityTypeGuid="entityType.value"
+        :entityTypeGuid="entityTypeGuid"
         multiple="true"
         enhanceForLongLists="true"
         showBlankItem="true"/>
@@ -84,7 +84,7 @@ export const ConfigurationComponent = defineComponent({
         const entityType = ref({} as ListItemBag);
         const qualifierColumn = ref("");
         const qualifierValue = ref("");
-        console.log(props.modelValue);
+
         /**
          * Update the modelValue property if any value of the dictionary has
          * actually changed. This helps prevent unwanted postbacks if the value
