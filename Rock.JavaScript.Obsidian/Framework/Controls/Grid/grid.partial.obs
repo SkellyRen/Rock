@@ -237,12 +237,24 @@ table.table-obsidian th.grid-error > .alert {
     import { GridCommunicationBag } from "@Obsidian/ViewModels/Core/Grid/gridCommunicationBag";
     import { Guid } from "@Obsidian/Types";
     import { isPromise } from "@Obsidian/Utility/promiseUtils";
-    import { useInvokeBlockAction } from "@Obsidian/Utility/block";
+    import { useInvokeBlockAction, usePersonPreferences } from "@Obsidian/Utility/block";
     import { makeUrlRedirectSafe } from "@Obsidian/Utility/url";
     import { EntityType } from "@Obsidian/SystemGuids/entityType";
     import { alert } from "@Obsidian/Utility/dialogs";
     import { RockDateTime } from "@Obsidian/Utility/rockDateTime";
     import { type Column, type Workbook, type Worksheet } from "@Obsidian/Libs/exceljs";
+    import { IPersonPreferenceCollection } from "@Obsidian/Types/Core/personPreferences";
+
+    /**
+     * The preference keys used by the grid.
+     */
+    const enum PreferenceKey {
+        /** The preference key that stores the column filter values. */
+        ColumnFilterValues = "column-filter-values",
+
+        /** The preference key that stores the current sort information. */
+        SortDirection = "sort-direction"
+    }
 
     /*
      * 8/17/2022 - DSH
@@ -471,6 +483,25 @@ table.table-obsidian th.grid-error > .alert {
         },
 
         /**
+         * The custom prefix to use when accessing person preferences related
+         * to the grid. This prefix is appended to the standard prefix used
+         * by the grid. This property is not reactive.
+         */
+        preferencePrefix: {
+            type: String as PropType<string>,
+            required: false
+        },
+
+        /**
+         * When `true`, all preferences will be disabled on the grid. Preferences
+         * will not be read nor will they be saved. This property is not reactive.
+         */
+        disablePreferences: {
+            type: Boolean as PropType<boolean>,
+            default: false
+        },
+
+        /**
          * The function to call in response to the add button being clicked.
          * Providing this function will automatically enable the add button.
          */
@@ -514,6 +545,11 @@ table.table-obsidian th.grid-error > .alert {
     const dragOptions = ref<IDragSourceOptions | undefined>();
     const reorderColumn: ColumnDefinition | undefined = gridState.columns.find(c => c.name === "__reorder");
     const isRowSelectionInProgress = ref(false);
+
+    const rootPreferences = usePersonPreferences().blockPreferences;
+    const gridPreferences = getPrefixedPreferences();
+    let preferencesAreDirty = false;
+    let preferencesAreSaving = false;
 
     // #endregion
 
@@ -1124,7 +1160,137 @@ table.table-obsidian th.grid-error > .alert {
 
     // #endregion
 
-    // #region Event Handlers
+    // #region Preference Functions
+
+    /**
+     * Gets the prefixed preference collection to use with the grid.
+     */
+     function getPrefixedPreferences(): IPersonPreferenceCollection {
+        const prefix = !props.preferencePrefix
+            ? "grid-"
+            : `grid-${props.preferencePrefix}-`;
+
+        return rootPreferences.withPrefix(prefix);
+    }
+
+    /**
+     * Sets the current filter value to match what is in the preferences.
+     */
+    function setFilterFromPreferences(): void {
+        const filterValues = gridPreferences.getValue(PreferenceKey.ColumnFilterValues);
+
+        if (filterValues) {
+            try {
+                const value = JSON.parse(filterValues);
+
+                if (typeof value === "object") {
+                    // Delete any filters for columns that don't exist anymore.
+                    const keys = Object.keys(value);
+
+                    for (const key of keys) {
+                        if (!gridState.columns.some(c => c.name === key)) {
+                            delete value[key];
+                        }
+                    }
+
+                    columnFilterValues.value = value;
+                }
+            }
+            catch {
+                // Intentionally ignored, just use default value.
+            }
+        }
+    }
+
+    /**
+     * Sets the current sort value to match what is in the preferences.
+     */
+    function setSortFromPreferences(): void {
+        const sortDirection = gridPreferences.getValue(PreferenceKey.SortDirection);
+
+        if (sortDirection) {
+            try {
+                const value = JSON.parse(sortDirection);
+
+                if (typeof value === "object") {
+                    columnSortDirection.value = value;
+                }
+            }
+            catch {
+                // Intentionally ignored, just use default value.
+            }
+        }
+    }
+
+    /**
+     * Saves the column filter values to the preference collection and triggers
+     * a request to save the preferences.
+     */
+    function saveFilterPreferences(): void {
+        if (props.disablePreferences) {
+            return;
+        }
+
+        const hasValues = Object.values(columnFilterValues.value).some(v => v !== undefined);
+
+        if (hasValues) {
+            gridPreferences.setValue(PreferenceKey.ColumnFilterValues, JSON.stringify(columnFilterValues.value));
+        }
+        else {
+            gridPreferences.setValue(PreferenceKey.ColumnFilterValues, "");
+        }
+
+        savePreferences();
+    }
+
+    /**
+     * Saves the sort value to the preference collection and triggers
+     * a request to save the preferences.
+     */
+     function saveSortPreferences(): void {
+        if (props.disablePreferences) {
+            return;
+        }
+
+        if (columnSortDirection.value) {
+            gridPreferences.setValue(PreferenceKey.SortDirection, JSON.stringify(columnSortDirection.value));
+        }
+        else {
+            gridPreferences.setValue(PreferenceKey.SortDirection, "");
+        }
+
+        savePreferences();
+    }
+
+    /**
+     * Saves the preferences. This handles logic to ensure that only a single
+     * attempt to save preferences is happening at one time.
+     */
+    async function savePreferences(): Promise<void> {
+        preferencesAreDirty = true;
+
+        if (preferencesAreSaving) {
+            return;
+        }
+
+        preferencesAreSaving = true;
+        preferencesAreDirty = false;
+
+        try {
+            await gridPreferences.save();
+        }
+        finally {
+            preferencesAreSaving = false;
+        }
+
+        if (preferencesAreDirty) {
+            window.setTimeout(() => savePreferences(), 0);
+        }
+    }
+
+    // #endregion
+
+    // #region Grid Action Event Handlers
 
     /**
      * Called when the bulk update grid action has been clicked.
@@ -1382,6 +1548,10 @@ table.table-obsidian th.grid-error > .alert {
         await createEntitySetAndRedirect([props.keyField], fixedUrl, options);
     }
 
+    // #endregion
+
+    // #region Event Handlers
+
     /**
      * Called when the {@link gridState.sortedRows} value has changed. Update
      * all the visible row information.
@@ -1422,13 +1592,31 @@ table.table-obsidian th.grid-error > .alert {
 
     // #endregion
 
-    watch([quickFilterValue, columnFilterValues], () => {
+    // Set initial filtering and sorting based on preferences. This needs to
+    // happen before we start watching for changes so we don't try to save
+    // preferences when we change the value.
+    if (!props.disablePreferences) {
+        setFilterFromPreferences();
+        setSortFromPreferences();
+    }
+
+    gridState.setFilters(quickFilterValue.value, columnFilterValues.value);
+    gridState.setSort(columnSortDirection.value);
+
+    watch(quickFilterValue, () => {
         currentPage.value = 1;
         gridState.setFilters(quickFilterValue.value, columnFilterValues.value);
     });
 
+    watch(columnFilterValues, () => {
+        currentPage.value = 1;
+        gridState.setFilters(quickFilterValue.value, columnFilterValues.value);
+        saveFilterPreferences();
+    });
+
     watch(columnSortDirection, () => {
         gridState.setSort(columnSortDirection.value);
+        saveSortPreferences();
     });
 
     watch([currentPage, pageSize], () => {

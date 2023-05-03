@@ -19,7 +19,7 @@ import { standardColumnProps } from "@Obsidian/Core/Controls/grid";
 import { Component, defineComponent, PropType } from "vue";
 import LabelCell from "../Cells/labelCell.partial.obs";
 import LabelSkeletonCell from "../Cells/labelSkeletonCell.partial.obs";
-import { ColumnDefinition, ExportValueFunction, QuickFilterValueFunction, SortValueFunction } from "@Obsidian/Types/Controls/grid";
+import { ColumnDefinition, ExportValueFunction, FilterValueFunction, QuickFilterValueFunction, SortValueFunction } from "@Obsidian/Types/Controls/grid";
 import { ListItemBag } from "@Obsidian/ViewModels/Utility/listItemBag";
 
 /**
@@ -66,6 +66,11 @@ export default defineComponent({
 
         quickFilterValue: {
             type: Object as PropType<QuickFilterValueFunction | string>,
+            default: getTextValue
+        },
+
+        filterValue: {
+            type: Object as PropType<FilterValueFunction | string>,
             default: getTextValue
         },
 
