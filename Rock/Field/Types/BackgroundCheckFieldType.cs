@@ -26,6 +26,7 @@ using Rock.Data;
 using Rock.Model;
 using Rock.Web.UI.Controls;
 using Rock.Attribute;
+using Rock.ViewModels.Utility;
 
 namespace Rock.Field.Types
 {
@@ -33,11 +34,134 @@ namespace Rock.Field.Types
     /// Field used to display or upload a new binary file of a specific type.
     /// Stored as BinaryFile.Guid.
     /// </summary>
-    [RockPlatformSupport( Utility.RockPlatform.WebForms )]
+    [RockPlatformSupport( Utility.RockPlatform.WebForms, Utility.RockPlatform.Obsidian )]
     [Rock.SystemGuid.FieldTypeGuid( Rock.SystemGuid.FieldType.BACKGROUNDCHECK )]
     public class BackgroundCheckFieldType : BinaryFileFieldType, IEntityReferenceFieldType
     {
+        private const string BACKGROUNDCHECK_TYPES = "backgroundCheckTypes";
+        private const string BACKGROUNDCHECK_TYPE = "backgroundCheckType";
+        private const string BINARY_FILE_TYPE = "binaryFileType";
+
         #region Edit Control
+
+        /// <inheritdoc />
+        public override string GetPublicValue( string privateValue, Dictionary<string, string> privateConfigurationValues )
+        {
+            return GetTextValue( privateValue, privateConfigurationValues );
+        }
+
+        /// <inheritdoc />
+        public override Dictionary<string, string> GetPrivateConfigurationValues( Dictionary<string, string> publicConfigurationValues )
+        {
+            var privateConfigurationValues = base.GetPrivateConfigurationValues( publicConfigurationValues );
+
+            if ( privateConfigurationValues.ContainsKey( BINARY_FILE_TYPE ) )
+            {
+                var binaryFileTypeValue = publicConfigurationValues[BINARY_FILE_TYPE].FromJsonOrNull<ListItemBag>();
+
+                if ( binaryFileTypeValue != null )
+                {
+                    privateConfigurationValues[BINARY_FILE_TYPE] = binaryFileTypeValue.Value;
+                }
+            }
+
+            if ( privateConfigurationValues.ContainsKey( BACKGROUNDCHECK_TYPE ) )
+            {
+                var backgroundCheckTypeValue = publicConfigurationValues[BACKGROUNDCHECK_TYPE].FromJsonOrNull<ListItemBag>();
+                if ( backgroundCheckTypeValue != null )
+                {
+                    privateConfigurationValues[BACKGROUNDCHECK_TYPE] = backgroundCheckTypeValue.Value;
+                }
+            }
+
+            privateConfigurationValues.Remove( BACKGROUNDCHECK_TYPES );
+
+            return privateConfigurationValues;
+        }
+
+        /// <inheritdoc />
+        public override Dictionary<string, string> GetPublicConfigurationValues( Dictionary<string, string> privateConfigurationValues, ConfigurationValueUsage usage, string value )
+        {
+            var publicConfigurationValues = base.GetPublicConfigurationValues( privateConfigurationValues, usage, value );
+
+            if ( publicConfigurationValues.ContainsKey( BINARY_FILE_TYPE ) && Guid.TryParse( publicConfigurationValues[BINARY_FILE_TYPE], out Guid binaryFileTypeGuid ) )
+            {
+                publicConfigurationValues[BINARY_FILE_TYPE] = new ListItemBag()
+                {
+                    Text = BinaryFileTypeCache.Get( binaryFileTypeGuid )?.Name,
+                    Value = binaryFileTypeGuid.ToString()
+                }.ToCamelCaseJson( false, true );
+            }
+
+            if ( Guid.TryParse( value, out Guid binaryFileGuid ) )
+            {
+                publicConfigurationValues[BACKGROUNDCHECK_TYPE] = new ListItemBag()
+                {
+                    Text = BackgroundCheckTypes.ProtectMyMinistry.ConvertToString(),
+                    Value = BackgroundCheckTypes.ProtectMyMinistry.ConvertToInt().ToString()
+                }.ToCamelCaseJson( false, true );
+            }
+            else if ( !string.IsNullOrWhiteSpace( value ) )
+            {
+                publicConfigurationValues[BACKGROUNDCHECK_TYPE] = new ListItemBag()
+                {
+                    Text = BackgroundCheckTypes.Checkr.ConvertToString(),
+                    Value = BackgroundCheckTypes.Checkr.ConvertToInt().ToString()
+                }.ToCamelCaseJson( false, true );
+            }
+            else if ( privateConfigurationValues.ContainsKey( BACKGROUNDCHECK_TYPE ) )
+            {
+                var backgroundCheckType = privateConfigurationValues[BACKGROUNDCHECK_TYPE].ConvertToEnum<BackgroundCheckTypes>();
+                publicConfigurationValues[BACKGROUNDCHECK_TYPE] = new ListItemBag()
+                {
+                    Text = backgroundCheckType.ConvertToString(),
+                    Value = backgroundCheckType.ConvertToInt().ToString()
+                }.ToCamelCaseJson( false, true );
+            }
+
+            publicConfigurationValues[BACKGROUNDCHECK_TYPES] = GetBackgroundCheckTypes().ToCamelCaseJson( false, true );
+
+            return publicConfigurationValues;
+        }
+
+        /// <inheritdoc />
+        public override string GetPublicEditValue( string privateValue, Dictionary<string, string> privateConfigurationValues )
+        {
+            return new ListItemBag()
+            {
+                Text = GetFileName( privateValue ),
+                Value = privateValue
+            }.ToCamelCaseJson( false, true );
+        }
+
+        /// <inheritdoc />
+        public override string GetPrivateEditValue( string publicValue, Dictionary<string, string> privateConfigurationValues )
+        {
+            var itemValue = publicValue.FromJsonOrNull<ListItemBag>();
+
+            if ( itemValue != null )
+            {
+                return itemValue.Value;
+            }
+
+            return string.Empty;
+        }
+
+        /// <summary>
+        /// Gets the background check types as a List of ListBagItems.
+        /// </summary>
+        /// <returns></returns>
+        private List<ListItemBag> GetBackgroundCheckTypes()
+        {
+            var backgroundCheckTypeEnums = ( BackgroundCheckTypes[] ) Enum.GetValues( typeof( BackgroundCheckTypes ) );
+            var backgroundCheckTypes = new List<ListItemBag>();
+            foreach ( BackgroundCheckTypes backgroundCheckType in backgroundCheckTypeEnums.Where( b => b != BackgroundCheckTypes.Unknown ) )
+            {
+                backgroundCheckTypes.Add( new ListItemBag() { Text = backgroundCheckType.ConvertToString(), Value = backgroundCheckType.ConvertToInt().ToString() } );
+            }
+
+            return backgroundCheckTypes;
+        }
 
         #endregion
 
@@ -284,5 +408,12 @@ namespace Rock.Field.Types
 
 #endif
         #endregion
+
+        private enum BackgroundCheckTypes
+        {
+            ProtectMyMinistry,
+            Checkr,
+            Unknown
+        }
     }
 }
