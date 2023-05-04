@@ -97,6 +97,7 @@ namespace Rock.Field.Types
             {
                 return new ListItemBag()
                 {
+                    Text = DefinedValueCache.Get( privateValue )?.Value,
                     Value = privateValue
                 }.ToCamelCaseJson( false, true );
             }
@@ -127,6 +128,7 @@ namespace Rock.Field.Types
         public override Dictionary<string, string> GetPublicConfigurationValues( Dictionary<string, string> privateConfigurationValues, ConfigurationValueUsage usage, string value )
         {
             var publicConfigurationValues = base.GetPublicConfigurationValues( privateConfigurationValues, usage, value );
+            var groupTypes = new List<GroupTypeCache>();
 
             if ( publicConfigurationValues.ContainsKey( GROUP_TYPE_KEY ) )
             {
@@ -139,12 +141,22 @@ namespace Rock.Field.Types
                         Text = groupType?.Name,
                         Value = groupTypeValue
                     }.ToCamelCaseJson( false, true );
+
+                    // If in Edit mode add GroupType if any so we get its locations.
+                    if ( usage == ConfigurationValueUsage.Edit && groupType != null )
+                    {
+                        groupTypes.Add( groupType );
+                    }
                 }
             }
 
-            var groupTypes = GroupTypeCache.All();
-            var locationTypes = new Dictionary<string, string>();
+            // If in Configure mode get all GroupTypes so we can get their locations
+            if ( usage == ConfigurationValueUsage.Configure )
+            {
+                groupTypes = GroupTypeCache.All();
+            }
 
+            var locationTypes = new Dictionary<string, string>();
             foreach ( var groupType in groupTypes )
             {
                 var locationTypeValues = groupType.LocationTypeValues.ConvertAll( g => new ListItemBag() { Text = g.Value, Value = g.Guid.ToString() } );
