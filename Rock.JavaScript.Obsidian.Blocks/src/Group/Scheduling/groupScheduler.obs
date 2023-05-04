@@ -11,7 +11,46 @@
            :hasFullscreen="true"
            :headerSecondaryActions="secondaryActions">
 
-        <GroupSchedulerHelp v-model:isVisible="showHelpPanel"></GroupSchedulerHelp>
+        <template #helpContent>
+            <div class="p-3 bg-white">
+                <div>
+                    <h5 class="mt-0 mb-4">Group Scheduler Help</h5>
+                    <p><strong>Scheduling Basics</strong></p>
+                    <p>This screen allows you to schedule individuals into groups. Individuals can be added to a schedule by clicking the ‘Plus’ icon in the lower right corner of each location.</p>
+                </div>
+                <div class="row mt-4">
+                    <div class="col-md-6">
+                        <p><strong>Scheduled Individual Legend</strong></p>
+                        <p>Each scheduled individual has one of three invite statuses:</p>
+                        <ul>
+                            <li><i class="fa fa-circle text-success"></i> Accepted Invite</li>
+                            <li><i class="fa fa-circle text-muted"></i> Pending Invite</li>
+                            <li><i class="fa fa-circle text-danger"></i> Declined Invite</li>
+                        </ul>
+                        <p>The invite status is shown by a border around the individual's avatar.</p>
+                        <p>Some scheduled individuals may also have notification icons that alert you to issues with their schedule.</p>
+                        <ul>
+                            <li><i class="fa fa-exclamation-triangle"></i> Indicates a conflict; which can can happen if an individual is unavailable due to a blackout, they do not meet the group requirements, or because they have a scheduling conflict.</li>
+                            <li><i class="fa fa-minus-circle"></i> Indicates that the schedule does not match this person's scheduling preference.</li>
+                        </ul>
+                        <p>For both notification icon types, additional details can be viewed by hovering over the icon.</p>
+                    </div>
+
+                    <div class="col-md-6">
+                        <p><strong>Group Location Schedule Status</strong></p>
+                        <p>Each group location has a status bar at the bottom that shows the overall status of the schedule.</p>
+                        <ul>
+                            <li><i class="fa fa-square text-danger"></i> A red bar means there are not enough accepted invites to reach the minimum number of individuals needed.</li>
+                            <li><i class="fa fa-square text-warning"></i> A yellow bar means there are enough accepted invites to reach the minimum number, but not the desired number.</li>
+                            <li><i class="fa fa-square text-success"></i> A green bar means there are enough accepted invites to reach or exceed the desired number.</li>
+                            <li><i class="fa fa-square text-critical"></i> An orange bar means there are too many accepted invites and the maximum number is exceeded.</li>
+                        </ul>
+                        <p>Each status bar will show a solid bar representing the accepted invites, and a semi-transparent bar representing pending invites.</p>
+                        <p>Bars include ticks, that mark the thresholds (minimum, desired and maximum) for each schedule. You can hover over each tick to see a tooltip with the threshold and the number of individuals required.</p>
+                    </div>
+                </div>
+            </div>
+        </template>
 
         <!-- Toolbar: Desktop -->
         <div class="panel-toolbar d-none d-md-flex flex-wrap flex-sm-nowrap justify-content-between">
@@ -125,7 +164,7 @@
 
         <div v-else ref="snapContainer" class="snap-container">
 
-            <OccurrenceDate v-for="(occurrences, key, index) in occurrencesByDate" :key="key"
+            <OccurrenceDate v-for="(occurrences, index) in sortedOccurrencesByDate" :key="getOccurrenceDateKey(occurrences)"
                             :occurrences="occurrences"
                             :showPrevNextButtons="showPrevNextButtons"
                             :disabled="isSchedulingDisabled"
@@ -203,7 +242,6 @@
 <script setup lang="ts">
     import { ComponentPublicInstance, computed, nextTick, provide, ref } from "vue";
     import CloneSchedules from "./GroupScheduler/cloneSchedules.partial.obs";
-    import GroupSchedulerHelp from "./GroupScheduler/groupSchedulerHelp.partial.obs";
     import OccurrenceDate from "./GroupScheduler/occurrenceDate.partial.obs";
     import SelectFilters from "./GroupScheduler/selectFilters.partial.obs";
     import { NavigationUrlKey, ReloadAllOccurrences, ReloadOccurrencesContainingResource } from "./GroupScheduler/types.partial";
@@ -240,8 +278,6 @@
     // #region Values
 
     const blockActionErrorMessage = ref("");
-
-    const showHelpPanel = ref(false);
 
     const snapContainer = ref<HTMLElement | null>(null);
     const scheduleComponentsByOccurrenceDate = ref<Record<number, (ComponentPublicInstance | null)[]>>({});
@@ -283,14 +319,7 @@
     });
 
     const secondaryActions = computed((): PanelAction[] => {
-        const actions: PanelAction[] = [
-            // {
-            //     title: "Group Scheduler Help",
-            //     iconCssClass: "fa fa-question",
-            //     type: "default",
-            //     handler: toggleHelpPanelVisbility
-            // }
-        ];
+        const actions: PanelAction[] = [];
 
         if (copyLinkUrl.value) {
             actions.push({
@@ -343,31 +372,36 @@
         };
     });
 
-    const occurrencesByDate = computed((): Record<string, GroupSchedulerOccurrenceBag[]> => {
+    const sortedOccurrencesByDate = computed((): (GroupSchedulerOccurrenceBag[])[] => {
         if (!scheduleOccurrences.value?.length) {
-            return {};
+            return [];
         }
 
-        const groupedOccurrences: Record<string, GroupSchedulerOccurrenceBag[]> = {};
+        // We're assuming the server has performed the sort and returned the occcurrences to us in the expected display order.
+        // A Map object is needed to maintain sort order.
+        const groupedOccurrences = new Map<string, GroupSchedulerOccurrenceBag[]>();
         scheduleOccurrences.value
             .filter((o: GroupSchedulerOccurrenceBag) => o.occurrenceDate)
             .forEach((o: GroupSchedulerOccurrenceBag) => {
                 const date = o.occurrenceDate || "";
-                let dateOccurrences = groupedOccurrences[date];
+                let dateOccurrences = groupedOccurrences.get(date);
 
                 if (!dateOccurrences) {
                     dateOccurrences = [];
-                    groupedOccurrences[date] = dateOccurrences;
+                    groupedOccurrences.set(date, dateOccurrences);
                 }
 
                 dateOccurrences.push(o);
             });
 
-        return groupedOccurrences;
+        const sortedDateOccurrences: (GroupSchedulerOccurrenceBag[])[] = [];
+        groupedOccurrences.forEach((occurrences) => sortedDateOccurrences.push(occurrences));
+
+        return sortedDateOccurrences;
     });
 
     const occurrenceDateCount = computed((): number => {
-        return Object.keys(occurrencesByDate.value).length;
+        return sortedOccurrencesByDate.value.length;
     });
 
     const anyOccurrences = computed((): boolean => {
@@ -375,7 +409,7 @@
     });
 
     const showPrevNextButtons = computed((): boolean => {
-        if (!occurrenceDateCount.value) {
+        if (!anyOccurrences.value) {
             return false;
         }
 
@@ -389,7 +423,7 @@
          * more than one schedule. If so, show the prev/next buttons.
          */
         const uniqueScheduleIds: number[] = [];
-        occurrencesByDate[Object.keys(occurrencesByDate.value)[0]]?.forEach((o: GroupSchedulerOccurrenceBag) => {
+        sortedOccurrencesByDate[0]?.forEach((o: GroupSchedulerOccurrenceBag) => {
             if (!uniqueScheduleIds.some((id: number) => id === o.scheduleId)) {
                 uniqueScheduleIds.push(o.scheduleId);
             }
@@ -455,6 +489,15 @@
     // #endregion
 
     // #region Functions
+
+    /**
+     * Gets the occurrence date "key" from the first occurrence in the collection.
+     *
+     * @param occurrences The occurrences for a given occurrence date.
+     */
+    function getOccurrenceDateKey(occurrences: GroupSchedulerOccurrenceBag[]): string {
+        return occurrences?.[0]?.occurrenceDate ?? "unknown";
+    }
 
     /**
      * Scrolls to the previous or next schedule component.
@@ -549,13 +592,6 @@
     // #endregion
 
     // #region Event Handlers
-
-    /**
-     * Handles the click event of the "Group Scheduler Help" secondary panel action.
-     */
-    function toggleHelpPanelVisbility(): void {
-        showHelpPanel.value = !showHelpPanel.value;
-    }
 
     /**
      * Handles the click event of the "Copy Link to Clipboard" secondary panel action.
