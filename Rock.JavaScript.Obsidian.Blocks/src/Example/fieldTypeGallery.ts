@@ -49,16 +49,16 @@ const getAttributeData = (name: string, fieldTypeGuid: Guid, configValues: Recor
             categories: []
         }),
         "value2": reactive({
-                fieldTypeGuid: fieldTypeGuid,
-                name: `${name} 2`,
-                key: "value2",
-                description: `This is the description of the ${name} with an initial value`,
-                configurationValues,
-                isRequired: false,
-                attributeGuid: "",
-                order: 0,
-                categories: []
-            })
+            fieldTypeGuid: fieldTypeGuid,
+            name: `${name} 2`,
+            key: "value2",
+            description: `This is the description of the ${name} with an initial value`,
+            configurationValues,
+            isRequired: false,
+            attributeGuid: "",
+            order: 0,
+            categories: []
+        })
     };
 };
 
@@ -139,7 +139,7 @@ const getFieldTypeGalleryComponent = (name: string, initialValue: string, fieldT
             GalleryAndResult: galleryAndResult,
             TextBox
         },
-        data () {
+        data() {
             return {
                 name,
                 values: { "value1": "", "value2": initialValue },
@@ -310,6 +310,10 @@ const galleryComponents: Record<string, Component> = {
     }),
 
     PhoneNumberGallery: getFieldTypeGalleryComponent("PhoneNumber", "(321) 456-7890", FieldTypeGuids.PhoneNumber, {
+    }),
+
+    PersonGallery: getFieldTypeGalleryComponent("Person", "996c8b72-c255-40e6-bb98-b1d5cf345f3b", FieldTypeGuids.Person, {
+        EnableSelfSelection: "T"
     }),
 
     RatingGallery: getFieldTypeGalleryComponent("Rating", '{"value":3,"maxValue":5}', FieldTypeGuids.Rating, {

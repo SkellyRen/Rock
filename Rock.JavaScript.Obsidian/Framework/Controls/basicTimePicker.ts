@@ -18,15 +18,7 @@ import { watch } from "vue";
 import { defineComponent, PropType, ref, Ref } from "vue";
 import { toNumber } from "@Obsidian/Utility/numberUtils";
 import { padLeft } from "@Obsidian/Utility/stringUtils";
-
-/** The value expected by the TimePicker. */
-export type BasicTimePickerValue = {
-    /** Hour of the time, 0-23. */
-    hour?: number;
-
-    /** Minute of the time, 0-59. */
-    minute?: number;
-};
+import { TimePickerValue } from "@Obsidian/ViewModels/Controls/timePickerValue.d";
 
 export default defineComponent({
     name: "BasicTimePicker",
@@ -36,7 +28,7 @@ export default defineComponent({
 
     props: {
         modelValue: {
-            type: Object as PropType<BasicTimePickerValue>,
+            type: Object as PropType<TimePickerValue>,
             default: {}
         },
         disabled: {
@@ -72,7 +64,7 @@ export default defineComponent({
 
         function updateValue(): void {
             const values = /(\d+)(?::(\d+))?/.exec(internalValue.value);
-            const value: BasicTimePickerValue = {};
+            const value: TimePickerValue = {};
 
             if (values !== null) {
                 value.hour = toNumber(values[1]) + (internalMeridiem.value === "PM" ? 12 : 0);

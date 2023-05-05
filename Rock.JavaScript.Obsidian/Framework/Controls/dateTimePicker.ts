@@ -19,7 +19,7 @@ import { toNumber } from "@Obsidian/Utility/numberUtils";
 import RockFormField from "./rockFormField";
 import TextBox from "./textBox";
 import BasicTimePicker from "./basicTimePicker";
-import { TimePickerValue } from "./timePicker";
+import { TimePickerValue } from "@Obsidian/ViewModels/Controls/timePickerValue";
 import { padLeft } from "@Obsidian/Utility/stringUtils";
 import { RockDateTime } from "@Obsidian/Utility/rockDateTime";
 

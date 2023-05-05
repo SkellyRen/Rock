@@ -16,10 +16,9 @@
 
 import { defineComponent, PropType } from "vue";
 import { normalizeRules, rulesPropType, ValidationRule } from "@Obsidian/ValidationRules";
-import BasicTimePicker, { BasicTimePickerValue as TimePickerValue } from "./basicTimePicker";
+import BasicTimePicker from "./basicTimePicker";
+import { TimePickerValue } from "@Obsidian/ViewModels/Controls/timePickerValue.d";
 import RockFormField from "./rockFormField";
-
-export { BasicTimePickerValue as TimePickerValue } from "./basicTimePicker";
 
 export default defineComponent({
     name: "TimePicker",
