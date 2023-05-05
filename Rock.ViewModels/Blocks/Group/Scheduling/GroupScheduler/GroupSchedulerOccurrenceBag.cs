@@ -65,6 +65,14 @@ namespace Rock.ViewModels.Blocks.Group.Scheduling.GroupScheduler
         public string ParentGroupName { get; set; }
 
         /// <summary>
+        /// Gets or sets the group location order for this occurrence.
+        /// </summary>
+        /// <value>
+        /// The group location order for this occurrence.
+        /// </value>
+        public int GroupLocationOrder { get; set; }
+
+        /// <summary>
         /// Gets or sets the location ID for this occurrence.
         /// </summary>
         /// <value>
@@ -126,7 +134,7 @@ namespace Rock.ViewModels.Blocks.Group.Scheduling.GroupScheduler
         /// <value>
         /// The occurrence date and time.
         /// </value>
-        public DateTime OccurrenceDateTime { get; set; }
+        public DateTimeOffset OccurrenceDateTime { get; set; }
 
         /// <summary>
         /// Gets or sets the ISO 8601 Sunday date for this occurrence.
