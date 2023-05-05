@@ -1,6 +1,6 @@
 <!-- Copyright by the Spark Development Network; Licensed under the Rock Community License -->
 <template>
-    <th ref="columnHeaderElement" class="grid-column-header" :class="additionalHeaderClass">
+    <div ref="columnHeaderElement" class="grid-column-header" :class="additionalHeaderClass" :style="additionalHeaderStyle">
         <component v-if="column.headerComponent" :is="column.headerComponent" :column="column" :grid="grid" />
         <span v-else :class="titleClass" @click.prevent="onSortClick">{{ column.title }}</span>
 
@@ -24,13 +24,14 @@
                 <button class="btn btn-link btn-sm" @click.prevent="onFilterClearClick">Clear</button>
             </div>
         </div>
-    </th>
+    </div>
 </template>
 
 <script setup lang="ts">
     import { useVModelPassthrough } from "@Obsidian/Utility/component";
     import { computed, nextTick, PropType, ref, watch } from "vue";
     import { ColumnDefinition, IGridState } from "@Obsidian/Types/Controls/grid";
+    import { getColumnStyles } from "@Obsidian/Core/Controls/grid";
 
     const props = defineProps({
         /** The currently selected filter value for the column. */
@@ -131,6 +132,15 @@
         }
 
         return classes.trim();
+    });
+
+    /** Contains the additional styles to be applied to the header. */
+    const additionalHeaderStyle = computed((): Record<string, string> => {
+        const styles: Record<string, string> = {
+            ...getColumnStyles(props.column)
+        };
+
+        return styles;
     });
 
     /** The CSS classes that should be applied to the title element. */

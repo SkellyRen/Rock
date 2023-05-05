@@ -1,19 +1,15 @@
 <!-- Copyright by the Spark Development Network; Licensed under the Rock Community License -->
 <template>
-    <tr>
-        <td class="grid-paging" :colspan="visibleColumnCount">
-            <div class="d-flex">
-                <div class="grid-page-sizes">
-                    <PageSizePicker v-model="pageSize" :pageSizes="pageSizes" />
+    <div class="grid-paging-footer">
+        <div class="grid-page-sizes">
+            <PageSizePicker v-model="pageSize" :pageSizes="pageSizes" />
 
-                    <div v-if="message" class="grid-itemcount">{{ message }}</div>
-                </div>
+            <div v-if="message" class="grid-itemcount">{{ message }}</div>
+        </div>
 
-                <PagePicker v-model="currentPage" :pageCount="pageCount" />
-                <div class="flex-grow-1"></div>
-            </div>
-        </td>
-    </tr>
+        <PagePicker v-model="currentPage" :pageCount="pageCount" />
+        <div></div>
+    </div>
 </template>
 
 <script setup lang="ts">

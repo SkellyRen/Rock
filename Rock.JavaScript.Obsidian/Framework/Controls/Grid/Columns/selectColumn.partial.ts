@@ -47,6 +47,11 @@ export default defineComponent({
         itemClass: {
             type: String as PropType<string>,
             default: "grid-select-field"
+        },
+
+        width: {
+            type: String as PropType<string>,
+            default: "52px"
         }
     }
 });

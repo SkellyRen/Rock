@@ -1,7 +1,7 @@
 <!-- Copyright by the Spark Development Network; Licensed under the Rock Community License -->
 <template>
-    <table class="grid-table table table-bordered table-striped table-hover table-obsidian" :class="{ 'table-sticky': isStickyHeader }">
-        <thead>
+    <div class="grid-obsidian grid-bordered grid-striped grid-hover" :class="{ 'grid-sticky': isStickyHeader }">
+        <div class="grid-heading">
             <FilterHeaderRow v-model:quickFilterValue="quickFilterValue"
                              :grid="gridState"
                              :gridActions="gridActions"
@@ -11,30 +11,27 @@
                              v-model:columnFilters="columnFilterValues"
                              v-model:columnSort="columnSortDirection"
                              :grid="gridState" />
-        </thead>
+        </div>
 
-        <tbody v-if="dragOptions" v-dragSource="dragOptions" v-dragTarget="dragOptions">
+
+        <div class="grid-body" v-if="loadingData">
+            <SkeletonRows :columns="visibleColumnDefinitions"
+                          :grid="gridState"
+                          :count="skeletonRowCount" />
+        </div>
+
+        <div class="grid-body" v-else-if="gridErrorMessage">
+            <NotificationBox alertType="warning">{{ gridErrorMessage }}</NotificationBox>
+        </div>
+
+        <div class="grid-body" v-else-if="dragOptions" v-dragSource="dragOptions" v-dragTarget="dragOptions">
             <DataRows
                       :columns="visibleColumnDefinitions"
                       :rows="visibleRows"
                       :grid="gridState"
                       :tooltipField="tooltipField"
                       @click="onRowClick" />
-        </tbody>
-
-        <tbody v-else-if="loadingData">
-            <SkeletonRows :columns="visibleColumnDefinitions"
-                          :grid="gridState"
-                          :count="skeletonRowCount" />
-        </tbody>
-
-        <tbody v-else-if="gridErrorMessage">
-            <tr>
-                <td class="grid-error" :colspan="visibleColumnCount">
-                    <NotificationBox alertType="warning">{{ gridErrorMessage }}</NotificationBox>
-                </td>
-            </tr>
-        </tbody>
+        </div>
 
         <VirtualDataRows v-else
                          :columns="visibleColumnDefinitions"
@@ -44,56 +41,100 @@
                          :isSelectable="isSelectionEnabled"
                          @click="onRowClick" />
 
-        <tfoot>
+        <div class="grid-footing">
             <PagerRow v-model:pageSize="pageSize"
                       v-model:currentPage="currentPage"
                       :pageCount="pageCount"
                       :pageSizes="pageSizes"
                       :message="pagerMessage"
                       :visibleColumnCount="visibleColumnCount" />
-        </tfoot>
-    </table>
+        </div>
+    </div>
 </template>
 
 <style>
-table.table-obsidian {
-    border-collapse: initial;
+.grid-obsidian {
+    box-shadow: 0 0 1px 0 rgba(0, 0, 0, 0.03), 0 1px 3px 0 rgba(0, 0, 0, 0.08);
 }
 
-table.table-obsidian.table-sticky > thead {
+.grid-obsidian.grid-bordered {
+    border: 1px solid #eee;
+    border-radius: 4px;
+}
+
+.grid-obsidian > .grid-heading {
+    border-bottom: 1px solid #e6e6e6;
+    color: #2d2e31;
+    background-color: #f5f5f5;
+}
+
+.grid-obsidian.grid-sticky > .grid-heading {
     position: sticky;
     top: var(--top-header-height);
 }
 
-table.table-obsidian th.grid-column-header {
-    position: relative;
+.grid-obsidian > .grid-heading > .grid-title-heading {
+    display: flex;
+    border-bottom: 1px solid #e6e6e6;
+    align-items: center;
+    font-size: 18px;
+    padding: 14px 18px;
 }
 
-table.table-obsidian th.grid-column-header,
-table.table-obsidian th.grid-filter {
+.grid-obsidian > .grid-heading > .grid-title-heading > .grid-title {
+    flex-grow: 1;
+    font-weight: 500;
+    line-height: 1;
+}
+
+.grid-obsidian > .grid-heading > .grid-title-heading > .grid-actions {
+    background-color: initial;
+    text-align: initial;
+}
+
+.grid-obsidian > .grid-heading > .grid-title-heading > .grid-quick-filter {
+    display: flex;
+}
+
+.grid-obsidian > .grid-heading > .grid-title-heading > .grid-quick-filter > .grid-quick-filter-search {
+    width: 0px;
+    overflow: hidden;
+    transition: width 0.3s ease;
+}
+
+.grid-obsidian > .grid-heading > .grid-title-heading > .grid-quick-filter > .grid-quick-filter-search.open {
+    width: 240px;
+}
+
+.grid-obsidian > .grid-heading > .grid-column-heading {
+    display: flex;
     background-color: #f9fafb;
-    border-bottom: 1px solid #d3dfe1;
+    font-weight: 500;
 }
 
-table.table-obsidian th.grid-column-header .btn-grid-column-filter {
+.grid-obsidian > .grid-heading > .grid-column-heading > .grid-column-header {
+    position: relative;
+    padding: 16px 0px 16px 12px;
+}
+
+.grid-obsidian > .grid-heading > .grid-column-heading > .grid-column-header > .btn-grid-column-filter {
     border: 0px;
     background-color: transparent;
     margin-left: 4px;
     color: #e7e7e7;
     opacity: 0.5;
-    transition-duration: 250ms;
-    transition-property: opacity, color;
+    transition-property: opacity 250ms, color 250ms;
 }
 
-table.table-obsidian th.grid-column-header .btn-grid-column-filter.active {
+.grid-obsidian > .grid-heading > .grid-column-heading > .grid-column-header > .btn-grid-column-filter.active {
     color: var(--brand-success);
 }
 
-table.table-obsidian th.grid-column-header:hover .btn-grid-column-filter {
+.grid-obsidian > .grid-heading > .grid-column-heading > .grid-column-header:hover > .btn-grid-column-filter {
     opacity: 1;
 }
 
-table.table-obsidian th.grid-column-header .grid-filter-popup {
+.grid-obsidian > .grid-heading > .grid-column-heading > .grid-column-header > .grid-filter-popup {
     position: absolute;
     display: flex;
     flex-direction: column;
@@ -111,111 +152,89 @@ table.table-obsidian th.grid-column-header .grid-filter-popup {
     z-index: 10;
 }
 
-table.table-obsidian th.grid-column-header .grid-filter-popup .grid-filter-popup-content {
+.grid-obsidian > .grid-heading > .grid-column-heading > .grid-column-header > .grid-filter-popup > .grid-filter-popup-content {
     flex-grow: 1;
     overflow-y: auto;
 }
 
-table.table-obsidian th.grid-column-header .grid-filter-popup .grid-filter-popup-body {
+.grid-obsidian > .grid-heading > .grid-column-heading > .grid-column-header > .grid-filter-popup > .grid-filter-popup-content > .grid-filter-popup-body {
     margin: 10px;
     padding: 2px;
     overflow-x: clip;
 }
 
-table.table-obsidian th.grid-column-header .grid-filter-popup .actions {
+.grid-obsidian > .grid-heading > .grid-column-heading > .grid-column-header > .grid-filter-popup > .actions {
     border-top: 1px solid #eee;
     padding: 12px;
 }
 
-table.table-obsidian th.grid-column-header .resize-handle {
-    position: absolute;
-    right: 0px;
-    top: 0px;
-    bottom: 0px;
-    width: 2px;
-    height: 100%;
-    cursor: w-resize;
+.grid-obsidian > .grid-body > .grid-row {
+    display: flex;
+    background-color: #fff;
+    border-bottom: 1px solid #eee;
+    transition: background-color 250ms;
 }
 
-table.table-obsidian th.grid-column-header:hover .resize-handle {
-    background-color: #eee;
+.grid-obsidian.grid-striped > .grid-body > .grid-row.grid-row-even {
+    background-color: #f5f5f5;
 }
 
-/* table.table-obsidian td.grid-paging {
+.grid-obsidian.grid-hover > .grid-body > .grid-row:hover {
+    background-color: #eef4fc;
+}
 
-} */
+.grid-obsidian > .grid-body > .grid-row > .grid-cell {
+    padding: 16px 0px 16px 12px;
+}
 
-table.table-obsidian td.grid-paging .grid-page-sizes {
-    flex: 1 0;
+.grid-obsidian > .grid-footing > .grid-paging-footer {
+    display: flex;
+    padding: 14px 18px;
+    color: #2d2e31;
+    background-color: #f5f5f5;
+}
+
+.grid-obsidian > .grid-footing > .grid-paging-footer > * {
+    flex: 1 0 33.33%
+}
+
+.grid-obsidian > .grid-footing > .grid-paging-footer > .grid-page-sizes {
+    display: flex;
     justify-content: start;
     align-items: center;
 }
 
-table.table-obsidian td.grid-paging .grid-page-picker {
-    flex: 1 0;
+.grid-obsidian > .grid-footing > .grid-paging-footer > .grid-page-sizes > ul {
+    margin: 0px;
+}
+
+.grid-obsidian > .grid-footing > .grid-paging-footer > .grid-page-picker {
     display: flex;
     justify-content: center;
     align-items: center;
 }
 
-table.table-obsidian td.grid-paging .grid-page-picker > button {
+.grid-obsidian > .grid-footing > .grid-paging-footer > .grid-page-picker > button {
     border: 0px;
     background-color: transparent;
     margin: 0px 5px;
     padding: 0px 6px;
 }
 
-table.table-obsidian td.grid-paging .grid-page-picker > button.disabled {
+.grid-obsidian > .grid-footing > .grid-paging-footer > .grid-page-picker > button.disabled {
     opacity: 0.5;
     pointer-events: none;
 }
 
-table.table-obsidian td.grid-paging .grid-page-picker > button.active {
+.grid-obsidian > .grid-footing > .grid-paging-footer > .grid-page-picker > button.active {
     border: 1px solid #b7b7b7;
     background-color: #f7f7f7;
 }
 
-table.table-obsidian td.grid-paging .grid-actions {
-    flex: 1 0;
-    display: flex;
-    justify-content: end;
-    align-items: center;
-}
+/*
 
-table.table-obsidian th.grid-filter {
-    padding: 8px;
-    font-weight: initial;
-}
 
-table.table-obsidian th.grid-filter .grid-title {
-    flex: 1 0;
-    align-self: center;
-    font-size: 18px;
-}
-
-table.table-obsidian th.grid-filter .grid-quick-filter {
-    display: flex;
-}
-
-table.table-obsidian th.grid-filter .grid-quick-filter .grid-quick-filter-search {
-    max-width: 240px;
-    overflow: hidden;
-    transition: width 0.3s ease;
-}
-
-table.table-obsidian th.grid-filter .grid-actions {
-    display: flex;
-    justify-content: end;
-    background-color: initial;
-}
-
-table.table-obsidian th.grid-error {
-    padding: 0px;
-}
-
-table.table-obsidian th.grid-error > .alert {
-    margin-bottom: 0px;
-}
+*/
 </style>
 
 <script setup lang="ts">
@@ -1165,7 +1184,7 @@ table.table-obsidian th.grid-error > .alert {
     /**
      * Gets the prefixed preference collection to use with the grid.
      */
-     function getPrefixedPreferences(): IPersonPreferenceCollection {
+    function getPrefixedPreferences(): IPersonPreferenceCollection {
         const prefix = !props.preferencePrefix
             ? "grid-"
             : `grid-${props.preferencePrefix}-`;
@@ -1247,7 +1266,7 @@ table.table-obsidian th.grid-error > .alert {
      * Saves the sort value to the preference collection and triggers
      * a request to save the preferences.
      */
-     function saveSortPreferences(): void {
+    function saveSortPreferences(): void {
         if (props.disablePreferences) {
             return;
         }

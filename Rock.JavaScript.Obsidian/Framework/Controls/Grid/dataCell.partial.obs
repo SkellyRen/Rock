@@ -1,16 +1,17 @@
 <!-- Copyright by the Spark Development Network; Licensed under the Rock Community License -->
 <template>
-    <td :class="additionalItemClass" @click="onClick">
+    <div class="grid-cell" :class="additionalItemClass" :style="additionalCellStyles" @click="onClick">
         <component :is="props.column.formatComponent"
                    :row="props.row"
                    :column="props.column"
                    :grid="props.grid" />
-    </td>
+    </div>
 </template>
 
 <script setup lang="ts">
     import { PropType, computed } from "vue";
     import { ColumnDefinition, IGridState } from "@Obsidian/Types/Controls/grid";
+    import { getColumnStyles } from "@Obsidian/Core/Controls/grid";
 
     const props = defineProps({
         /** The column definition of this cell. */
@@ -61,6 +62,15 @@
         }
 
         return classes.trim();
+    });
+
+    /** Contains the additional styles to be applied to the cell. */
+    const additionalCellStyles = computed((): Record<string, string> => {
+        const styles: Record<string, string> = {
+            ...getColumnStyles(props.column)
+        };
+
+        return styles;
     });
 
     /**

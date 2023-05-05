@@ -1,13 +1,13 @@
 <!-- Copyright by the Spark Development Network; Licensed under the Rock Community License -->
 <template>
-    <tr ref="element" :title="tooltipText" :class="rowClasses">
+    <div ref="element" :title="tooltipText" class="grid-row" :class="additionalRowClasses">
         <DataCell v-for="column in props.columns"
                   :column="column"
                   :row="props.row"
                   :grid="props.grid"
                   :isSelectable="isSelectable"
                   @click="onCellClick" />
-    </tr>
+    </div>
 </template>
 
 <script setup lang="ts">
@@ -70,7 +70,7 @@
 
     const element = ref<HTMLElement>();
 
-    const rowClasses = computed((): string => {
+    const additionalRowClasses = computed((): string => {
         return props.isEven ? "grid-row-even" : "grid-row-odd";
     });
 

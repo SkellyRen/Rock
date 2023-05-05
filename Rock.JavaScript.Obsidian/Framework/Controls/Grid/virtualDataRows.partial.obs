@@ -1,6 +1,6 @@
 <template>
-    <tbody ref="element">
-        <tr :style="beforePadStyle" />
+    <div class="grid-body" ref="element">
+        <div :style="beforePadStyle" />
         <DataRow v-for="(row, index) of virtualRows"
                  :key="props.grid.getRowKey(row)"
                  :columns="props.columns"
@@ -12,8 +12,8 @@
                  monitorHeight
                  @resize="onRowResize"
                  @click="onRowClick" />
-        <tr :style="afterPadStyle" />
-    </tbody>
+        <div :style="afterPadStyle" />
+    </div>
 </template>
 
 <script setup lang="ts">

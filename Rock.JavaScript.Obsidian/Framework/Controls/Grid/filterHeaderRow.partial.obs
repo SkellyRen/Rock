@@ -1,30 +1,27 @@
 <!-- Copyright by the Spark Development Network; Licensed under the Rock Community License -->
 <template>
-    <tr>
-        <th class="grid-filter" :colspan="visibleColumnCount">
-            <div class="d-flex">
-                <div class="grid-title">
-                    {{ props.grid.itemTerm }} List
-                </div>
+    <div class="grid-title-heading">
+        <div class="grid-title">
+            {{ props.grid.itemTerm }} List
+        </div>
 
-                <div v-if="isFilterable" class="grid-quick-filter grid-actions">
-                    <button class="btn btn-grid-action" title="Search" @click.stop.prevent="onSearchClick">
-                        <i class="fa fa-search"></i>
-                    </button>
+        <div v-if="isFilterable" class="grid-quick-filter grid-actions">
+            <button class="btn btn-grid-action" title="Search" @click.stop.prevent="onSearchClick">
+                <i class="fa fa-search fa-fw"></i>
+            </button>
 
-                    <div class="grid-quick-filter-search" :style="searchBoxStyle">
-                        <TextBox v-model="quickFilterValue" placeholder="Filter" />
-                    </div>
-                </div>
-
-                <ActionGroup :gridActions="primaryGridActions"
-                             :grid="grid" />
-                <PopupActionGroup v-if="hasSecondaryActions"
-                                  :gridActions="secondaryGridActions"
-                                  :grid="grid" />
+            <div class="grid-quick-filter-search" :class="{ 'open': isSearchVisible }">
+                <TextBox v-model="quickFilterValue" placeholder="Filter" />
             </div>
-        </th>
-    </tr>
+        </div>
+
+        <ActionGroup :gridActions="primaryGridActions"
+                        :grid="grid" />
+
+                        <PopupActionGroup v-if="hasSecondaryActions"
+                            :gridActions="secondaryGridActions"
+                            :grid="grid" />
+    </div>
 </template>
 
 <script setup lang="ts">

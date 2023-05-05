@@ -20,7 +20,7 @@ import { NumberFilterMethod } from "@Obsidian/Enums/Controls/Grid/numberFilterMe
 import { DateFilterMethod } from "@Obsidian/Enums/Controls/Grid/dateFilterMethod";
 import { PickExistingFilterMethod } from "@Obsidian/Enums/Controls/Grid/pickExistingFilterMethod";
 import { TextFilterMethod } from "@Obsidian/Enums/Controls/Grid/textFilterMethod";
-import { ColumnFilter, ColumnDefinition, IGridState, StandardFilterProps, StandardCellProps, IGridCache, IGridRowCache, ColumnSort, SortValueFunction, FilterValueFunction, QuickFilterValueFunction, StandardColumnProps, StandardHeaderCellProps, EntitySetOptions, ExportValueFunction, StandardSkeletonCellProps } from "@Obsidian/Types/Controls/grid";
+import { ColumnFilter, ColumnDefinition, IGridState, StandardFilterProps, StandardCellProps, IGridCache, IGridRowCache, ColumnSort, SortValueFunction, FilterValueFunction, QuickFilterValueFunction, StandardColumnProps, StandardHeaderCellProps, EntitySetOptions, ExportValueFunction, StandardSkeletonCellProps, GridLength } from "@Obsidian/Types/Controls/grid";
 import { ICancellationToken } from "@Obsidian/Utility/cancellation";
 import { extractText, getVNodeProp, getVNodeProps } from "@Obsidian/Utility/component";
 import { DayOfWeek, RockDateTime } from "@Obsidian/Utility/rockDateTime";
@@ -181,6 +181,11 @@ export const standardColumnProps: StandardColumnProps = {
     visiblePriority: {
         type: String as PropType<"xs" | "sm" | "md" | "lg" | "xl">,
         default: "xs"
+    },
+
+    width: {
+        type: String as PropType<string>,
+        required: false
     }
 };
 
@@ -836,6 +841,10 @@ function buildAttributeColumns(columns: ColumnDefinition[], node: VNode): void {
             hideOnScreen: false,
             excludeFromExport: false,
             visiblePriority: "md",
+            width: {
+                value: 10,
+                unitType: "%"
+            },
             props: {},
             data: {}
         });
@@ -872,6 +881,10 @@ function insertCustomColumns(columns: ColumnDefinition[], customColumns: CustomC
             hideOnScreen: false,
             excludeFromExport: false,
             visiblePriority: "md",
+            width: {
+                value: 10,
+                unitType: "%"
+            },
             props: {},
             data: {}
         };
@@ -915,6 +928,7 @@ function buildColumn(name: string, node: VNode): ColumnDefinition {
     const hideOnScreen = getVNodeProp<boolean>(node, "hideOnScreen") === true || getVNodeProp<string>(node, "hideOnScreen") === "";
     const excludeFromExport = getVNodeProp<boolean>(node, "excludeFromExport") === true || getVNodeProp<string>(node, "excludeFromExport") === "";
     const visiblePriority = getVNodeProp<"xs" | "sm" | "md" | "lg" | "xl">(node, "visiblePriority") || "xs";
+    const width = getVNodeProp<string>(node, "width");
 
     // Get the function that will provide the sort value.
     let sortValue = getVNodeProp<SortValueFunction | string>(node, "sortValue");
@@ -1044,6 +1058,7 @@ function buildColumn(name: string, node: VNode): ColumnDefinition {
         hideOnScreen,
         excludeFromExport,
         visiblePriority,
+        width: parseGridLength(width),
         headerClass,
         itemClass,
         props: getVNodeProps(node),
@@ -1110,6 +1125,59 @@ export function getRowKey(row: Record<string, unknown>, itemIdKey?: string): str
     else {
         return undefined;
     }
+}
+
+/**
+ * Parses the width string into a well formed {@link GridLength} object
+ * that can be worked with more easily than the raw string.
+ *
+ * @param width The width that should be parsed into a grid length.
+ *
+ * @returns A {@link GridLength} object that describes the width.
+ */
+function parseGridLength(width: string | undefined): GridLength {
+    if (!width) {
+        return {
+            value: 10,
+            unitType: "%"
+        };
+    }
+
+    const value = parseInt(width);
+
+    if (width.endsWith("%")) {
+        return {
+            value: isNaN(value) ? 10 : value,
+            unitType: "%"
+        };
+    }
+
+    // Default to pixels.
+    return {
+        value: isNaN(value) ? 10 : value,
+        unitType: "px"
+    };
+}
+
+/**
+ * Gets the custom styles to apply to cells of a specific column.
+ *
+ * @param column The column whose cell styles are being requested.
+ *
+ * @returns An object that contains the custom styles to apply to cells of this column.
+ */
+export function getColumnStyles(column: ColumnDefinition): Record<string, string> {
+    const styles: Record<string, string> = {};
+
+    if (column.width.unitType === "px") {
+        styles.width = `${column.width.value}px`;
+        styles.flex = "0 0 auto";
+    }
+    else {
+        styles.flex = `1 1 ${column.width.value}%`;
+    }
+
+    return styles;
 }
 
 // #endregion

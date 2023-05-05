@@ -43,6 +43,11 @@ export default defineComponent({
             default: "grid-columncommand"
         },
 
+        width: {
+            type: String as PropType<string>,
+            default: "52px"
+        },
+
         /**
          * Disables the normal confirmation message displayed before calling
          * the click handler.

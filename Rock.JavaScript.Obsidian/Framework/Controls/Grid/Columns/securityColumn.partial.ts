@@ -44,6 +44,11 @@ export default defineComponent({
             default: "grid-columncommand"
         },
 
+        width: {
+            type: String as PropType<string>,
+            default: "52px"
+        },
+
         /**
          * The row item title to use when opening the security dialog. If a
          * plain string is provided it is the field name that contains the

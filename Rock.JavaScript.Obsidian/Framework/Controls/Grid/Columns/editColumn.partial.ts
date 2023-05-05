@@ -43,6 +43,11 @@ export default defineComponent({
             default: "grid-columncommand"
         },
 
+        width: {
+            type: String as PropType<string>,
+            default: "52px"
+        },
+
         /**
          * Called when the edit button has been clicked.
          */

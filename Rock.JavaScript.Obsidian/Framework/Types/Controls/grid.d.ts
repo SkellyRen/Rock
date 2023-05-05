@@ -442,6 +442,21 @@ type StandardColumnProps = {
     visiblePriority: {
         type: PropType<"xs" | "sm" | "md" | "lg" | "xl">,
         default: "xs"
+    },
+
+    /**
+     * Specifies the width of the column. If the string ends with `%` then it
+     * is parsed as a proportional width percentage. Otherwise it is parsed
+     * as a fixed number of pixels. When a percentage is specified, this is
+     * used as a base percentage to calculate the actual width compared to other
+     * columns. So if you have 3 columns and specify 10% on all three, they
+     * will be given the same width and take up all 100% of the space. If you
+     * give one column 20%, it will be given twice as much space as the other
+     * two.
+     */
+    width: {
+        type: PropType<string>,
+        required: false
     }
 };
 
@@ -621,6 +636,18 @@ export type GridAction = {
     disabled?: boolean;
 };
 
+/** The type of unit the length value represents. */
+export type GridUnitType = "px" | "%";
+
+/** Represents a length in a Grid. */
+export type GridLength = {
+    /** The numerical value of the length. */
+    value: number;
+
+    /** The type of unit that describes the length. */
+    unitType: GridUnitType;
+};
+
 /**
  * Defines the structure and properties of a column in the grid.
  */
@@ -633,6 +660,9 @@ export type ColumnDefinition = {
 
     /** The name of the field in the row object. */
     field?: string;
+
+    /** The width of the column. */
+    width: GridLength;
 
     /**
      * Defines the content that will be used in the header cell. This will

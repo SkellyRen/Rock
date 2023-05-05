@@ -1,9 +1,9 @@
 <template>
-    <tr :class="rowClasses">
+    <div class="grid-row" :class="additionalRowClasses">
         <SkeletonCell v-for="column in props.columns"
                       :column="column"
                       :grid="props.grid" />
-    </tr>
+    </div>
 </template>
 
 <script setup lang="ts">
@@ -35,7 +35,7 @@
         }
     });
 
-    const rowClasses = computed((): string => {
+    const additionalRowClasses = computed((): string => {
         return props.isEven ? "grid-row-even" : "grid-row-odd";
     });
 </script>

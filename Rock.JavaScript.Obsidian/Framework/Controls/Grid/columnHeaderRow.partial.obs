@@ -1,6 +1,6 @@
 <!-- Copyright by the Spark Development Network; Licensed under the Rock Community License -->
 <template>
-    <tr>
+    <div class="grid-column-heading">
         <ColumnHeaderCell v-for="column in columns"
                               :column="column"
                               :filterValue="columnFilters[column.name]"
@@ -8,7 +8,7 @@
                               :grid="grid"
                               @update:filterValue="onUpdateFilterValue(column.name, $event)"
                               @update:sortDirection="onUpdateSortDirection(column.name, $event)" />
-    </tr>
+    </div>
 </template>
 
 <script setup lang="ts">

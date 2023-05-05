@@ -1,18 +1,19 @@
 <!-- Copyright by the Spark Development Network; Licensed under the Rock Community License -->
 <template>
-    <td :class="additionalItemClass">
+    <div class="grid-cell" :class="additionalItemClass" :style="additionalCellStyles">
         <Skeleton v-if="props.column.skeletonComponent">
             <component :is="props.column.skeletonComponent"
                        :column="props.column"
                        :grid="props.grid" />
         </Skeleton>
-    </td>
+    </div>
 </template>
 
 <script setup lang="ts">
     import Skeleton from "@Obsidian/Controls/skeleton.obs";
     import { PropType, computed } from "vue";
     import { ColumnDefinition, IGridState } from "@Obsidian/Types/Controls/grid";
+    import { getColumnStyles } from "@Obsidian/Core/Controls/grid";
 
     const props = defineProps({
         /** The column definition of this cell. */
@@ -28,7 +29,7 @@
         }
     });
 
-    /** Contains any additional CSS classes for the td element. */
+    /** Contains any additional CSS classes for the cell. */
     const additionalItemClass = computed((): string => {
         let classes = props.column.itemClass ?? "";
 
@@ -43,5 +44,14 @@
         }
 
         return classes.trim();
+    });
+
+    /** Contains any additional style values to apply to the cell. */
+    const additionalCellStyles = computed((): Record<string, string> => {
+        const styles: Record<string, string> = {
+            ...getColumnStyles(props.column)
+        };
+
+        return styles;
     });
 </script>

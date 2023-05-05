@@ -43,6 +43,11 @@ export default defineComponent({
             default: "grid-columnreorder"
         },
 
+        width: {
+            type: String as PropType<string>,
+            default: "52px"
+        },
+
         /**
          * Called when the order of an item has changed. The first parameter
          * is the row item that was moved. The second parameter is the row item
