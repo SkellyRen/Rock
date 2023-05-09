@@ -16,7 +16,7 @@
 //
 import { defineComponent } from "vue";
 import { getFieldEditorProps } from "./utils";
-import TimePicker from "@Obsidian/Controls/timePicker";
+import TimePicker from "@Obsidian/Controls/timePicker.obs";
 import { TimePickerValue } from "@Obsidian/ViewModels/Controls/timePickerValue.d";
 import { toNumber } from "@Obsidian/Utility/numberUtils";
 import { padLeft } from "@Obsidian/Utility/stringUtils";
