@@ -99,7 +99,10 @@ namespace Rock.Lava.Blocks
 
             var twoPassEnabled = parms["twopass"].AsBoolean();
 
-            var cacheKey = "lavacache-" + parms["key"];
+            // Make sure the cache key is unique to this Lava engine, to ensure that there are no collisions
+            // if we are rendering with multiple engines in the same instance.
+            var engine = context.GetService<ILavaEngine>();
+            var cacheKey = $"lavacache-{engine.EngineName}-{parms["key"]}";
             if ( cacheKey == string.Empty )
             {
                 result.Write( "* No cache key provided. *" );
