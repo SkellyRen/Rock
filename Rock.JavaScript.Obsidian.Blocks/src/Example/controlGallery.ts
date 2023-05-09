@@ -1680,11 +1680,13 @@ const timePickerGallery = defineComponent({
     name: "TimePickerGallery",
     components: {
         GalleryAndResult,
-        TimePicker
+        TimePicker,
+        CheckBox
     },
     setup() {
         return {
             value: ref({ hour: 14, minute: 15 }),
+            disabled: ref(false),
             importCode: getSfcControlImportPath("timePicker"),
             exampleCode: `<TimePicker label="Time" v-model="value" />`
         };
@@ -1695,9 +1697,12 @@ const timePickerGallery = defineComponent({
     :importCode="importCode"
     :exampleCode="exampleCode"
     enableReflection >
-    <TimePicker label="Time" v-model="value" />
+    <TimePicker label="Time" v-model="value" :disabled="disabled" />
 
     <template #settings>
+        <div>
+            <CheckBox v-model="disabled" label="Disabled" />
+        </div>
         <p class="text-semibold font-italic">Not all settings are demonstrated in this gallery.</p>
         <p>Additional props extend and are passed to the underlying <code>Rock Form Field</code> and <code>Drop Down List</code>.</p>
     </template>

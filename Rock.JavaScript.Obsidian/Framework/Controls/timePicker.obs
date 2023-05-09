@@ -9,7 +9,7 @@
         <template #default="{ uniqueId, field }">
             <div class="control-wrapper">
                 <div class="timepicker-input">
-                    <BasicTimePicker v-model="internalValue" />
+                    <BasicTimePicker v-model="internalValue" :disabled="disabled" />
                 </div>
             </div>
         </template>
@@ -28,6 +28,11 @@
         modelValue: {
             type: Object as PropType<TimePickerValue>,
             default: {}
+        },
+
+        disabled: {
+            type: Boolean as PropType<boolean>,
+            default: false
         },
 
         ...standardRockFormFieldProps
