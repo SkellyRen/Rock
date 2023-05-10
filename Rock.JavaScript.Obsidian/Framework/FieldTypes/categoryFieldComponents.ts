@@ -35,13 +35,12 @@ export const EditComponent = defineComponent({
     setup(props, { emit }) {
 
         const internalValue = ref({} as ListItemBag);
-console.log("new-internal-value", internalValue.value);
+
         watch(() => props.modelValue, () => {
             internalValue.value = JSON.parse(props.modelValue || "{}");
         }, { immediate: true });
 
         watch(() => internalValue.value, () => {
-            console.log("internal-value", internalValue.value);
             emit("update:modelValue", JSON.stringify(internalValue.value));
         });
 
@@ -119,7 +118,7 @@ export const ConfigurationComponent = defineComponent({
 
         /**
         * Emits the updateConfigurationValue if the value has actually changed.
-        * 
+        *
         * @param key The key that was possibly modified.
         * @param value The new value.
         */
