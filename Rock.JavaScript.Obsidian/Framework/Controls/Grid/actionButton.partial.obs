@@ -1,6 +1,7 @@
 <!-- Copyright by the Spark Development Network; Licensed under the Rock Community License -->
 <template>
-    <button :class="buttonCssClass"
+    <button type="button"
+            :class="buttonCssClass"
             :title="actionTooltip"
             @click.prevent.stop="onActionClick">
         <i :class="iconCssClass"></i>

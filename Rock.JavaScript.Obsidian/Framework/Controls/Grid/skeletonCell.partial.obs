@@ -36,10 +36,10 @@
         if (["sm", "md", "lg", "xl"].includes(props.column.visiblePriority)) {
             // We don't have support for lg just yet, but it's coming.
             if (props.column.visiblePriority === "xl") {
-                classes += ` d-none d-lg-table-cell`;
+                classes += ` d-none d-lg-flex`;
             }
             else {
-                classes += ` d-none d-${props.column.visiblePriority}-table-cell`;
+                classes += ` d-none d-${props.column.visiblePriority}-flex`;
             }
         }
 

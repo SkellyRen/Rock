@@ -8,7 +8,6 @@
         </div>
 
         <PagePicker v-model="currentPage" :pageCount="pageCount" />
-        <div></div>
     </div>
 </template>
 

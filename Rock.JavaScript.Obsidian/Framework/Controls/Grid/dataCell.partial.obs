@@ -1,6 +1,6 @@
 <!-- Copyright by the Spark Development Network; Licensed under the Rock Community License -->
 <template>
-    <div class="grid-cell" :class="additionalItemClass" :style="additionalCellStyles" @click="onClick">
+    <div class="grid-cell" :class="additionalItemClass" :style="additionalCellStyles" @click="onClick" role="gridcell">
         <component :is="props.column.formatComponent"
                    :row="props.row"
                    :column="props.column"
@@ -50,10 +50,10 @@
         if (["sm", "md", "lg", "xl"].includes(props.column.visiblePriority)) {
             // We don't have support for lg just yet, but it's coming.
             if (props.column.visiblePriority === "xl") {
-                classes += ` d-none d-lg-table-cell`;
+                classes += ` d-none d-lg-flex`;
             }
             else {
-                classes += ` d-none d-${props.column.visiblePriority}-table-cell`;
+                classes += ` d-none d-${props.column.visiblePriority}-flex`;
             }
         }
 

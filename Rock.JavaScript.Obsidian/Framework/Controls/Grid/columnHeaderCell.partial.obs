@@ -2,16 +2,19 @@
 <template>
     <div ref="columnHeaderElement" class="grid-column-header" :class="additionalHeaderClass" :style="additionalHeaderStyle">
         <component v-if="column.headerComponent" :is="column.headerComponent" :column="column" :grid="grid" />
-        <span v-else :class="titleClass" @click.prevent="onSortClick">{{ column.title }}</span>
+        <span v-else-if="column.title" :class="titleClass" @click.prevent="onSortClick">{{ column.title }}</span>
 
-        <span v-if="isSortAscending" class="grid-sort-direction"><i class="fa fa-sort-alpha-up"></i></span>
-        <span v-else-if="isSortDescending" class="grid-sort-direction"><i class="fa fa-sort-alpha-down"></i></span>
+        <span v-if="isSort" class="grid-sort-direction" :class="additionalSortClass">
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 21"><path fill="var(--color-info)" d="M9.95 9.36H3.1a.53.53 0 0 1-.37-.9l3.42-3.43c.2-.2.55-.2.75 0l3.43 3.43c.33.33.1.9-.38.9Z"/><path fill="currentColor" style="opacity:.4;" d="M3.1 12.49h6.85c.47 0 .7.57.37.9L6.9 16.82c-.2.2-.54.2-.75 0l-3.42-3.43a.53.53 0 0 1 .37-.9Z"/></svg></span>
 
         <button v-if="isFilterVisible"
                 ref="filterButtonElement"
+                type="button"
                 :class="filterButtonCssClass"
                 @click.prevent="onFilterClick">
-            <i class="fa fa-filter "></i>
+            
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 13 12"><path fill="currentColor" d="M4.22 11.26c0 .27.21.48.48.48h3.93c.27 0 .48-.21.48-.48V8.32H4.22v2.94ZM12.2 1H1.14c-.36 0-.6.4-.4.72l3.31 5.64h5.23l3.32-5.64A.48.48 0 0 0 12.2 1Z"/></svg>
+            <!-- <i class="fa fa-filter "></i> -->
         </button>
 
         <div v-if="isFilterOpen" ref="filterElement" class="grid-filter-popup">
@@ -20,8 +23,8 @@
             </div>
 
             <div class="actions">
-                <button class="btn btn-primary btn-sm" @click.prevent="onFilterApplyClick">Apply</button>
-                <button class="btn btn-link btn-sm" @click.prevent="onFilterClearClick">Clear</button>
+                <button class="btn btn-primary btn-xs" @click.prevent="onFilterApplyClick">Apply</button>
+                <button class="btn btn-link btn-xs" @click.prevent="onFilterClearClick">Clear</button>
             </div>
         </div>
     </div>
@@ -104,6 +107,13 @@
     /**
      * Will be `true` if the sort direction is ascending.
      */
+     const isSort = computed((): boolean => {
+        return sortDirection.value !== 0 && isSortingEnabled.value;
+    });
+
+    /**
+     * Will be `true` if the sort direction is ascending.
+     */
     const isSortAscending = computed((): boolean => {
         return sortDirection.value > 0 && isSortingEnabled.value;
     });
@@ -118,17 +128,36 @@
     /**
      * Additional CSS classes that should be applied to the header.
      */
+    const additionalSortClass = computed((): string => {
+        let classValue = "";
+        if (sortDirection.value < 0) {
+            classValue += "sort-desc";
+        }
+        else if (sortDirection.value > 0) {
+            classValue += "sort-asc";
+        }
+
+        return classValue;
+    });
+
+    /**
+     * Additional CSS classes that should be applied to the header.
+     */
     const additionalHeaderClass = computed((): string => {
         let classes = props.column.headerClass ?? "";
 
         if (["sm", "md", "lg", "xl"].includes(props.column.visiblePriority)) {
             // We don't have support for lg just yet, but it's coming.
             if (props.column.visiblePriority === "xl") {
-                classes += ` d-none d-lg-table-cell`;
+                classes += ` d-none d-lg-flex`;
             }
             else {
-                classes += ` d-none d-${props.column.visiblePriority}-table-cell`;
+                classes += ` d-none d-${props.column.visiblePriority}-flex`;
             }
+        }
+
+        if (isFilterVisible && props.column.title !== undefined) {
+            classes += " sortable";
         }
 
         return classes.trim();
@@ -148,7 +177,7 @@
         let classValue = "grid-column-title";
 
         if (isSortingEnabled.value) {
-            classValue += " clickable";
+            classValue += " stretched-link";
         }
 
         return classValue;
@@ -209,7 +238,7 @@
      * Called when the sort icon in the column header is clicked.
      */
     const onSortClick = (): void => {
-        if (!isSortingEnabled.value) {
+        if (!isSortingEnabled.value || props.column.title === undefined) {
             return;
         }
 

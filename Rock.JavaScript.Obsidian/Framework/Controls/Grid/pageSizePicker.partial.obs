@@ -1,10 +1,9 @@
 <!-- Copyright by the Spark Development Network; Licensed under the Rock Community License -->
 <template>
-    <div v-if="pageSizes" class="grid-page-size-picker btn-group btn-group-sm mr-3">
-        <button v-for="size in pageSizes" class="btn btn-default" :class="getPageSizeClass(size)" @click.prevent="onPageSizeClick(size)">
-            {{ size }}
-        </button>
-    </div>
+    <!-- select with onchange event -->
+    <select v-if="pageSizes" class="form-control input-sm">
+        <option v-for="size in pageSizes" :key="size" :value="size">{{size}}</option>
+    </select>
 </template>
 
 <script setup lang="ts">
@@ -59,7 +58,7 @@
      *
      * @param size The page size represented by the button.
      */
-    function onPageSizeClick(size: number): void {
+    function changePageSize(size: number): void {
         pageSize.value = size;
     }
 

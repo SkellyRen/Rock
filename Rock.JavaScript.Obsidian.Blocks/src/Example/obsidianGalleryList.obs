@@ -20,8 +20,8 @@
                 filterValue="{{ row.nickName }} {{ row.lastName }}"
                 quickFilterValue="{{ row.nickName }} {{  row.lastName }}">
             <template #format="{ row }">
-                <div class="d-flex align-items-center">
-                    <div class="mr-3"
+                <div class="d-flex flex-fill align-items-center">
+                    <div class="mr-2 flex-shrink-0"
                          :style="{ 'width': '24px', 'height': '24px', 'border-radius': '12px', 'background-image': `url('${row.photoUrl}')`, 'background-size': 'cover' }">
                     </div>
                     <div class="flex-grow-1">
@@ -31,8 +31,8 @@
             </template>
 
             <template #skeleton>
-                <div class="d-flex align-items-center">
-                    <div class="mr-3 skeleton skeleton-xs"
+                <div class="d-flex flex-fill align-items-center">
+                    <div class="mr-2 flex-shrink-0 skeleton skeleton-xs"
                          style="width: 24px; height: 24px; border-radius: 12px;" />
                     <div class="skeleton skeleton-text skeleton-sm skeleton-rounded flex-grow-1" />
                 </div>

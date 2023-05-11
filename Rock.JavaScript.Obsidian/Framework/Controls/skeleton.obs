@@ -12,6 +12,11 @@
 </style>
 
 <style scoped>
+.skeleton-container {
+    display: flex;
+    flex: 1 1 auto;
+}
+
 .skeleton-container :deep(.skeleton) {
     background: #ddd;
     background: linear-gradient(90deg, #ddd 0%, #f0f0f0 8%, #ddd 16%);
@@ -25,7 +30,8 @@
 }
 
 .skeleton-container :deep(.skeleton-text) {
-    height: 1em;
+    height: 1.5em;
+    flex: 1 1 auto;
 }
 
 .skeleton-container :deep(.skeleton-xs) {

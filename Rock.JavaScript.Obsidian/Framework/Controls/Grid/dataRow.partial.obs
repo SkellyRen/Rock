@@ -71,7 +71,13 @@
     const element = ref<HTMLElement>();
 
     const additionalRowClasses = computed((): string => {
-        return props.isEven ? "grid-row-even" : "grid-row-odd";
+        let classValue = props.isEven ? "grid-row-even" : "grid-row-odd";
+
+        if (props.isSelectable) {
+            classValue += " grid-row-selectable";
+        }
+
+        return classValue;
     });
 
     /** Contains the text to display in the tooltip for the entire row. */

@@ -5,13 +5,13 @@
             {{ props.grid.itemTerm }} List
         </div>
 
-        <div v-if="isFilterable" class="grid-quick-filter grid-actions">
-            <button class="btn btn-grid-action" title="Search" @click.stop.prevent="onSearchClick">
+        <div v-if="isFilterable" class="grid-quick-filter grid-actions" :class="{ 'active': isSearchVisible }">
+            <button type="button" class="btn btn-grid-action" title="Search" @click.stop.prevent="onSearchClick">
                 <i class="fa fa-search fa-fw"></i>
             </button>
 
             <div class="grid-quick-filter-search" :class="{ 'open': isSearchVisible }">
-                <TextBox v-model="quickFilterValue" placeholder="Filter" />
+                <TextBox v-model="quickFilterValue" placeholder="Search" />
             </div>
         </div>
 
@@ -105,6 +105,13 @@
      */
     function onSearchClick(): void {
         isSearchVisible.value = !isSearchVisible.value;
+        // focus the search box if it is visible.
+        if (isSearchVisible.value) {
+            setTimeout(() => {
+                const searchBox = document.querySelector(".grid-quick-filter-search input") as HTMLInputElement;
+                searchBox.focus();
+            }, 0);
+        }
     }
 
     // #endregion

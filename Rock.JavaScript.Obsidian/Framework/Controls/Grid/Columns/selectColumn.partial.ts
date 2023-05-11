@@ -51,7 +51,7 @@ export default defineComponent({
 
         width: {
             type: String as PropType<string>,
-            default: "52px"
+            default: "56px"
         }
     }
 });

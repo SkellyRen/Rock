@@ -9,13 +9,12 @@
         <TextBox label="Search"
                  v-model="searchValue" />
 
-        <div v-for="value in displayedValues" class="d-flex align-items-center mb-2">
-            <label class="checkbox-inline">
-                <input type="checkbox" :checked="value.selected" @change="onSelected(value, $event)" />
-                <span class="label-text">&nbsp;</span>
-            </label>
-            <component :is="column.condensedComponent" :row="value.row" :column="column" />
-        </div>
+            <div v-for="value in displayedValues" class="checkbox">
+                <label>
+                    <input type="checkbox" :checked="value.selected" @change="onSelected(value, $event)" />
+                    <span class="label-text"><component :is="column.condensedComponent" :row="value.row" :column="column" /></span>
+                </label>
+            </div>
     </div>
 </template>
 

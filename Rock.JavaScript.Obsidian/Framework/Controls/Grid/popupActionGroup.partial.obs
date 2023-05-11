@@ -1,7 +1,8 @@
 <!-- Copyright by the Spark Development Network; Licensed under the Rock Community License -->
 <template>
     <div class="grid-actions btn-group">
-        <button class="btn btn-grid-action"
+        <button type="button"
+                class="btn btn-grid-action"
                 style="position: relative;"
                 data-toggle="dropdown">
             <i class="fa fa-ellipsis-v fa-fw"></i>
