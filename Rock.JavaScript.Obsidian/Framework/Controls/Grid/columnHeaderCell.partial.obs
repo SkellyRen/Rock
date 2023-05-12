@@ -4,17 +4,22 @@
         <component v-if="column.headerComponent" :is="column.headerComponent" :column="column" :grid="grid" />
         <span v-else-if="column.title" :class="titleClass" @click.prevent="onSortClick">{{ column.title }}</span>
 
-        <span v-if="isSort" class="grid-sort-direction" :class="additionalSortClass">
-<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 21"><path fill="var(--color-info)" d="M9.95 9.36H3.1a.53.53 0 0 1-.37-.9l3.42-3.43c.2-.2.55-.2.75 0l3.43 3.43c.33.33.1.9-.38.9Z"/><path fill="currentColor" style="opacity:.4;" d="M3.1 12.49h6.85c.47 0 .7.57.37.9L6.9 16.82c-.2.2-.54.2-.75 0l-3.42-3.43a.53.53 0 0 1 .37-.9Z"/></svg></span>
+        <span v-if="isSorted" class="grid-sort-direction" :class="additionalSortClass">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 21">
+                <path fill="var(--color-info)" d="M9.95 9.36H3.1a.53.53 0 0 1-.37-.9l3.42-3.43c.2-.2.55-.2.75 0l3.43 3.43c.33.33.1.9-.38.9Z" />
+                <path fill="currentColor" style="opacity:.4;" d="M3.1 12.49h6.85c.47 0 .7.57.37.9L6.9 16.82c-.2.2-.54.2-.75 0l-3.42-3.43a.53.53 0 0 1 .37-.9Z" />
+            </svg>
+        </span>
 
         <button v-if="isFilterVisible"
                 ref="filterButtonElement"
                 type="button"
                 :class="filterButtonCssClass"
                 @click.prevent="onFilterClick">
-            
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 13 12"><path fill="currentColor" d="M4.22 11.26c0 .27.21.48.48.48h3.93c.27 0 .48-.21.48-.48V8.32H4.22v2.94ZM12.2 1H1.14c-.36 0-.6.4-.4.72l3.31 5.64h5.23l3.32-5.64A.48.48 0 0 0 12.2 1Z"/></svg>
-            <!-- <i class="fa fa-filter "></i> -->
+
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 13 12">
+                <path fill="currentColor" d="M4.22 11.26c0 .27.21.48.48.48h3.93c.27 0 .48-.21.48-.48V8.32H4.22v2.94ZM12.2 1H1.14c-.36 0-.6.4-.4.72l3.31 5.64h5.23l3.32-5.64A.48.48 0 0 0 12.2 1Z" />
+            </svg>
         </button>
 
         <div v-if="isFilterOpen" ref="filterElement" class="grid-filter-popup">
@@ -88,7 +93,9 @@
     /** Will be `true` if sorting is enabled on the grid. */
     const isSortingEnabled = computed((): boolean => {
         // Sorting is not supported if re-ordering is enabled.
-        return !props.grid.columns.some(c => c.name === "__reorder");
+        // Sorting is not supported if this is not a data column.
+        return !props.grid.columns.some(c => c.name === "__reorder")
+            || props.column.name.startsWith("__");
     });
 
     /** Will be `true` if filtering is enabled on the grid. */
@@ -107,22 +114,8 @@
     /**
      * Will be `true` if the sort direction is ascending.
      */
-     const isSort = computed((): boolean => {
+    const isSorted = computed((): boolean => {
         return sortDirection.value !== 0 && isSortingEnabled.value;
-    });
-
-    /**
-     * Will be `true` if the sort direction is ascending.
-     */
-    const isSortAscending = computed((): boolean => {
-        return sortDirection.value > 0 && isSortingEnabled.value;
-    });
-
-    /**
-     * Will be `true` if the sort direction is descending.
-     */
-    const isSortDescending = computed((): boolean => {
-        return sortDirection.value < 0 && isSortingEnabled.value;
     });
 
     /**
@@ -130,6 +123,7 @@
      */
     const additionalSortClass = computed((): string => {
         let classValue = "";
+
         if (sortDirection.value < 0) {
             classValue += "sort-desc";
         }
@@ -238,7 +232,7 @@
      * Called when the sort icon in the column header is clicked.
      */
     const onSortClick = (): void => {
-        if (!isSortingEnabled.value || props.column.title === undefined) {
+        if (!isSortingEnabled.value) {
             return;
         }
 
@@ -269,7 +263,7 @@
             });
         }
         else {
-            document.removeEventListener("mousedown", onMouseDownEvent);
-        }
-    });
+        document.removeEventListener("mousedown", onMouseDownEvent);
+    }
+});
 </script>

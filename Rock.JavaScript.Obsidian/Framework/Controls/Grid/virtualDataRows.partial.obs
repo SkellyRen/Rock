@@ -89,7 +89,7 @@
             return [];
         }
 
-        return props.rows.slice(range.value.startIndex, range.value.endIndex);
+        return props.rows.slice(range.value.startIndex, range.value.endIndex + 1);
     });
 
     /**

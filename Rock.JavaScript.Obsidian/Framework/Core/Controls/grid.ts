@@ -1170,7 +1170,6 @@ export function getColumnStyles(column: ColumnDefinition): Record<string, string
     const styles: Record<string, string> = {};
 
     if (column.width.unitType === "px") {
-        // styles.width = `${column.width.value}px`;
         styles.flex = `0 0 ${column.width.value}px`;
     }
     else {

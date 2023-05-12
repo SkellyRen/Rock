@@ -10,7 +10,7 @@
                 <i class="fa fa-search fa-fw"></i>
             </button>
 
-            <div class="grid-quick-filter-search" :class="{ 'open': isSearchVisible }">
+            <div ref="quickFilterContainerElement" class="grid-quick-filter-search" :class="{ 'open': isSearchVisible }">
                 <TextBox v-model="quickFilterValue" placeholder="Search" />
             </div>
         </div>
@@ -27,7 +27,7 @@
 <script setup lang="ts">
     import { useVModelPassthrough } from "@Obsidian/Utility/component";
     import TextBox from "@Obsidian/Controls/textBox";
-    import { PropType, computed, ref } from "vue";
+    import { PropType, computed, nextTick, ref } from "vue";
     import ActionGroup from "./actionGroup.partial.obs";
     import PopupActionGroup from "./popupActionGroup.partial.obs";
     import { GridAction, IGridState } from "@Obsidian/Types/Controls/grid";
@@ -67,6 +67,7 @@
 
     // #region Values
 
+    const quickFilterContainerElement = ref<HTMLElement>();
     const isFilterable = !props.grid.columns.some(c => c.name === "__reorder");
     const isSearchVisible = ref(false);
     const quickFilterValue = useVModelPassthrough(props, "quickFilterValue", emit);
@@ -74,14 +75,6 @@
     // #endregion
 
     // #region Computed Values
-
-    /** Contains the custom style values to be applied to the search box. */
-    const searchBoxStyle = computed(() => {
-        // Set the width of the search box based on the visibility state.
-        return {
-            width: `${isSearchVisible.value ? 100 : 0}%`
-        };
-    });
 
     const primaryGridActions = computed((): GridAction[] => {
         return props.gridActions.filter(a => a.isPrimary === true);
@@ -105,12 +98,13 @@
      */
     function onSearchClick(): void {
         isSearchVisible.value = !isSearchVisible.value;
-        // focus the search box if it is visible.
+
+        // Focus the search box if it is visible.
         if (isSearchVisible.value) {
-            setTimeout(() => {
-                const searchBox = document.querySelector(".grid-quick-filter-search input") as HTMLInputElement;
-                searchBox.focus();
-            }, 0);
+            nextTick(() => {
+                const searchBox = quickFilterContainerElement.value?.querySelector(".grid-quick-filter-search input") as HTMLInputElement | null;
+                searchBox?.focus();
+            });
         }
     }
 

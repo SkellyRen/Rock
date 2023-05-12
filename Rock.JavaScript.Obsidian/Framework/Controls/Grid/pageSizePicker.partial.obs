@@ -1,8 +1,7 @@
 <!-- Copyright by the Spark Development Network; Licensed under the Rock Community License -->
 <template>
-    <!-- select with onchange event -->
-    <select v-if="pageSizes" class="form-control input-sm">
-        <option v-for="size in pageSizes" :key="size" :value="size">{{size}}</option>
+    <select v-if="pageSizes" v-model="pageSize" class="form-control input-sm">
+        <option v-for="size in pageSizes" :key="size" :value="size">{{ size }}</option>
     </select>
 </template>
 
@@ -36,31 +35,6 @@
     // #region Values
 
     const pageSize = useVModelPassthrough(props, "modelValue", emit);
-
-    // #endregion
-
-    // #region Functions
-
-    /**
-     * Gets the CSS class to be applied to a specific page size button. This
-     * helps us toggle the selected state of the button.
-     */
-    function getPageSizeClass(size: number): string | undefined {
-        return pageSize.value === size ? "active" : undefined;
-    }
-
-    // #endregion
-
-    // #region Event Handlers
-
-    /**
-     * Called when the individual clicks one of the page sizes.
-     *
-     * @param size The page size represented by the button.
-     */
-    function changePageSize(size: number): void {
-        pageSize.value = size;
-    }
 
     // #endregion
 </script>
