@@ -69,6 +69,7 @@
     }>();
 
     const element = ref<HTMLElement>();
+    let resizeObserver: ResizeObserver | undefined;
 
     const additionalRowClasses = computed((): string => {
         let classValue = props.isEven ? "grid-row-even" : "grid-row-odd";
@@ -113,8 +114,6 @@
             emit("click", rowKey);
         }
     }
-
-    let resizeObserver: ResizeObserver | undefined;
 
     onMounted(() => {
         if (typeof ResizeObserver !== "undefined" && element.value) {
