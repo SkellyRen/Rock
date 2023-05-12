@@ -189,10 +189,10 @@ namespace Rock.Field.Types
 
             if ( privateConfigurationValues.ContainsKey( DEFINED_TYPE_KEY ) )
             {
-                var definedTypeValue = publicConfigurationValues[DEFINED_TYPE_KEY].FromJsonOrNull<ListItemBag>();
-                if ( definedTypeValue != null && Guid.TryParse( definedTypeValue.Value, out Guid definedTypeGuid ) )
+                var definedTypeGuid = publicConfigurationValues[DEFINED_TYPE_KEY].AsGuidOrNull();
+                if ( definedTypeGuid.HasValue )
                 {
-                    var definedType = DefinedTypeCache.Get( definedTypeGuid );
+                    var definedType = DefinedTypeCache.Get( definedTypeGuid.Value );
                     if ( definedType != null )
                     {
                         privateConfigurationValues[DEFINED_TYPE_KEY] = definedType.Id.ToString();
@@ -233,11 +233,7 @@ namespace Rock.Field.Types
                     var definedType = DefinedTypeCache.Get( definedTypeId );
                     if ( definedType != null )
                     {
-                        publicConfigurationValues[DEFINED_TYPE_KEY] = new ListItemBag()
-                        {
-                            Text = definedType.Name,
-                            Value = definedType.Guid.ToString()
-                        }.ToCamelCaseJson( false, true );
+                        publicConfigurationValues[DEFINED_TYPE_KEY] = definedType.Guid.ToString();
 
                         // If in Edit mode add GroupType if any so we get its locations.
                         if ( usage == ConfigurationValueUsage.Edit && definedType != null )

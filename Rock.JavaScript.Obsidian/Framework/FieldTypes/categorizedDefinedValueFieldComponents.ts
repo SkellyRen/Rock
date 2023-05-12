@@ -37,8 +37,7 @@ export const EditComponent = defineComponent({
     setup(props, { emit }) {
         const internalValue = ref<ListItemBag>({});
         const definedTypeValue = computed((): string | null | undefined => {
-            const definedType = JSON.parse(props.configurationValues[ConfigurationValueKey.DefinedType] || "{}") as ListItemBag;
-            return definedType.value;
+            return props.configurationValues[ConfigurationValueKey.DefinedType];
         });
 
         const selectableValues = computed((): ListItemBag[] => {
@@ -92,7 +91,7 @@ export const ConfigurationComponent = defineComponent({
     ],
 
     setup(props, { emit }) {
-        const definedType = ref<ListItemBag>({});
+        const definedType = ref<string>("");
         const selectableDefinedValues = ref<string[]>([]);
 
         const definedTypes = computed((): ListItemBag[] => {
@@ -104,9 +103,9 @@ export const ConfigurationComponent = defineComponent({
             try {
                 const definedTypeValue = definedType.value;
 
-                if (definedTypeValue.value) {
+                if (definedTypeValue) {
                     const definedTypeValues = JSON.parse(props.modelValue[ConfigurationValueKey.DefinedTypeValues] || "{}");
-                    return JSON.parse(definedTypeValues[definedTypeValue.value] || "[]") as ListItemBag[];
+                    return JSON.parse(definedTypeValues[definedTypeValue] || "[]") as ListItemBag[];
                 }
                 else {
                     return [];
@@ -130,7 +129,7 @@ export const ConfigurationComponent = defineComponent({
 
             // Construct the new value that will be emitted if it is different
             // than the current value.
-            newValue[ConfigurationValueKey.DefinedType] = JSON.stringify(definedType.value ?? "");
+            newValue[ConfigurationValueKey.DefinedType] = definedType.value;
             newValue[ConfigurationValueKey.SelectableDefinedValues] = JSON.stringify(selectableDefinedValues.value ?? "");
             newValue[ConfigurationValueKey.DefinedTypeValues] = props.modelValue[ConfigurationValueKey.DefinedTypeValues];
             newValue[ConfigurationValueKey.DefinedTypes] = props.modelValue[ConfigurationValueKey.DefinedTypes];
@@ -166,13 +165,13 @@ export const ConfigurationComponent = defineComponent({
         // Watch for changes coming in from the parent component and update our
         // data to match the new information.
         watch(() => [props.modelValue, props.configurationProperties], () => {
-            definedType.value = JSON.parse(props.modelValue[ConfigurationValueKey.DefinedType] || "{}");
+            definedType.value = props.modelValue[ConfigurationValueKey.DefinedType];
             selectableDefinedValues.value = JSON.parse(props.modelValue[ConfigurationValueKey.SelectableDefinedValues] || "[]");
         }, {
             immediate: true
         });
 
-        watch(definedType, val => maybeUpdateConfiguration(ConfigurationValueKey.DefinedType, JSON.stringify(val ?? "")));
+        watch(definedType, val => maybeUpdateConfiguration(ConfigurationValueKey.DefinedType, val));
         watch(selectableDefinedValues, val => maybeUpdateConfiguration(ConfigurationValueKey.SelectableDefinedValues, JSON.stringify(val ?? "")));
 
         return {
@@ -184,7 +183,7 @@ export const ConfigurationComponent = defineComponent({
     },
 
     template: `
-    <DropDownList label="Defined Type" v-model="definedType.value" :items="definedTypes" help="A Defined Type that is configured to support categorized values." :showBlankItem="true" :enhanceForLongLists="true" />
-    <CheckBoxList v-if="definedType.value" label="Selectable Values" v-model="selectableDefinedValues" :items="options" horizontal repeatColumns="4" />
+    <DropDownList label="Defined Type" v-model="definedType" :items="definedTypes" help="A Defined Type that is configured to support categorized values." :showBlankItem="true" :enhanceForLongLists="true" />
+    <CheckBoxList v-if="definedType" label="Selectable Values" v-model="selectableDefinedValues" :items="options" horizontal repeatColumns="4" />
     `
 });
