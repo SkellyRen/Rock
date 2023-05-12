@@ -185,6 +185,6 @@ export const ConfigurationComponent = defineComponent({
 
     template: `
     <DropDownList label="Defined Type" v-model="definedType.value" :items="definedTypes" help="A Defined Type that is configured to support categorized values." :showBlankItem="true" :enhanceForLongLists="true" />
-    <CheckBoxList label="Selectable Values" v-model="selectableDefinedValues" :items="options" :horizontal="true" :repeatColumns="0" />
+    <CheckBoxList v-if="definedType.value" label="Selectable Values" v-model="selectableDefinedValues" :items="options" horizontal repeatColumns="4" />
     `
 });
