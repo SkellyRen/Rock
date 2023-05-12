@@ -41,7 +41,11 @@ export function useVModelPassthrough<T extends Prop, K extends PropKey<T>, E ext
     const internalValue = ref(props[modelName]) as Ref<T[K]>;
 
     watch(() => props[modelName], val => updateRefValue(internalValue, val), options);
-    watch(internalValue, val => emit(`update:${modelName}`, val), options);
+    watch(internalValue, val => {
+        if (val !== props[modelName]) {
+            emit(`update:${modelName}`, val);
+        }
+    }, options);
 
     return internalValue;
 }
