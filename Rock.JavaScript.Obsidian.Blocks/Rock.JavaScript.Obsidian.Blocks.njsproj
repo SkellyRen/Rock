@@ -142,7 +142,6 @@
     <Folder Include="src\Event\InteractiveExperiences\LiveExperience\" />
     <Folder Include="src\Event\RegistrationEntry\" />
     <Folder Include="src\Example\" />
-    <Folder Include="src\Example\GridTest\" />
     <Folder Include="src\Finance\" />
     <Folder Include="src\Group\" />
     <Folder Include="src\Group\GroupAttendanceDetail\" />
@@ -234,10 +233,6 @@
     <TypeScriptCompile Include="src\Event\RegistrationEntry\utils.partial.ts" />
     <TypeScriptCompile Include="src\Example\controlGallery.ts" />
     <TypeScriptCompile Include="src\Example\fieldTypeGallery.ts" />
-    <TypeScriptCompile Include="src\Example\gridTest.vue" />
-    <TypeScriptCompile Include="src\Example\GridTest\grid.partial.ts" />
-    <TypeScriptCompile Include="src\Example\GridTest\gridActionRow.partial.ts" />
-    <TypeScriptCompile Include="src\Example\GridTest\types.d.ts" />
     <TypeScriptCompile Include="src\Example\personDetail.ts" />
     <TypeScriptCompile Include="src\Example\personSecondary.ts" />
     <TypeScriptCompile Include="src\Finance\transactionEntry.ts" />
