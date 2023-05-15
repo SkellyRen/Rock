@@ -29,7 +29,7 @@ import { ColumnDefinition, ExportValueFunction } from "@Obsidian/Types/Controls/
  *
  * @returns A string value or undefined if the cell has no value.
  */
-function getQuickFilterValue(row: Record<string, unknown>, column: ColumnDefinition): string | undefined {
+function getExportValue(row: Record<string, unknown>, column: ColumnDefinition): string | undefined {
     if (!column.field) {
         return undefined;
     }
@@ -59,7 +59,7 @@ export default defineComponent({
 
         exportValue: {
             type: Function as PropType<ExportValueFunction>,
-            default: getQuickFilterValue
+            default: getExportValue
         }
     }
 });
