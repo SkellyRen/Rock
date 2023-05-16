@@ -14,18 +14,12 @@
 // limitations under the License.
 // </copyright>
 //
-using System;
 using System.Collections.Generic;
-using System.Data.Entity;
-using System.Diagnostics;
-using System.IO;
 using System.Linq;
-using System.Reflection;
-using System.Threading;
+using System.Linq.Dynamic.Core;
 
+using Rock.Attribute;
 using Rock.Data;
-using Rock.Web.Cache;
-using Rock.Web.UI;
 
 namespace Rock.Model
 {
@@ -53,6 +47,42 @@ namespace Rock.Model
                 .ToList();
 
             return authorizedReminderTypes;
+        }
+
+        /// <summary>
+        /// Gets the reminder types and reminders associated as a queryable
+        /// for a specific person.
+        /// </summary>
+        /// <param name="personAliasId"></param>
+        /// <returns></returns>
+        [RockInternal( "1.16" )]
+        internal IQueryable<IGrouping<ReminderType, Reminder>> GetTypesAndRemindersAssignedToPerson( int personAliasId )
+        {
+            var rockContext = ( RockContext ) this.Context;
+            var reminderService = new ReminderService( rockContext ).Queryable();
+
+            // Querying the reminder type and reminder table
+            // to find reminder types and the amount of reminders
+            // associated with them.
+            var reminderTypes = this.Queryable()
+                // Join on the reminder type id.
+                .Join( reminderService,
+                ( rt ) => rt.Id,
+                ( r ) => r.ReminderTypeId,
+                ( rt, r ) => new
+                {
+                    ReminderType = rt,
+                    Reminder = r
+                }
+                )
+                // Limit to reminders that are assigned
+                // to the passed in person.
+                .Where( r => r.Reminder.PersonAliasId == personAliasId )
+                .GroupBy( rt => rt.ReminderType, r => r.Reminder );
+
+            // We want to be able to build off of this query,
+            // so just return the grouping.
+            return reminderTypes;
         }
     }
 }

@@ -7,7 +7,7 @@ namespace Rock.Blocks.Types.Mobile.Reminders
     /// A block used to show existing reminders for a current person.
     /// </summary>
     [DisplayName( "Reminder List" )]
-    [Category( "Reminders > Reminder List" )]
+    [Category( "Reminders" )]
     [Description( "Allows management of the current person's reminders." )]
     [IconCssClass( "fa fa-user-check" )]
 

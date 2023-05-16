@@ -7,7 +7,7 @@ namespace Rock.Blocks.Types.Mobile.Reminders
     /// A block used to add/edit reminders.
     /// </summary>
     [DisplayName( "Reminder Edit" )]
-    [Category( "Reminders > Reminder Edit" )]
+    [Category( "Reminders" )]
     [Description( "Allows adding/editing of reminders." )]
     [IconCssClass( "fa fa-user-check" )]
 
