@@ -86,7 +86,7 @@ export const EditComponent = defineComponent({
 });
 
 export const ConfigurationComponent = defineComponent({
-    name: "NoteTypeField.Configuration",
+    name: "NoteTypesField.Configuration",
 
     components: {
         TextBox,
@@ -101,6 +101,23 @@ export const ConfigurationComponent = defineComponent({
         "updateConfiguration",
         "updateConfigurationValue"
     ],
+
+    computed: {
+        options(): ListItemBag[] {
+            try {
+                const valuesConfig = JSON.parse(this.modelValue[ConfigurationValueKey.EntityTypes] ?? "[]") as ListItemBag[];
+                return valuesConfig.map(v => {
+                    return {
+                        text: v.text,
+                        value: v.value
+                    } as ListItemBag;
+                });
+            }
+            catch {
+                return [];
+            }
+        }
+    },
 
     setup(props, { emit }) {
         // Define the properties that will hold the current selections.
@@ -181,7 +198,7 @@ export const ConfigurationComponent = defineComponent({
 
     template: `
 <div>
-    <DropDownList v-model="entityTypeName" label="Entity Type" help="The type of entity to display categories for." />
+    <DropDownList v-model="entityTypeName" :items="options" label="Entity Type" help="The type of entity to display categories for." />
     <TextBox v-model="qualifierColumn" label="Qualifier Column" help="Entity column qualifier." />
     <TextBox v-model="qualifierValue" label="Qualifier Value" help="Entity column value." />
     <NumberBox v-model="repeatColumns" label="Columns" help="Select how many columns the list should use before going to the next row. If blank or 0 then 4 columns will be displayed. There is no upper limit enforced here however the block this is used in might add contraints due to available space." />

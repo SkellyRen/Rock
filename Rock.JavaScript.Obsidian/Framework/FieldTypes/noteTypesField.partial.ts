@@ -26,6 +26,7 @@ export const enum ConfigurationValueKey {
     EntityTypeName = "entityTypeName",
     QualifierColumn = "qualifierColumn",
     QualifierValue = "qualifierValue",
+    EntityTypes = "entityTypes"
 }
 
 

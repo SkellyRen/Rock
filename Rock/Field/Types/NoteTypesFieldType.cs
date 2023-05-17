@@ -41,6 +41,7 @@ namespace Rock.Field.Types
     {
         private const string REPEAT_COLUMNS = "repeatColumns";
         private const string VALUES_PUBLIC_KEY = "values";
+        private const string ENTITY_TYPES = "entityTypes";
 
         #region Configuration
 
@@ -48,6 +49,17 @@ namespace Rock.Field.Types
         public override Dictionary<string, string> GetPublicConfigurationValues( Dictionary<string, string> privateConfigurationValues, ConfigurationValueUsage usage, string privateValue )
         {
             var publicConfigurationValues = base.GetPublicConfigurationValues( privateConfigurationValues, usage, privateValue );
+
+            if ( usage == ConfigurationValueUsage.Configure )
+            {
+                publicConfigurationValues[ENTITY_TYPES] = new EntityTypeService( new RockContext() )
+                    .GetEntities()
+                    .OrderBy( e => e.FriendlyName )
+                    .ThenBy( e => e.Name )
+                    .ToList()
+                    .Select( e => e.ToListItemBag() )
+                    .ToCamelCaseJson( false, true );
+            }
 
             using ( var rockContext = new RockContext() )
             {
