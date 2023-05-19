@@ -214,6 +214,13 @@ namespace Rock.Jobs
                 // Overwrite the block type ID.
                 newBlock.BlockTypeId = newBlockTypeId;
 
+                // If replacing legacy blocks,
+                // remove "(Legacy)" from the new block's name.
+                var legacyText = "(Legacy)";
+                newBlock.Name = newBlock.Name
+                    .Replace( $" {legacyText}", string.Empty ) // First remove " (Legacy)" (with a leading space)
+                    .Replace( legacyText, string.Empty ); // Then remove "(Legacy)" (without a leading space)
+
                 blockService.Add( newBlock );
 
                 // Keep track of the block instance that is replacing the old one.
