@@ -59,6 +59,14 @@ namespace Rock.Jobs
         DefaultBooleanValue = false,
         Order = 2 )]
 
+    [BooleanField(
+        "Should Delete Old Block Type",
+        Key = AttributeKey.ShouldDeleteOldBlockType,
+        Description = "Determines if the old block type should be deleted after the blocks are replaced. By default, the old block type will not be deleted.",
+        IsRequired = false,
+        DefaultBooleanValue = false,
+        Order = 3 )]
+
     [RockInternal( "1.15" )]
     internal class PostV15DataMigrationsReplaceWebFormsBlocksWithObsidianBlocks : RockJob
     {
@@ -68,6 +76,7 @@ namespace Rock.Jobs
         {
             public const string CommandTimeout = "CommandTimeout";
             public const string ShouldKeepOldBlocks = "ShouldKeepOldBlocks";
+            public const string ShouldDeleteOldBlockType = "ShouldDeleteOldBlockType";
             public const string BlockTypeGuidReplacementPairs = "BlockTypeGuidReplacementPairs";
         }
 
@@ -92,6 +101,14 @@ namespace Rock.Jobs
         ///   <c>true</c> to keep old blocks; otherwise, <c>false</c> to delete old blocks.
         /// </value>
         private bool ShouldKeepOldBlocks => this.GetAttributeValue( AttributeKey.ShouldKeepOldBlocks ).AsBoolean();
+
+        /// <summary>
+        /// Determines if the old block type should be deleted after the blocks are replaced.
+        /// </summary>
+        /// <value>
+        ///   <c>true</c> to delete the old block type; otherwise, <c>false</c> to keep the old block type.
+        /// </value>
+        private bool ShouldDeleteOldBlockType => this.GetAttributeValue( AttributeKey.ShouldDeleteOldBlockType ).AsBoolean();
 
         #endregion
 
@@ -167,6 +184,8 @@ namespace Rock.Jobs
             CopyAuthFromOldBlocksToNewBlocks( migrationHelper, copiedBlockMappings );
 
             DeleteOldBlocks( migrationHelper, copiedBlockMappings );
+
+            DeleteOldBlockType( migrationHelper, oldBlockTypeGuid );
         }
 
         /// <summary>
@@ -256,6 +275,11 @@ namespace Rock.Jobs
             }
         }
 
+        /// <summary>
+        /// Deletes the old blocks.
+        /// </summary>
+        /// <param name="migrationHelper">The migration helper.</param>
+        /// <param name="copiedBlockMappings">The copied block mappings.</param>
         private void DeleteOldBlocks( MigrationHelper migrationHelper, Dictionary<Model.Block, Model.Block> copiedBlockMappings )
         {
             if ( !this.ShouldKeepOldBlocks )
@@ -264,6 +288,20 @@ namespace Rock.Jobs
                 {
                     migrationHelper.DeleteBlock( oldBlock.Guid.ToString() );
                 }
+            }
+        }
+
+        /// <summary>
+        /// Deletes the old block type.
+        /// <para>This will fail if Blocks of this BlockType have not been deleted.</para>
+        /// </summary>
+        /// <param name="migrationHelper">The migration helper.</param>
+        /// <param name="oldBlockTypeGuid">The old block type unique identifier.</param>
+        private void DeleteOldBlockType( MigrationHelper migrationHelper, Guid oldBlockTypeGuid )
+        {
+            if ( this.ShouldDeleteOldBlockType )
+            {
+                migrationHelper.DeleteBlockType( oldBlockTypeGuid.ToString() );
             }
         }
 
