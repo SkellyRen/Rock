@@ -38,8 +38,6 @@ namespace Rock.Field.Types
     [Rock.SystemGuid.FieldTypeGuid( Rock.SystemGuid.FieldType.BACKGROUNDCHECK )]
     public class BackgroundCheckFieldType : BinaryFileFieldType, IEntityReferenceFieldType
     {
-        private const string BACKGROUNDCHECK_TYPES = "backgroundCheckTypes";
-        private const string BACKGROUNDCHECK_TYPE = "backgroundCheckType";
         private const string BINARY_FILE_TYPE = "binaryFileType";
 
         #region Edit Control
@@ -65,17 +63,6 @@ namespace Rock.Field.Types
                 }
             }
 
-            if ( privateConfigurationValues.ContainsKey( BACKGROUNDCHECK_TYPE ) )
-            {
-                var backgroundCheckTypeValue = publicConfigurationValues[BACKGROUNDCHECK_TYPE].FromJsonOrNull<ListItemBag>();
-                if ( backgroundCheckTypeValue != null )
-                {
-                    privateConfigurationValues[BACKGROUNDCHECK_TYPE] = backgroundCheckTypeValue.Value;
-                }
-            }
-
-            privateConfigurationValues.Remove( BACKGROUNDCHECK_TYPES );
-
             return privateConfigurationValues;
         }
 
@@ -93,74 +80,62 @@ namespace Rock.Field.Types
                 }.ToCamelCaseJson( false, true );
             }
 
-            if ( Guid.TryParse( value, out Guid binaryFileGuid ) )
-            {
-                publicConfigurationValues[BACKGROUNDCHECK_TYPE] = new ListItemBag()
-                {
-                    Text = BackgroundCheckTypes.ProtectMyMinistry.ConvertToString(),
-                    Value = BackgroundCheckTypes.ProtectMyMinistry.ConvertToInt().ToString()
-                }.ToCamelCaseJson( false, true );
-            }
-            else if ( !string.IsNullOrWhiteSpace( value ) )
-            {
-                publicConfigurationValues[BACKGROUNDCHECK_TYPE] = new ListItemBag()
-                {
-                    Text = BackgroundCheckTypes.Checkr.ConvertToString(),
-                    Value = BackgroundCheckTypes.Checkr.ConvertToInt().ToString()
-                }.ToCamelCaseJson( false, true );
-            }
-            else if ( privateConfigurationValues.ContainsKey( BACKGROUNDCHECK_TYPE ) )
-            {
-                var backgroundCheckType = privateConfigurationValues[BACKGROUNDCHECK_TYPE].ConvertToEnum<BackgroundCheckTypes>();
-                publicConfigurationValues[BACKGROUNDCHECK_TYPE] = new ListItemBag()
-                {
-                    Text = backgroundCheckType.ConvertToString(),
-                    Value = backgroundCheckType.ConvertToInt().ToString()
-                }.ToCamelCaseJson( false, true );
-            }
-
-            publicConfigurationValues[BACKGROUNDCHECK_TYPES] = GetBackgroundCheckTypes().ToCamelCaseJson( false, true );
-
             return publicConfigurationValues;
         }
 
         /// <inheritdoc />
         public override string GetPublicEditValue( string privateValue, Dictionary<string, string> privateConfigurationValues )
         {
-            return new ListItemBag()
+            if ( !string.IsNullOrWhiteSpace( privateValue ) )
             {
-                Text = GetFileName( privateValue ),
-                Value = privateValue
-            }.ToCamelCaseJson( false, true );
-        }
+                if ( Guid.TryParse( privateValue, out Guid binaryFileGuid ) )
+                {
+                    var entityType = EntityTypeCache.Get( Rock.SystemGuid.EntityType.PROTECT_MY_MINISTRY_PROVIDER.AsGuid() );
+                    return $"{entityType.Guid},{entityType.FriendlyName},{privateValue},{GetFileName( privateValue )}";
+                }
 
-        /// <inheritdoc />
-        public override string GetPrivateEditValue( string publicValue, Dictionary<string, string> privateConfigurationValues )
-        {
-            var itemValue = publicValue.FromJsonOrNull<ListItemBag>();
+                var valueSplit = privateValue.Split( ',' );
+                if ( valueSplit?.Length == 2 )
+                {
+                    var entityTypeId = valueSplit[0];
+                    var entityType = EntityTypeCache.Get( entityTypeId.AsInteger() );
 
-            if ( itemValue != null )
-            {
-                return itemValue.Value;
+                    if ( entityType != null )
+                    {
+                        return $"{entityType.Guid},{entityType.FriendlyName},{valueSplit[1]}";
+                    }
+                }
             }
 
             return string.Empty;
         }
 
-        /// <summary>
-        /// Gets the background check types as a List of ListBagItems.
-        /// </summary>
-        /// <returns></returns>
-        private List<ListItemBag> GetBackgroundCheckTypes()
+        /// <inheritdoc />
+        public override string GetPrivateEditValue( string publicValue, Dictionary<string, string> privateConfigurationValues )
         {
-            var backgroundCheckTypeEnums = ( BackgroundCheckTypes[] ) Enum.GetValues( typeof( BackgroundCheckTypes ) );
-            var backgroundCheckTypes = new List<ListItemBag>();
-            foreach ( BackgroundCheckTypes backgroundCheckType in backgroundCheckTypeEnums.Where( b => b != BackgroundCheckTypes.Unknown ) )
+            if ( !string.IsNullOrWhiteSpace( publicValue ) )
             {
-                backgroundCheckTypes.Add( new ListItemBag() { Text = backgroundCheckType.ConvertToString(), Value = backgroundCheckType.ConvertToInt().ToString() } );
+                var valueSplit = publicValue.Split( ',' );
+
+                if ( valueSplit.Length > 2 && Guid.TryParse( valueSplit[0], out Guid entityTypeGuid ) )
+                {
+                    var entityType = EntityTypeCache.Get( entityTypeGuid );
+
+                    if ( entityType != null )
+                    {
+                        if ( entityType.Guid == SystemGuid.EntityType.CHECKR_PROVIDER.AsGuid() )
+                        {
+                            return $"{entityType.Id},{valueSplit[2]}";
+                        }
+                        else
+                        {
+                            return $"{valueSplit[2]}";
+                        }
+                    }
+                }
             }
 
-            return backgroundCheckTypes;
+            return publicValue;
         }
 
         #endregion

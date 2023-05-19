@@ -20,16 +20,18 @@ import { getFieldEditorProps, getFieldConfigurationProps } from "./utils";
 import BinaryFileTypePicker from "@Obsidian/Controls/binaryFileTypePicker";
 import TextBox from "@Obsidian/Controls/textBox";
 import FileUploader from "@Obsidian/Controls/fileUploader";
-import DropDownList from "@Obsidian/Controls/dropDownList";
+import ComponentPicker from "@Obsidian/Controls/componentPicker";
 import { ListItemBag } from "@Obsidian/ViewModels/Utility/listItemBag";
 import { ConfigurationValueKey } from "./backgroundCheckField.partial";
+import { EntityType } from "@Obsidian/SystemGuids/entityType";
 
 export const EditComponent = defineComponent({
     name: "BackgroundCheckField.Edit",
 
     components: {
         TextBox,
-        FileUploader
+        FileUploader,
+        ComponentPicker
     },
 
     props: getFieldEditorProps(),
@@ -37,33 +39,41 @@ export const EditComponent = defineComponent({
     setup(props, { emit }) {
 
         const internalValue = ref<ListItemBag>({});
-
-        const backgroundCheckType = computed((): string | null | undefined => {
-            const checkType = JSON.parse(props.configurationValues[ConfigurationValueKey.BackgroundCheckType] || "{}") as ListItemBag;
-            return checkType.value;
-        });
+        const entityType = ref<ListItemBag>({});
 
         const isFile = computed((): boolean => {
-            return backgroundCheckType.value === "0";
+            const entityTypeValue = entityType.value.value;
+            return entityTypeValue?.toLowerCase() == EntityType.ProtectMyMinistryProvider.toLowerCase();
         });
 
         watch(() => props.modelValue, () => {
-            internalValue.value = JSON.parse(props.modelValue || "{}");
+            const splitValues = props.modelValue.split(",");
+
+            entityType.value = {
+                text: splitValues[1],
+                value: splitValues[0]
+            };
+
+            internalValue.value = {
+                text: splitValues[3],
+                value: splitValues[2]
+            };
         }, { immediate: true });
 
         watch(() => internalValue.value, () => {
-            emit("update:modelValue", JSON.stringify(internalValue.value));
+            emit("update:modelValue", `${entityType.value.value},${entityType.value.text},${internalValue.value.value},${internalValue.value.text ?? ""}`);
         },{ deep: true });
 
         return {
             internalValue,
-            backgroundCheckType,
+            entityType,
             isFile
         };
     },
 
     template: `
-    <div v-if="backgroundCheckType">
+    <ComponentPicker label="Component" v-model="entityType" containerType="Rock.Security.BackgroundCheckContainer" />
+    <div v-if="entityType">
         <FileUploader v-if="isFile"
             v-model="internalValue"
             uploadAsTemporary="true"
@@ -83,8 +93,7 @@ export const ConfigurationComponent = defineComponent({
     name: "BackgroundCheckField.Configuration",
 
     components: {
-        BinaryFileTypePicker,
-        DropDownList
+        BinaryFileTypePicker
     },
 
     props: getFieldConfigurationProps(),
@@ -96,15 +105,6 @@ export const ConfigurationComponent = defineComponent({
 
     setup(props, { emit }) {
         const binaryFileType = ref<ListItemBag>({});
-        const backgroundCheckType = ref<ListItemBag>({});
-        const backgroundCheckTypes = computed((): ListItemBag[] => {
-            try {
-                return JSON.parse(props.modelValue[ConfigurationValueKey.BackgroundCheckTypes] ?? "[]") as ListItemBag[];
-            }
-            catch {
-                return [];
-            }
-        });
 
         /**
          * Update the modelValue property if any value of the dictionary has
@@ -120,12 +120,9 @@ export const ConfigurationComponent = defineComponent({
             // Construct the new value that will be emitted if it is different
             // than the current value.
             newValue[ConfigurationValueKey.BinaryFileType] = JSON.stringify(binaryFileType.value ?? "");
-            newValue[ConfigurationValueKey.BackgroundCheckTypes] = JSON.stringify(backgroundCheckTypes.value ?? "[]");
-            newValue[ConfigurationValueKey.BackgroundCheckType] = JSON.stringify(backgroundCheckType.value ?? "");
 
             // Compare the new value and the old value.
-            const anyValueChanged = newValue[ConfigurationValueKey.BinaryFileType] !== (props.modelValue[ConfigurationValueKey.BinaryFileType] ?? "")
-                || newValue[ConfigurationValueKey.BackgroundCheckType] !== (props.modelValue[ConfigurationValueKey.BackgroundCheckType] ?? "");
+            const anyValueChanged = newValue[ConfigurationValueKey.BinaryFileType] !== (props.modelValue[ConfigurationValueKey.BinaryFileType] ?? "");
 
             // If any value changed then emit the new model value.
             if (anyValueChanged) {
@@ -154,23 +151,18 @@ export const ConfigurationComponent = defineComponent({
         // data to match the new information.
         watch(() => [props.modelValue, props.configurationProperties], () => {
             binaryFileType.value = JSON.parse(props.modelValue[ConfigurationValueKey.BinaryFileType] || "{}");
-            backgroundCheckType.value = JSON.parse(props.modelValue[ConfigurationValueKey.BackgroundCheckType] || "{}");
         }, {
             immediate: true
         });
 
         watch(binaryFileType, val => maybeUpdateConfiguration(ConfigurationValueKey.BinaryFileType, JSON.stringify(val ?? "")));
-        watch(backgroundCheckType, val => maybeUpdateConfiguration(ConfigurationValueKey.BackgroundCheckType, JSON.stringify(val ?? "")), { deep: true });
 
         return {
-            binaryFileType,
-            backgroundCheckType,
-            backgroundCheckTypes
+            binaryFileType
         };
     },
 
     template: `
     <BinaryFileTypePicker label="File Type" v-model="binaryFileType" help="File type to use to store and retrieve the file. New file types can be configured under 'Admin Tools > General Settings > File Types'" />
-    <DropDownList v-model="backgroundCheckType.value" :items="backgroundCheckTypes" showBlankItem="true" />
     `
 });

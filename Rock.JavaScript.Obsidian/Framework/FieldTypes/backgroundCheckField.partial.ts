@@ -21,8 +21,6 @@ import { FieldTypeBase } from "./fieldType";
 
 export const enum ConfigurationValueKey {
     BinaryFileType = "binaryFileType",
-    BackgroundCheckType = "backgroundCheckType",
-    BackgroundCheckTypes = "backgroundCheckTypes",
 }
 
 // The edit component can be quite large, so load it only as needed.
