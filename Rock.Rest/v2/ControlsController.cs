@@ -4540,6 +4540,33 @@ namespace Rock.Rest.v2
 
         #endregion
 
+        #region Registration Instance Picker
+
+        /// <summary>
+        /// Gets the instances that can be displayed in the registration instance picker.
+        /// </summary>
+        /// <returns>A List of <see cref="ListItemBag"/> objects that represent the registraion instances for the control.</returns>
+        [HttpPost]
+        [System.Web.Http.Route( "RegistrationInstancePickerGetRegistrationInstances" )]
+        [Authenticate]
+        [Rock.SystemGuid.RestActionGuid( "26ecd3a7-9c55-4052-afc9-b59e84ab890b" )]
+        public IHttpActionResult RegistrationInstancePickerGetRegistrationInstances( [FromBody] RegistrationInstancePickerGetRegistrationInstancesOptionsBag options )
+        {
+            using (var rockContext = new RockContext())
+            {
+                var registrationInstanceService = new Rock.Model.RegistrationInstanceService( new RockContext() );
+                var registrationInstances = registrationInstanceService.Queryable()
+                    .Where( ri => ri.RegistrationTemplate.Guid == options.RegistrationTemplateGuid && ri.IsActive )
+                    .OrderBy( ri => ri.Name )
+                    .Select(ri => new ListItemBag { Text = ri.Name, Value = ri.Guid.ToString() } )
+                    .ToList();
+
+                return Ok( registrationInstances );
+            }
+        }
+
+        #endregion
+
         #region Registration Template Picker
 
         /// <summary>

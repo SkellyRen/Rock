@@ -1104,6 +1104,7 @@
     <TypeScriptCompile Include="Framework\ViewModels\Rest\Controls\phoneNumberBoxGetConfigurationResultsBag.d.ts" />
     <TypeScriptCompile Include="Framework\ViewModels\Rest\Controls\phoneNumberCountryCodeRulesConfigurationBag.d.ts" />
     <TypeScriptCompile Include="Framework\ViewModels\Rest\Controls\racePickerGetRacesResultsBag.d.ts" />
+    <TypeScriptCompile Include="Framework\ViewModels\Rest\Controls\registrationInstancePickerGetRegistrationInstancesOptionsBag.d.ts" />
     <TypeScriptCompile Include="Framework\ViewModels\Rest\Controls\registrationTemplatePickerGetChildrenOptionsBag.d.ts" />
     <TypeScriptCompile Include="Framework\ViewModels\Rest\Controls\reminderTypePickerGetReminderTypesOptionsBag.d.ts" />
     <TypeScriptCompile Include="Framework\ViewModels\Rest\Controls\reportPickerGetChildrenOptionsBag.d.ts" />
