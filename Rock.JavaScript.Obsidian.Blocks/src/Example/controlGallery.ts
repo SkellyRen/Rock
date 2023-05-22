@@ -150,6 +150,7 @@ import LavaCommandPicker from "@Obsidian/Controls/lavaCommandPicker";
 import RemoteAuthsPicker from "@Obsidian/Controls/remoteAuthsPicker";
 import StepProgramPicker from "@Obsidian/Controls/stepProgramPicker.obs";
 import StepProgramStepTypePicker from "@Obsidian/Controls/stepProgramStepTypePicker.obs";
+import StepProgramStepStatusPicker from "@Obsidian/Controls/stepProgramStepStatusPicker.obs";
 import StepStatusPicker from "@Obsidian/Controls/stepStatusPicker.obs";
 import StepTypePicker from "@Obsidian/Controls/stepTypePicker.obs";
 import StreakTypePicker from "@Obsidian/Controls/streakTypePicker";
@@ -4500,7 +4501,7 @@ const stepProgramPickerGallery = defineComponent({
 </GalleryAndResult>`
 });
 
-/** Demonstrates Step Program Step TypePicker */
+/** Demonstrates Step Program Step Type Picker */
 const stepProgramStepTypePickerGallery = defineComponent({
     name: "StepProgramStepTypePickerGallery",
     components: {
@@ -4529,6 +4530,57 @@ const stepProgramStepTypePickerGallery = defineComponent({
     enableReflection >
 
     <StepProgramStepTypePicker label="Step Program > Step Type"
+        v-model="value"
+        v-model:stepProgram="stepProgram"
+        :defaultStepProgramGuid="defaultProgramGuid?.value"
+        :rules="required ? 'required' : ''"
+        :disabled="disabled" />
+
+    <template #settings>
+        <div class="row">
+            <div class="col-md-4">
+                <StepProgramPicker label="Default Step Program" v-model="defaultProgramGuid" showBlankItem help="If this defaultStepProgramGuid prop is set, the Step Program selector will not be shown and the Step Types will be based on that Program." />
+            </div>
+            <div class="col-md-4">
+                <CheckBox label="Required" v-model="required" />
+            </div>
+            <div class="col-md-4">
+                <CheckBox label="Disabled" v-model="disabled" />
+            </div>
+        </div>
+    </template>
+</GalleryAndResult>`
+});
+
+/** Demonstrates Step Program Step Status Picker */
+const stepProgramStepStatusPickerGallery = defineComponent({
+    name: "StepProgramStepStatusPickerGallery",
+    components: {
+        GalleryAndResult,
+        StepProgramPicker,
+        StepProgramStepStatusPicker,
+        CheckBox,
+    },
+    setup() {
+        return {
+            value: ref({}),
+            stepProgram: ref({}),
+            defaultProgramGuid: ref(""),
+            required: ref(false),
+            disabled: ref(false),
+            importCode: getSfcControlImportPath("stepProgramStepStatusPicker"),
+            exampleCode: `<StepProgramStepStatusPicker label="Step Program > Step Status" v-model="value" />`
+        };
+    },
+    template: `
+<GalleryAndResult
+    :value="{value,stepProgram}"
+    :importCode="importCode"
+    :exampleCode="exampleCode"
+    hasMultipleValues
+    enableReflection >
+
+    <StepProgramStepStatusPicker label="Step Program > Step Status"
         v-model="value"
         v-model:stepProgram="stepProgram"
         :defaultStepProgramGuid="defaultProgramGuid?.value"
@@ -7902,6 +7954,7 @@ const controlGalleryComponents: Record<string, Component> = [
     remoteAuthsPickerGallery,
     stepProgramPickerGallery,
     stepProgramStepTypePickerGallery,
+    stepProgramStepStatusPickerGallery,
     stepStatusPickerGallery,
     stepTypePickerGallery,
     streakTypePickerGallery,

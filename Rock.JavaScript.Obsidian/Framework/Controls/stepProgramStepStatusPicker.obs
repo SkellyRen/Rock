@@ -10,15 +10,15 @@
                            showBlankItem
                            formGroupClasses="mt-0"
                            :displayStyle="PickerDisplayStyle.Condensed" />
-        <StepTypePicker
-                        v-if="stepProgramGuid"
-                        v-model="internalValue"
-                        label="Step Type"
-                        :stepProgramGuid="stepProgramGuid"
-                        :multiple="false"
-                        :disabled="disabled"
-                        showBlankItem
-                        :displayStyle="PickerDisplayStyle.Condensed" />
+        <StepStatusPicker
+                          v-if="stepProgramGuid"
+                          v-model="internalValue"
+                          label="Step Status"
+                          :stepProgramGuid="stepProgramGuid"
+                          :multiple="false"
+                          :disabled="disabled"
+                          showBlankItem
+                          :displayStyle="PickerDisplayStyle.Condensed" />
     </RockFormField>
 </template>
 
@@ -27,7 +27,7 @@
     import { ListItemBag } from "@Obsidian/ViewModels/Utility/listItemBag";
     import { computed, PropType, watch } from "vue";
     import StepProgramPicker from "./stepProgramPicker.obs";
-    import StepTypePicker from "./stepTypePicker.obs";
+    import StepStatusPicker from "./stepStatusPicker.obs";
     import RockFormField from "./rockFormField";
     import { PickerDisplayStyle } from "@Obsidian/Enums/Controls/pickerDisplayStyle";
     import { Guid } from "@Obsidian/Types";
