@@ -36,7 +36,7 @@ namespace Rock.Migrations
             IF NOT EXISTS (
                 SELECT 1
                 FROM [ServiceJob]
-                WHERE [Guid] = '{Rock.SystemGuid.ServiceJob.DATA_MIGRATIONS_150_UPDATE_WORKFLOWID_COLUMNS}'
+                WHERE [Guid] = '{Rock.SystemGuid.ServiceJob.DATA_MIGRATIONS_160_UPDATE_WORKFLOWID_COLUMNS}'
             )
             BEGIN
                 INSERT INTO [ServiceJob] (
@@ -51,12 +51,12 @@ namespace Rock.Migrations
                 ) VALUES (
                       1
                     , 1
-                    , 'Rock Update Helper v15.0 - Update WorkflowId columns.'
+                    , 'Rock Update Helper v16.0 - Update WorkflowId columns.'
                     , 'This job update all WorkflowId columns on the Workflow table using the format specified in ''ufnWorkflow_GetWorkflowId''.'
-                    , 'Rock.Jobs.PostV15UpdateWorkflowIds'
+                    , 'Rock.Jobs.PostV16UpdateWorkflowIds'
                     , '0 0 21 1/1 * ? *'
                     , 1
-                    , '{Rock.SystemGuid.ServiceJob.DATA_MIGRATIONS_150_UPDATE_WORKFLOWID_COLUMNS}'
+                    , '{Rock.SystemGuid.ServiceJob.DATA_MIGRATIONS_160_UPDATE_WORKFLOWID_COLUMNS}'
                 );
             END" );
         }

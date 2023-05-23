@@ -938,7 +938,7 @@
     <Compile Include="Jobs\PostV15DataMigrationsReplaceWebFormsBlocksWithObsidianBlocks.cs" />
     <Compile Include="Jobs\PostV15DataMigrationsSystemPhoneNumbers.cs" />
     <Compile Include="Jobs\PostV16DataMigrationsMovePersonPreferences.cs" />
-    <Compile Include="Jobs\PostV15UpdateWorkflowIds.cs" />
+    <Compile Include="Jobs\PostV16UpdateWorkflowIds.cs" />
     <Compile Include="Jobs\ProcessReminders.cs" />
     <Compile Include="Jobs\PostV133DataMigrationsAddInteractionSessionLocationIndexToInteractionSession.cs" />
     <Compile Include="Jobs\PostV141AddMissingIndexes.cs" />
@@ -1702,6 +1702,7 @@
     <Compile Include="Tasks\UpdatePersonAliasLastVisitDateTime.cs" />
     <Compile Include="Tasks\UpdateUserLastActivity.cs" />
     <Compile Include="Store\StoreApiResult.cs" />
+    <Compile Include="Tasks\UpdateWorkflowIds.cs" />
     <Compile Include="Transactions\AggregateAsyncTransaction.cs" />
     <Compile Include="Transactions\AggregateTransaction.cs" />
     <Compile Include="Transactions\BenevolenceRequestChangeTransaction.cs" />

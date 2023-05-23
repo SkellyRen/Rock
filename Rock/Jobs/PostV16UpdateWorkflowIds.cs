@@ -7,9 +7,9 @@ using System.ComponentModel;
 namespace Rock.Jobs
 {
     /// <summary>
-    /// Run once job for v15 to update WorkflowId columns after switch from computed Column.
+    /// Run once job for v16 to update WorkflowId columns after switch from computed Column.
     /// </summary>
-    [DisplayName( "Rock Update Helper v15.0 - Update WorkflowId columns." )]
+    [DisplayName( "Rock Update Helper v16.0 - Update WorkflowId columns." )]
     [Description( "This job update all WorkflowId columns on the Workflow table using the format specified in 'ufnWorkflow_GetWorkflowId'." )]
 
     [IntegerField(
@@ -18,7 +18,7 @@ namespace Rock.Jobs
     Description = "Maximum amount of time (in seconds) to wait for each SQL command to complete. On a large database with lots of transactions, this could take several minutes or more.",
     IsRequired = false,
     DefaultIntegerValue = 14400 )]
-    public class PostV15UpdateWorkflowIds : RockJob
+    public class PostV16UpdateWorkflowIds : RockJob
     {
         private static class AttributeKey
         {
