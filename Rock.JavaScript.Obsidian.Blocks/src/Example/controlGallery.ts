@@ -7891,8 +7891,12 @@ const registrationInstancePickerGallery = defineComponent({
     setup() {
         return {
             registrationTemplateGuid: ref(null),
-            value: ref(null),
-            importCode: getControlImportPath("registrationInstancePicker"),
+            value: ref({
+                "value": "eefe4ad9-bfa9-405c-b732-ccb4d857ab73",
+                "text": "Joe's Test Registration",
+                "category": null
+            }),
+            importCode: getSfcControlImportPath("registrationInstancePicker"),
             exampleCode: `<RegistrationInstancePicker label="Registration Instance" v-model="value" />`
         };
     },

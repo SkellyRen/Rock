@@ -12,6 +12,7 @@
     import { ListItemBag } from "@Obsidian/ViewModels/Utility/listItemBag";
     import { PropType, computed, ref, watch } from "vue";
     import BaseAsyncPicker from "./baseAsyncPicker";
+    import { useSecurityGrantToken } from "@Obsidian/Utility/block";
     import { Guid } from "@Obsidian/Types";
 
     const props = defineProps({
@@ -41,6 +42,8 @@
     const http = useHttp();
     const loadedItems = ref<ListItemBag[] | null>(null);
 
+    const securityGrantToken = useSecurityGrantToken();
+
     // #endregion
 
     // #region Computed Values
@@ -67,7 +70,8 @@
         }
 
         const options: RegistrationInstancePickerGetRegistrationInstancesOptionsBag = {
-            registrationTemplateGuid: props.registrationTemplateGuid
+            registrationTemplateGuid: props.registrationTemplateGuid,
+            securityGrantToken: securityGrantToken.value
         };
 
         const result = await http.post<ListItemBag[]>("/api/v2/Controls/RegistrationInstancePickerGetRegistrationInstances", null, options);
@@ -90,5 +94,5 @@
 
     watch(() => props.registrationTemplateGuid, () => loadedItems.value = null);
 
-    // #endregion
+        // #endregion
 </script>
