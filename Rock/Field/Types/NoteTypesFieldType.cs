@@ -63,8 +63,8 @@ namespace Rock.Field.Types
 
             using ( var rockContext = new RockContext() )
             {
-                var entityTypeName = privateConfigurationValues.GetValueOrNull( ENTITY_TYPE_NAME_KEY );
-                if ( string.IsNullOrWhiteSpace( entityTypeName ) )
+                var entityTypeGuid = privateConfigurationValues.GetValueOrNull( ENTITY_TYPE_NAME_KEY );
+                if ( string.IsNullOrWhiteSpace( entityTypeGuid ) )
                 {
                     publicConfigurationValues[VALUES_PUBLIC_KEY] = new NoteTypeService( rockContext )
                         .Queryable()
@@ -92,10 +92,9 @@ namespace Rock.Field.Types
 
                     if ( publicConfigurationValues.ContainsKey( ENTITY_TYPE_NAME_KEY ) )
                     {
-                        entityTypeName = publicConfigurationValues[ENTITY_TYPE_NAME_KEY];
-                        if ( !string.IsNullOrWhiteSpace( entityTypeName ) && entityTypeName != None.IdValue )
+                        if ( !string.IsNullOrWhiteSpace( entityTypeGuid ) && entityTypeGuid != None.IdValue )
                         {
-                            var entityType = EntityTypeCache.Get( entityTypeName );
+                            var entityType = EntityTypeCache.Get( entityTypeGuid.AsGuid() );
                             if ( entityType != null )
                             {
                                 entityTypeId = entityType.Id;

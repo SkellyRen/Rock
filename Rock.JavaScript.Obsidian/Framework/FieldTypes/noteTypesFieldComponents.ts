@@ -68,15 +68,7 @@ export const EditComponent = defineComponent({
 
     watch: {
         internalValue() {
-            this.$emit("update:modelValue", this.internalValue.join(","));
-        },
-
-        modelValue: {
-            immediate: true,
-            handler() {
-                const value = this.modelValue || "";
-                this.internalValue = value !== "" ? value.split(",") : [];
-            }
+            this.$emit("update:modelValue", this.internalValue);
         }
     },
 
@@ -123,9 +115,9 @@ export const ConfigurationComponent = defineComponent({
         // Define the properties that will hold the current selections.
         const repeatColumns = ref<number | null>(null);
 
-        const entityTypeName = ref("");
-        const qualifierColumn = ref("");
-        const qualifierValue = ref("");
+        const entityTypeName = ref(props.modelValue[ConfigurationValueKey.EntityTypeName]);
+        const qualifierColumn = ref(props.modelValue[ConfigurationValueKey.QualifierColumn]);
+        const qualifierValue = ref(props.modelValue[ConfigurationValueKey.QualifierValue]);
 
         /**
          * Update the modelValue property if any value of the dictionary has
@@ -171,6 +163,7 @@ export const ConfigurationComponent = defineComponent({
         const maybeUpdateConfiguration = (key: string, value: string): void => {
             if (maybeUpdateModelValue()) {
                 emit("updateConfigurationValue", key, value);
+                emit("updateConfiguration");
             }
         };
 
@@ -180,6 +173,14 @@ export const ConfigurationComponent = defineComponent({
             repeatColumns.value = toNumberOrNull(props.modelValue[ConfigurationValueKey.RepeatColumns]);
         }, {
             immediate: true
+        });
+
+        // Watch for changes in properties that require new configuration
+        // properties to be retrieved from the server.
+        watch([], () => {
+            if (maybeUpdateModelValue()) {
+                emit("updateConfiguration");
+            }
         });
 
         // Watch for changes in properties that only require a local UI update.
