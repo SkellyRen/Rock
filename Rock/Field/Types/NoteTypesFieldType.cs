@@ -90,7 +90,7 @@ namespace Rock.Field.Types
                     string qualifierColumn = string.Empty;
                     string qualifierValue = string.Empty;
 
-                    if ( publicConfigurationValues.ContainsKey( ENTITY_TYPE_NAME_KEY ) )
+                    if ( privateConfigurationValues.ContainsKey( ENTITY_TYPE_NAME_KEY ) )
                     {
                         if ( !string.IsNullOrWhiteSpace( entityTypeGuid ) && entityTypeGuid != None.IdValue )
                         {
