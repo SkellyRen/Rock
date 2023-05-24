@@ -38,8 +38,9 @@ export const EditComponent = defineComponent({
 
     setup(props, { emit }) {
 
-        const internalValue = ref<ListItemBag>({});
+        const fileValue = ref<ListItemBag>({});
         const entityType = ref<ListItemBag>({});
+        const textValue = ref<string>("");
 
         const isFile = computed((): boolean => {
             const entityTypeValue = entityType.value.value;
@@ -54,33 +55,44 @@ export const EditComponent = defineComponent({
                 value: splitValues[0]
             };
 
-            internalValue.value = {
-                text: splitValues[3],
-                value: splitValues[2]
-            };
+            if (isFile.value) {
+                fileValue.value = {
+                    text: splitValues[3],
+                    value: splitValues[2]
+                };
+            }
+            else {
+                textValue.value = splitValues[2];
+            }
+
         }, { immediate: true });
 
-        watch(() => internalValue.value, () => {
-            emit("update:modelValue", `${entityType.value.value},${entityType.value.text},${internalValue.value.value},${internalValue.value.text ?? ""}`);
+        watch(() => fileValue.value, () => {
+            emit("update:modelValue", `${entityType.value.value},${entityType.value.text},${fileValue.value?.value ?? ""},${fileValue.value?.text ?? ""}`);
         },{ deep: true });
 
+        watch(() => textValue.value, () => {
+            emit("update:modelValue", `${entityType.value.value},${entityType.value.text},${textValue.value ?? ""}`);
+        });
+
         return {
-            internalValue,
+            fileValue,
             entityType,
-            isFile
+            isFile,
+            textValue
         };
     },
 
     template: `
-    <ComponentPicker label="Component" v-model="entityType" containerType="Rock.Security.BackgroundCheckContainer" />
-    <div v-if="entityType">
+    <ComponentPicker label="Component" v-model="entityType" containerType="Rock.Security.BackgroundCheckContainer" showBlankItem />
+    <div v-if="entityType?.value">
         <FileUploader v-if="isFile"
-            v-model="internalValue"
+            v-model="fileValue"
             uploadAsTemporary="true"
             uploadButtonText="Upload"
             showDeleteButton="true" />
         <TextBox v-else
-            v-model="internalValue.value"
+            v-model="textValue"
             label="RecordKey"
             help="Unique key for the background check report."
             textMode="MultiLine" />
