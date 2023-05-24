@@ -67,7 +67,6 @@ namespace Rock.Field.Types
             {
                 publicConfigurationValues[ENTITY_TYPES] = new EntityTypeService( new RockContext() )
                     .GetEntities()
-                    .Where( e => e.IsEntity )
                     .OrderBy( e => e.FriendlyName )
                     .ThenBy( e => e.Name )
                     .ToList()
@@ -77,8 +76,8 @@ namespace Rock.Field.Types
 
             using ( var rockContext = new RockContext() )
             {
-                var entityTypeName = privateConfigurationValues.GetValueOrNull( ENTITY_TYPE_NAME_KEY );
-                if ( string.IsNullOrWhiteSpace( entityTypeName ) )
+                var entityTypeGuid = privateConfigurationValues.GetValueOrNull( ENTITY_TYPE_NAME_KEY );
+                if ( string.IsNullOrWhiteSpace( entityTypeGuid ) )
                 {
                     publicConfigurationValues[VALUES_PUBLIC_KEY] = new NoteTypeService( rockContext )
                         .Queryable()
@@ -104,12 +103,11 @@ namespace Rock.Field.Types
                     string qualifierColumn = string.Empty;
                     string qualifierValue = string.Empty;
 
-                    if ( publicConfigurationValues.ContainsKey( ENTITY_TYPE_NAME_KEY ) )
+                    if ( privateConfigurationValues.ContainsKey( ENTITY_TYPE_NAME_KEY ) )
                     {
-                        entityTypeName = publicConfigurationValues[ENTITY_TYPE_NAME_KEY];
-                        if ( !string.IsNullOrWhiteSpace( entityTypeName ) && entityTypeName != None.IdValue )
+                        if ( !string.IsNullOrWhiteSpace( entityTypeGuid ) && entityTypeGuid != None.IdValue )
                         {
-                            var entityType = EntityTypeCache.Get( entityTypeName );
+                            var entityType = EntityTypeCache.Get( entityTypeGuid.AsGuid() );
                             if ( entityType != null )
                             {
                                 entityTypeId = entityType.Id;
@@ -142,7 +140,7 @@ namespace Rock.Field.Types
         #endregion
 
         #region Formatting
-
+/*
         /// <summary>
         /// Gets the text value.
         /// </summary>
@@ -163,7 +161,7 @@ namespace Rock.Field.Types
 
             return privateValue;
         }
-
+*/
         #endregion
 
         #region Edit Control

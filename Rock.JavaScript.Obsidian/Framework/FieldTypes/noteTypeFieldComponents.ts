@@ -15,7 +15,6 @@
 // </copyright>
 //
 import { defineComponent, inject, ref, watch } from "vue";
-import CheckBoxList from "@Obsidian/Controls/checkBoxList";
 import TextBox from "@Obsidian/Controls/textBox";
 import NumberBox from "@Obsidian/Controls/numberBox";
 import DropDownList from "@Obsidian/Controls/dropDownList";
@@ -40,7 +39,7 @@ export const EditComponent = defineComponent({
 
     data() {
         return {
-            internalValue: [] as string[]
+            internalValue: this.modelValue ?? ""
         };
     },
 
@@ -48,7 +47,6 @@ export const EditComponent = defineComponent({
         options(): ListItemBag[] {
             try {
                 const valuesConfig = JSON.parse(this.configurationValues[ConfigurationValueKey.Values] ?? "[]") as ListItemBag[];
-                console.log(valuesConfig);
                 return valuesConfig.map(v => {
                     return {
                         text: v.text,
@@ -64,15 +62,7 @@ export const EditComponent = defineComponent({
 
     watch: {
         internalValue() {
-            this.$emit("update:modelValue", this.internalValue.join(","));
-        },
-
-        modelValue: {
-            immediate: true,
-            handler() {
-                const value = this.modelValue || "";
-                this.internalValue = value !== "" ? value.split(",") : [];
-            }
+            this.$emit("update:modelValue", this.internalValue);
         }
     },
 
@@ -116,9 +106,9 @@ export const ConfigurationComponent = defineComponent({
     ],
 
     setup(props, { emit }) {
-        const entityTypeName = ref("");
-        const qualifierColumn = ref("");
-        const qualifierValue = ref("");
+        const entityTypeName = ref(props.modelValue[ConfigurationValueKey.EntityTypeName]?? {});
+        const qualifierColumn = ref(props.modelValue[ConfigurationValueKey.QualifierColumn]);
+        const qualifierValue = ref(props.modelValue[ConfigurationValueKey.QualifierValue]);
 
         /**
          * Update the modelValue property if any value of the dictionary has
@@ -162,6 +152,7 @@ export const ConfigurationComponent = defineComponent({
         const maybeUpdateConfiguration = (key: string, value: string): void => {
             if (maybeUpdateModelValue()) {
                 emit("updateConfigurationValue", key, value);
+                emit("updateConfiguration");
             }
         };
 

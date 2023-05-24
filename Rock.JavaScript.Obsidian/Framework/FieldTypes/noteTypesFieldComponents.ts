@@ -41,7 +41,7 @@ export const EditComponent = defineComponent({
 
     data() {
         return {
-            internalValue: [] as string[]
+            internalValue: this.modelValue ? this.modelValue.split(",") : []
         };
     },
 
@@ -68,7 +68,7 @@ export const EditComponent = defineComponent({
 
     watch: {
         internalValue() {
-            this.$emit("update:modelValue", this.internalValue);
+            this.$emit("update:modelValue", this.internalValue.join(","));
         }
     },
 

@@ -127,7 +127,7 @@ namespace Rock.Field.Types
         #endregion Configuration
 
         #region Formatting
-
+/*
         /// <inheritdoc/>
         public override string GetTextValue( string privateValue, Dictionary<string, string> privateConfigurationValues )
         {
@@ -156,7 +156,7 @@ namespace Rock.Field.Types
             // The parent is CategoryFieldType. CategoryFieldType's FormatValue expects a list of category guids, so we should not call the base FormatValue.
             return formattedValue;
         }
-
+*/
         #endregion
 
         #region EditControl

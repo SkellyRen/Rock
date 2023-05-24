@@ -53,7 +53,7 @@ export class NoteTypeField extends FieldTypeBase {
             const userValues = value.split(",");
             const selectedValues = values.filter(v => userValues.includes(v.value ?? ""));
             return selectedValues.map(v => v.text)
-                .map(v => v?.split(":")[1]) // just get the name of the note type
+                .map(v => v?.split(":").pop()) // just get the name of the note type
                 .join(", ");
         }
         catch {
