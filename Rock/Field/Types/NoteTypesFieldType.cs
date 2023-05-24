@@ -127,36 +127,6 @@ namespace Rock.Field.Types
         #endregion Configuration
 
         #region Formatting
-/*
-        /// <inheritdoc/>
-        public override string GetTextValue( string privateValue, Dictionary<string, string> privateConfigurationValues )
-        {
-            string formattedValue = string.Empty;
-
-            if ( !string.IsNullOrWhiteSpace( privateValue ) )
-            {
-                var names = new List<string>();
-
-                foreach ( string guidString in privateValue.SplitDelimitedValues() )
-                {
-                    Guid? guid = guidString.AsGuidOrNull();
-                    if ( guid.HasValue )
-                    {
-                        var noteType = NoteTypeCache.Get( guid.Value );
-                        if ( noteType != null )
-                        {
-                            names.Add( noteType.Name );
-                        }
-                    }
-                }
-
-                formattedValue = names.AsDelimited( ", " );
-            }
-
-            // The parent is CategoryFieldType. CategoryFieldType's FormatValue expects a list of category guids, so we should not call the base FormatValue.
-            return formattedValue;
-        }
-*/
         #endregion
 
         #region EditControl
