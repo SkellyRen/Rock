@@ -307,6 +307,7 @@ namespace Rock.Blocks.Finance
             var entityBag = new FinancialPledgeBag
             {
                 IdKey = entity.IdKey,
+                Account = entity.Account.ToListItemBag(),
                 Group = entity.Group.ToListItemBag(),
                 CurrentPerson = RequestContext.CurrentPerson.ToListItemBag(),
                 PersonAlias = entity.PersonAlias.ToListItemBag(),
@@ -388,7 +389,7 @@ namespace Rock.Blocks.Finance
                 () => entity.EndDate = box.Entity.EndDate ?? DateTime.MinValue );
 
             box.IfValidProperty( nameof( box.Entity.Group ),
-                () => entity.GroupId = box.Entity.Group.GetEntityId<Group>( rockContext ) );
+                () => entity.GroupId = box.Entity.Group.GetEntityId<Rock.Model.Group>( rockContext ) );
 
             box.IfValidProperty( nameof( box.Entity.PledgeFrequencyValue ),
                 () => entity.PledgeFrequencyValueId = box.Entity.PledgeFrequencyValue.GetEntityId<DefinedValue>( rockContext ) );
@@ -402,7 +403,7 @@ namespace Rock.Blocks.Finance
             if ( !isNew )
             {
                 box.IfValidProperty( nameof( box.Entity.Account ),
-                () => entity.GroupId = box.Entity.Account.GetEntityId<FinancialAccount>( rockContext ) );
+                () => entity.AccountId = box.Entity.Account.GetEntityId<FinancialAccount>( rockContext ) );
             }
 
             box.IfValidProperty( nameof( box.Entity.AttributeValues ),
@@ -716,7 +717,7 @@ namespace Rock.Blocks.Finance
                     return ActionOk( entityBag );
                 }
 
-                return ActionOk(entityBag);
+                return ActionOk( entityBag );
             }
         }
 
