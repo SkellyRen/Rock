@@ -67,7 +67,7 @@ namespace Rock.Jobs
                 {
                     System.Diagnostics.Debug.WriteLine( RockDateTime.Now.ToString() + $" VETOED! Scheduler '{scheduler.SchedulerName}' is already executing job Id '{context.JobDetail.Description}' (key: {context.JobDetail.Key})" );
 
-                    RockLogger.Log.Debug( RockLogDomains.Jobs, "Job ID: {jobId}, Job Key: {jobKey}, Job trigger was vetoed.", jobId, context.JobDetail?.Key );
+                    RockLogger.Log.Debug( RockLogDomains.Jobs, $"Job ID: {{jobId}}, Job Key: {{jobKey}}, Job trigger was vetoed because scheduler '{scheduler.SchedulerName}' is already executing job.", jobId, context.JobDetail?.Key );
 
                     return true;
                 }
