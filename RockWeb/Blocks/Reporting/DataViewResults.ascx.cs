@@ -25,6 +25,8 @@ using Rock.Web.UI.Controls;
 using System;
 using System.ComponentModel;
 using System.Data.Entity;
+using System.Diagnostics;
+using System.Linq;
 using System.Web.UI;
 
 namespace RockWeb.Blocks.Reporting
@@ -289,9 +291,16 @@ namespace RockWeb.Blocks.Reporting
                     }
                 };
 
+                var persistStopwatch = Stopwatch.StartNew();
+
                 var qry = dataView.GetQuery( dataViewGetQueryArgs );
 
-                gDataViewResults.SetLinqDataSource( qry.AsNoTracking() );
+                gDataViewResults.DataSource = qry.ToList();
+
+                persistStopwatch.Stop();
+
+                DataViewService.AddRunDataViewTransaction( dataView.Id, Convert.ToInt32( persistStopwatch.ElapsedMilliseconds ) );
+
                 gDataViewResults.DataBind();
             }
             catch ( Exception ex )
