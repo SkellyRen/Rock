@@ -10,7 +10,7 @@
                  :blockLabels="blockLabels"
                  :entityKey="entityKey"
                  :entityTypeGuid="entityTypeGuid"
-                 entityTypeName="FollowingEventType"
+                 :entityTypeName="panelName"
                  :isAuditHidden="false"
                  :isBadgesVisible="true"
                  :isDeleteVisible="isEditable"
@@ -61,7 +61,7 @@
 
     const entityTypeGuid = EntityType.FollowingEventType;
 
-    const panelMode = ref<DetailPanelMode>(DetailPanelMode.Edit);
+    const panelMode = ref<DetailPanelMode>(config.isEditable ? DetailPanelMode.Edit : DetailPanelMode.View);
 
     // The properties that are being edited in the UI. This is used to
     // inform the server which incoming values have valid data in them.
@@ -91,7 +91,7 @@
      * The entity name to display in the block panel.
      */
     const panelName = computed((): string => {
-        return followingEventTypeViewBag.value?.name ?? "";
+        return config.entity?.name ?? "";
     });
 
     /**
@@ -244,12 +244,7 @@
         });
 
         if (result.isSuccess && result.data) {
-            if (result.statusCode === 200 && typeof result.data === "object") {
-                followingEventTypeViewBag.value = result.data;
-
-                return true;
-            }
-            else if (result.statusCode === 201 && typeof result.data === "string") {
+            if ((result.statusCode === 200 || result.statusCode === 201) && typeof result.data === "string") {
                 return result.data;
             }
         }

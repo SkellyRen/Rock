@@ -37,7 +37,7 @@
                     v-model="includeNonPublicRequests"
                     label="Include Non-Public Requests" />
 
-                <AttributeValuesContainer v-model="attributeValues" :showCategoryLabel="false" :attributes="attributes" isEditMode />
+                <AttributeValuesContainer v-model="attributeValues" showCategoryLabel :attributes="attributes" isEditMode />
             </div>
         </div>
 
@@ -91,18 +91,10 @@
         delete attributes["Order"];
         return attributes;
     });
-    const attributeValues = computed(() => {
-        if(!props.modelValue.attributeValues) {
-            return {};
-        }
-        const attributeValues = props.modelValue.attributeValues;
-        delete attributeValues["Active"];
-        delete attributeValues["Order"];
-        return attributeValues;
-    });
     const description = propertyRef(props.modelValue.description ?? "", "Description");
     const isActive = propertyRef(props.modelValue.isActive ?? false, "IsActive");
     const name = propertyRef(props.modelValue.name ?? "", "Name");
+    const attributeValues = propertyRef(props.modelValue.attributeValues ?? {}, "AttributeValues");
     const isNoticeRequired = propertyRef(props.modelValue.isNoticeRequired, "IsNoticeRequired");
     const sendOnFriday = propertyRef(!props.modelValue.sendOnWeekends, "SendOnWeekends");
     const entityType = propertyRef(props.modelValue.entityType, "EntityTypeId");

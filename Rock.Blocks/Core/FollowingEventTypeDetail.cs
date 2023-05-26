@@ -128,38 +128,20 @@ namespace Rock.Blocks.Core
                 return;
             }
 
-            var isViewable = entity.IsAuthorized( Authorization.VIEW, RequestContext.CurrentPerson );
             box.IsEditable = BlockCache.IsAuthorized( Authorization.EDIT, RequestContext.CurrentPerson )
                 && entity.IsAuthorized( Authorization.EDIT, RequestContext.CurrentPerson );
 
             entity.LoadAttributes( rockContext );
 
-            if ( entity.Id != 0 )
+            if( !box.IsEditable ) 
             {
-                // Existing entity was found, prepare for view mode by default.
-                if ( isViewable )
-                {
-                    box.Entity = GetEntityBagForView( entity );
-                    box.SecurityGrantToken = GetSecurityGrantToken( entity );
-                }
-                else
-                {
-                    box.ErrorMessage = EditModeMessage.NotAuthorizedToView( FollowingEventType.FriendlyTypeName );
-                }
+                box.Entity = GetEntityBagForView( entity );
             }
             else
             {
-                // New entity is being created, prepare for edit mode by default.
-                if ( box.IsEditable )
-                {
-                    box.Entity = GetEntityBagForEdit( entity );
-                    box.SecurityGrantToken = GetSecurityGrantToken( entity );
-                }
-                else
-                {
-                    box.ErrorMessage = EditModeMessage.NotAuthorizedToEdit( FollowingEventType.FriendlyTypeName );
-                }
+                box.Entity = GetEntityBagForEdit( entity );
             }
+            box.SecurityGrantToken = GetSecurityGrantToken( entity );
         }
 
         /// <summary>
@@ -387,7 +369,8 @@ namespace Rock.Blocks.Core
                 return false;
             }
 
-            if ( !entity.IsAuthorized( Authorization.EDIT, RequestContext.CurrentPerson ) )
+            if ( !(BlockCache.IsAuthorized( Authorization.EDIT, RequestContext.CurrentPerson )
+                && entity.IsAuthorized( Authorization.EDIT, RequestContext.CurrentPerson )) )
             {
                 error = ActionBadRequest( $"Not authorized to edit ${FollowingEventType.FriendlyTypeName}." );
                 return false;
@@ -466,17 +449,14 @@ namespace Rock.Blocks.Core
 
                 if ( isNew )
                 {
-                    return ActionContent( System.Net.HttpStatusCode.Created, this.GetCurrentPageUrl( new Dictionary<string, string>
-                    {
-                        [PageParameterKey.FollowingEventTypeId] = entity.IdKey
-                    } ) );
+                    return ActionContent( System.Net.HttpStatusCode.Created,this.GetParentPageUrl() );
                 }
 
                 // Ensure navigation properties will work now.
                 entity = entityService.Get( entity.Id );
                 entity.LoadAttributes( rockContext );
 
-                return ActionOk( GetEntityBagForView( entity ) );
+                return ActionOk( this.GetParentPageUrl() );
             }
         }
 
