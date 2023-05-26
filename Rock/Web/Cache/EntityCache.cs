@@ -375,7 +375,7 @@ namespace Rock.Web.Cache
                     .AsNoTracking()
                     .Where( a => idsBatch.Contains( a.Id ) );
 
-                var items = itemsQry.ToList();
+                List<IEntity> items = itemsQry.ToList();
 
                 // Pre-load all the attributes.
                 if ( typeof( IHasAttributes ).IsAssignableFrom( typeof( TT ) ) && typeof( T ) != typeof( AttributeCache ) )

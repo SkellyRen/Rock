@@ -24,6 +24,8 @@ using System.Collections.Generic;
 using Rock.Blocks.Types.Mobile.Connection;
 using Rock.Common.Mobile.Blocks.Reminders.ReminderDashboard;
 using Rock.Common.Mobile.Blocks.Reminders;
+using System;
+using Rock.Common.Mobile.Blocks.Reminders.ReminderList;
 
 namespace Rock.Blocks.Types.Mobile.Reminders
 {
@@ -107,7 +109,7 @@ namespace Rock.Blocks.Types.Mobile.Reminders
                     Guid = x.Key.Guid,
                     HighlightColor = x.Key.HighlightColor,
                     Name = x.Key.Name,
-                    EntityTypeName = x.Key.EntityType.FriendlyName
+                    EntityTypeName = x.Key.EntityType.FriendlyName,
                 } )
                 .ToList();
 
@@ -134,6 +136,11 @@ namespace Rock.Blocks.Types.Mobile.Reminders
                     CssClass = "reminders-due",
                     IconClass = "fa fa-bell",
                     TotalReminderCount = GetTotalRemindersForFilteredType( "due", rockContext ),
+                    Parameters = new Dictionary<string, string>
+                    {
+                        ["CompletionFilter"] = ReminderListFilterBag.CompletionFilterValue.Active.ToString(),
+                        ["DueFilter"] = ReminderListFilterBag.DueFilterValue.Due.ToString()
+                    },
                     Order = 1
                 },
 
@@ -146,6 +153,11 @@ namespace Rock.Blocks.Types.Mobile.Reminders
                     CssClass = "reminders-future",
                     IconClass = "fa fa-calendar",
                     TotalReminderCount = GetTotalRemindersForFilteredType( "future", rockContext ),
+                    Parameters = new Dictionary<string, string>
+                    {
+                        ["CompletionFilter"] = ReminderListFilterBag.CompletionFilterValue.Active.ToString(),
+                        ["StartDate"] = RockDateTime.Now.ToString()
+                    },
                     Order = 2
                 },
 
@@ -158,6 +170,11 @@ namespace Rock.Blocks.Types.Mobile.Reminders
                     CssClass = "reminders-all",
                     IconClass = "fa fa-inbox",
                     TotalReminderCount = GetTotalRemindersForFilteredType( "", rockContext ),
+                    Parameters = new Dictionary<string, string>
+                    {
+                        ["GroupByType"] = true.ToString(),
+                        ["CollectionHeader"] = "All"
+                    },
                     Order = 3
                 },
 
@@ -186,13 +203,13 @@ namespace Rock.Blocks.Types.Mobile.Reminders
         private int GetTotalRemindersForFilteredType( string filter, RockContext rockContext )
         {
             var reminders = new ReminderService( rockContext )
-                .GetReminders( RequestContext.CurrentPerson.Id, null, null, null )
-                .Where( r => r.ReminderType.IsActive );
+                .GetReminders( RequestContext.CurrentPerson.Id, null, null, null );
 
             // Get the reminders that are past due.
             if ( filter == "due" )
             {
-                reminders = reminders.Where( r => r.ReminderDate < RockDateTime.Now );
+                var currentDate = RockDateTime.Now;
+                reminders = reminders.Where( r => r.ReminderDate <= currentDate );
             }
             // Get the reminders that are upcoming.
             else if ( filter == "future" )
@@ -225,7 +242,7 @@ namespace Rock.Blocks.Types.Mobile.Reminders
                 return ActionUnauthorized();
             }
 
-            using( var rockContext = new RockContext() )
+            using ( var rockContext = new RockContext() )
             {
                 // Get the list of filtered reminder types and the count associated with them.
                 var filteredReminderOptions = GetFilteredReminderOptionBags( rockContext );

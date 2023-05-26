@@ -20,7 +20,9 @@ using System.Data.Entity;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+
 using Rock.Data;
+using Rock.Web.Cache;
 
 namespace Rock.Model
 {
@@ -51,6 +53,34 @@ namespace Rock.Model
             }
 
             return updatedReminderCount;
+        }
+
+        public IQueryable<Reminder> GetReminders( Guid personGuid, Guid? entityTypeGuid, Guid? entityGuid, Guid? reminderTypeGuid )
+        {
+            var rockContext = ( RockContext ) this.Context;
+
+            var personId = new PersonService( rockContext ).GetId( personGuid );
+
+            int? entityTypeId = null, entityId = null, reminderTypeId = null;
+
+            if( entityTypeGuid.HasValue )
+            {
+                entityTypeId = EntityTypeCache.GetId( entityTypeGuid.Value );
+
+                if( entityGuid.HasValue )
+                {
+                    // get the entity id?
+                    entityId = Reflection.GetEntityIdForEntityType( entityTypeGuid.Value, entityGuid.Value, rockContext );
+                }
+            }
+
+            
+            if( reminderTypeGuid.HasValue )
+            {
+                reminderTypeId = new ReminderTypeService( rockContext ).GetId( reminderTypeGuid.Value );
+            }
+
+            return this.GetReminders( personId.Value, entityTypeId, entityId, reminderTypeId );
         }
 
         /// <summary>
@@ -284,7 +314,7 @@ namespace Rock.Model
             {
                 var systemType = Rock.Web.Cache.EntityTypeCache.Get( entityTypeId ).GetEntityType();
                 var serviceInstance = Reflection.GetServiceForEntityType( systemType, rockContext );
-                var remindersByEntity = reminders.Where( r => r.ReminderType.EntityTypeId == entityTypeId);
+                var remindersByEntity = reminders.Where( r => r.ReminderType.EntityTypeId == entityTypeId );
                 var reminderEntityIds = remindersByEntity.Select( r => r.EntityId );
 
                 MethodInfo qryMethod = serviceInstance.GetType().GetMethod( "Queryable", new Type[] { } );
