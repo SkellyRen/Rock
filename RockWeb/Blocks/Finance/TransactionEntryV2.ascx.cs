@@ -1030,7 +1030,7 @@ mission. We are so grateful for your commitment.</p>
                 _hostedPaymentInfoControl = this.FinancialGatewayComponent.GetHostedPaymentInfoControl( this.FinancialGateway, $"_hostedPaymentInfoControl_{this.FinancialGateway.Id}", new HostedPaymentInfoControlOptions { EnableACH = enableACH, EnableCreditCard = enableCreditCard } );
                 phHostedPaymentControl.Controls.Add( _hostedPaymentInfoControl );
 
-                if ( GetAttributeValue( AttributeKey.DisableCaptchaSupport ).AsBoolean() )
+                if ( GetAttributeValue( AttributeKey.DisableCaptchaSupport ).AsBoolean() || cpCaptcha.SiteKey.IsNullOrWhiteSpace() )
                 {
                     hfHostPaymentInfoSubmitScript.Value = this.FinancialGatewayComponent.GetHostPaymentInfoSubmitScript( this.FinancialGateway, _hostedPaymentInfoControl );
                 }
@@ -1058,7 +1058,7 @@ mission. We are so grateful for your commitment.</p>
             tbCommentEntry.Visible = GetAttributeValue( AttributeKey.EnableCommentEntry ).AsBoolean();
 
             var disableCaptchaSupport = GetAttributeValue( AttributeKey.DisableCaptchaSupport ).AsBoolean();
-            cpCaptcha.Visible = !disableCaptchaSupport;
+            cpCaptcha.Visible = !disableCaptchaSupport && !cpCaptcha.SiteKey.IsNullOrWhiteSpace();
             cpCaptcha.TokenReceived += CpCaptcha_TokenReceived;
         }
 
@@ -3539,7 +3539,7 @@ mission. We are so grateful for your commitment.</p>
         protected void btnGiveNow_Click( object sender, EventArgs e )
         {
             var disableCaptchaSupport = GetAttributeValue( AttributeKey.DisableCaptchaSupport ).AsBoolean();
-            if ( !disableCaptchaSupport && cpCaptcha.Visible )
+            if ( !disableCaptchaSupport && hfHostPaymentInfoSubmitScript.Value.IsNullOrWhiteSpace() )
             {
                 nbPromptForAmountsWarning.Visible = true;
                 nbPromptForAmountsWarning.Text = "There was an issue processing your request. Please try again. If the issue persists please contact us.";
