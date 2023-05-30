@@ -56,10 +56,7 @@ export const EditComponent = defineComponent({
     },
 
     template: `
-    <CategoryPicker v-model="internalValue"
-        :entityTypeGuid="entityTypeGuid"
-        enhanceForLongLists="true"
-        showBlankItem="true"/>
+    <CategoryPicker v-model="internalValue" :entityTypeGuid="entityTypeGuid" enhanceForLongLists showBlankItem/>
 `
 });
 
@@ -152,7 +149,7 @@ export const ConfigurationComponent = defineComponent({
 
     template: `
 <div>
-    <EntityTypePicker label="Entity Type" v-model="entityType" :multiple="false" :includeGlobalOption="false" help="The type of entity to display categories for." />
+    <EntityTypePicker label="Entity Type" v-model="entityType" help="The type of entity to display categories for." />
     <TextBox v-model="qualifierColumn" label="Qualifier Column" help="Entity column qualifier."/>
     <TextBox v-model="qualifierValue" label="Qualifier Value" text="Yes" help="Entity column value." />
 </div>
