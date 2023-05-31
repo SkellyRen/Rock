@@ -137,7 +137,7 @@ import ComponentPicker from "@Obsidian/Controls/componentPicker";
 import Modal from "@Obsidian/Controls/modal";
 import EventItemPicker from "@Obsidian/Controls/eventItemPicker";
 import DataViewPicker from "@Obsidian/Controls/dataViewPicker";
-import WorkflowTypePicker from "@Obsidian/Controls/workflowTypePicker";
+import WorkflowTypePicker from "@Obsidian/Controls/workflowTypePicker.obs";
 import FinancialGatewayPicker from "@Obsidian/Controls/financialGatewayPicker";
 import FinancialStatementTemplatePicker from "@Obsidian/Controls/financialStatementTemplatePicker";
 import FieldTypePicker from "@Obsidian/Controls/fieldTypePicker";
@@ -3678,7 +3678,7 @@ const workflowTypePickerGallery = defineComponent({
             includeInactiveItems: ref(false),
             multiple: ref(false),
             value: ref(null),
-            importCode: getControlImportPath("workflowTypePicker"),
+            importCode: getSfcControlImportPath("workflowTypePicker"),
             exampleCode: `<WorkflowTypePicker label="Data View" v-model="value" />`
         };
     },
