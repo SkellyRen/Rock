@@ -76,6 +76,13 @@
     <Compile Include="Blocks\Group\Scheduling\GroupScheduler\GroupSchedulerSchedulesBag.cs" />
     <Compile Include="Blocks\Group\Scheduling\GroupScheduler\GroupSchedulerSendNowResponseBag.cs" />
     <Compile Include="Blocks\Group\Scheduling\GroupScheduler\GroupSchedulerUpdatePreferenceBag.cs" />
+    <Compile Include="Blocks\Reporting\ServiceMetricsEntry\ServiceMetricsEntryGetServiceMetricsResponseBag.cs" />
+    <Compile Include="Blocks\Reporting\ServiceMetricsEntry\ServiceMetricsEntryGetServiceMetricsRequestBag.cs" />
+    <Compile Include="Blocks\Reporting\ServiceMetricsEntry\ServiceMetricsEntryGetServiceTimesRequestBag.cs" />
+    <Compile Include="Blocks\Reporting\ServiceMetricsEntry\ServiceMetricsEntryGetWeekendDatesRequestBag.cs" />
+    <Compile Include="Blocks\Reporting\ServiceMetricsEntry\ServiceMetricsEntryInitializationBox.cs" />
+    <Compile Include="Blocks\Reporting\ServiceMetricsEntry\ServiceMetricBag.cs" />
+    <Compile Include="Blocks\Reporting\ServiceMetricsEntry\ServiceMetricsEntrySaveRequestBag.cs" />
     <Compile Include="Blocks\Security\AccountEntry\AccountEntryAccountInfoBag.cs" />
     <Compile Include="Blocks\Security\AccountEntry\AccountEntryCompletedStepBag.cs" />
     <Compile Include="Blocks\Security\AccountEntry\AccountEntryConfirmationSentStepBag.cs" />

@@ -1,0 +1,180 @@
+<template>
+    <div id="pnlSelection" v-if="currentSelectionStep.type !== SelectionStepType.Begin && currentSelectionStep.type !== SelectionStepType.End">
+        <h3 class="mt-0">Select {{ currentSelectionStep.type }}:</h3>
+        <RockButton v-for="option of currentSelectionStep.options" btnType="default" @click="onSelectionChanged(option.value)" class="btn-block">{{ option.text }}</RockButton>
+    </div>
+</template>
+
+<script setup lang="ts">
+    import { ComputedRef, PropType, UnwrapNestedRefs, computed, onMounted, ref } from "vue";
+    import { SelectionStepType, StepperController } from "./types.partial";
+    import RockButton from "@Obsidian/Controls/rockButton";
+    import { ServiceMetricsEntryGetWeekendDatesRequestBag } from "@Obsidian/ViewModels/Blocks/Reporting/ServiceMetricsEntry/serviceMetricsEntryGetWeekendDatesRequestBag";
+    import { ServiceMetricsEntryGetServiceTimesRequestBag } from "@Obsidian/ViewModels/Blocks/Reporting/ServiceMetricsEntry/serviceMetricsEntryGetServiceTimesRequestBag";
+    import { ListItemBag } from "@Obsidian/ViewModels/Utility/listItemBag";
+
+    const props = defineProps({
+        campusGuid: {
+            type: String as PropType<string | null | undefined>
+        },
+        weekOf: {
+            type: String as PropType<string | null | undefined>
+        },
+        scheduleGuid: {
+            type: String as PropType<string | null | undefined>
+        },
+        campuses: {
+            type: Object as PropType<ListItemBag[] | undefined>
+        },
+        weekendDates: {
+            type: Object as PropType<ListItemBag[] | undefined>
+        },
+        serviceTimes: {
+            type: Object as PropType<ListItemBag[] | undefined>
+        }
+    });
+
+    const emit = defineEmits<{
+        (e: "update:campusGuid", value: string | null | undefined): void;
+        (e: "update:weekOf", value: string | null | undefined): void;
+        (e: "update:scheduleGuid", value: string | null | undefined): void;
+        (e: "loadCampuses"): void;
+        (e: "loadWeekendDates", bag: ServiceMetricsEntryGetWeekendDatesRequestBag): void;
+        (e: "loadServiceTimes", bag: ServiceMetricsEntryGetServiceTimesRequestBag): void;
+        (e: "ready", value: StepperController): void;
+        (e: "complete"): void;
+    }>();
+
+    type SelectionStep = {
+        type: SelectionStepType;
+        options: ComputedRef<ListItemBag[]>;
+        setValue(value: string | null | undefined): void;
+        getNextStep(): UnwrapNestedRefs<SelectionStep>;
+        showStep(): Promise<void>;
+    };
+
+    const selectionStepBegin = ref<SelectionStep>({
+        type: SelectionStepType.Begin,
+        options: computed(() => []),
+        setValue: (_value: string | null | undefined): void => {
+            // Do nothing
+        },
+        getNextStep: () => selectionStepLocation.value,
+        showStep: () => {
+            // Show this step.
+            currentSelectionStep.value = selectionStepBegin.value;
+
+            // Return an empty promise.
+            return Promise.resolve();
+        }
+    });
+
+    const selectionStepLocation = ref<SelectionStep>({
+        type: SelectionStepType.Location,
+        options: computed(() => props.campuses ?? []),
+        setValue: (value: string | null | undefined): void => {
+            emit("update:campusGuid", value);
+        },
+        getNextStep: () => selectionStepWeekOf.value,
+        async showStep(): Promise<void> {
+            // Load the data for this step.
+            emit("loadCampuses");
+
+            // Show this step.
+            currentSelectionStep.value = selectionStepLocation.value;
+        }
+    });
+
+    const selectionStepWeekOf = ref<SelectionStep>({
+        type: SelectionStepType.WeekOf,
+        options: computed(() => props.weekendDates ?? []),
+        setValue: (value: string | null | undefined) => {
+            emit("update:weekOf", value);
+        },
+        getNextStep: () => selectionStepServiceTime.value,
+        async showStep(): Promise<void> {
+            // Load the data for this step.
+            emit("loadWeekendDates", {
+                weeksAhead: 1,
+                weeksBack: 0
+            });
+
+            // Show this step.
+            currentSelectionStep.value = selectionStepWeekOf.value;
+        }
+    });
+
+    const selectionStepServiceTime = ref<SelectionStep>({
+        type: SelectionStepType.ServiceTime,
+        options: computed(() => props.serviceTimes ?? []),
+        setValue: (value: string | null | undefined) => {
+            emit("update:scheduleGuid", value);
+        },
+        getNextStep: () => selectionStepEnd.value,
+        async showStep(): Promise<void> {
+            // Load the data for this step.
+            emit("loadServiceTimes", {
+                campusGuid: props.campusGuid
+            });
+
+            // Show this step.
+            currentSelectionStep.value = selectionStepServiceTime.value;
+        }
+    });
+
+    const selectionStepEnd = ref<SelectionStep>({
+        type: SelectionStepType.End,
+        options: computed(() => []),
+        setValue: (_value: string | null | undefined) => {
+            // Do nothing.
+        },
+        getNextStep: () => selectionStepEnd.value,
+        showStep: () => {
+            // Show this step.
+            currentSelectionStep.value = selectionStepEnd.value;
+
+            // Once this step is shown, emit the "complete" event.
+            emit("complete");
+
+            // Return an empty promise.
+            return Promise.resolve();
+        }
+    });
+
+    const currentSelectionStep = ref<UnwrapNestedRefs<SelectionStep>>(selectionStepBegin.value);
+
+    //#region Functions
+
+    async function start(): Promise<void> {
+        // Set to the beginning step then move next.
+        currentSelectionStep.value = selectionStepBegin.value;
+
+        await moveNext();
+    }
+
+    async function moveNext(): Promise<void> {
+        // Load the data for the next step and show it.
+        const nextStep = currentSelectionStep.value.getNextStep();
+        await nextStep.showStep();
+    }
+
+    //#endregion
+
+    //#region Events
+
+    async function onSelectionChanged(value: string | null | undefined): Promise<void> {
+        // Set the selected value for the step.
+        currentSelectionStep.value.setValue(value);
+
+        // Move to the next step.
+        await moveNext();
+    }
+
+    //#endregion
+
+    onMounted(() => {
+        emit("ready", {
+            start
+        });
+    });
+</script>
