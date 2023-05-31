@@ -38,6 +38,9 @@ registerFieldType(FieldTypeGuids.Campus, new CampusFieldType());
 import { CampusesFieldType } from "./campusesField.partial";
 registerFieldType(FieldTypeGuids.Campuses, new CampusesFieldType());
 
+import { CategoryFieldType } from "./categoryField.partial";
+registerFieldType(FieldTypeGuids.Category, new CategoryFieldType());
+
 import { CategorizedDefinedValueField } from "./categorizedDefinedValueField.partial";
 registerFieldType(FieldTypeGuids.DefinedValueCategorized, new CategorizedDefinedValueField());
 
@@ -82,6 +85,9 @@ registerFieldType(FieldTypeGuids.File, new FileFieldType());
 
 import { GenderFieldType } from "./genderField.partial";
 registerFieldType(FieldTypeGuids.Gender, new GenderFieldType());
+
+import { GroupAndRoleFieldType } from "./groupAndRoleField.partial";
+registerFieldType(FieldTypeGuids.GroupAndRole, new GroupAndRoleFieldType());
 
 import { GroupFieldType } from "./groupField.partial";
 registerFieldType(FieldTypeGuids.Group, new GroupFieldType());
