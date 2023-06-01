@@ -223,6 +223,12 @@ namespace Rock.Model
             return null;
         }
 
+        /// <summary>
+        /// Gets an entity by entity type guid and guid..
+        /// </summary>
+        /// <param name="entityTypeGuid">The entity type unique identifier.</param>
+        /// <param name="entityGuid">The entity unique identifier.</param>
+        /// <returns>IEntity.</returns>
         public IEntity GetEntity( Guid entityTypeGuid, Guid entityGuid )
         {
             var entityTypeId = EntityTypeCache.GetId( entityTypeGuid );

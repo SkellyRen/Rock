@@ -51,6 +51,12 @@ namespace Rock.Model
             return authorizedReminderTypes;
         }
 
+        /// <summary>
+        /// Gets the type of the reminder types for entity.
+        /// </summary>
+        /// <param name="entityTypeGuid">The entity type unique identifier.</param>
+        /// <param name="authorizedPerson">The authorized person.</param>
+        /// <returns>List&lt;ReminderType&gt;.</returns>
         public List<ReminderType> GetReminderTypesForEntityType( Guid entityTypeGuid, Person authorizedPerson )
         {
             var entityTypeId = EntityTypeCache.GetId( entityTypeGuid );
