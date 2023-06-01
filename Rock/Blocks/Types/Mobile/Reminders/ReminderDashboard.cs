@@ -24,7 +24,6 @@ using System.Collections.Generic;
 using Rock.Blocks.Types.Mobile.Connection;
 using Rock.Common.Mobile.Blocks.Reminders.ReminderDashboard;
 using Rock.Common.Mobile.Blocks.Reminders;
-using System;
 using Rock.Common.Mobile.Blocks.Reminders.ReminderList;
 
 namespace Rock.Blocks.Types.Mobile.Reminders
@@ -36,7 +35,7 @@ namespace Rock.Blocks.Types.Mobile.Reminders
     [DisplayName( "Reminder Dashboard" )]
     [Category( "Reminders" )]
     [Description( "Allows management of the current person's reminders." )]
-    [IconCssClass( "fa fa-user-check" )]
+    [IconCssClass( "fa fa-bell" )]
 
     #region Block Attributes
 
@@ -46,6 +45,35 @@ namespace Rock.Blocks.Types.Mobile.Reminders
         IsRequired = false,
         Key = AttributeKey.ReminderListPage,
         Order = 0 )]
+
+    [LinkedPage(
+        "Reminder Edit Page",
+        Description = "The page where a person can edit a reminder.",
+        Order = 1,
+        IsRequired = false,
+        Key = AttributeKey.ReminderEditPage )]
+
+    [ReminderTypesField(
+        "Reminder Types Include",
+        Description = "Select any specific reminder types to show in this block. Leave all unchecked to show all active reminder types ( except for excluded reminder types ).",
+        IsRequired = false,
+        Order = 2,
+        Key = AttributeKey.ReminderTypesInclude )]
+
+    [ReminderTypesField(
+        "Reminder Types Exclude",
+        Description = "Select group types to exclude from this block. Note that this setting is only effective if 'Reminder Types Include' has no specific group types selected.",
+        IsRequired = false,
+        Order = 3,
+        Key = AttributeKey.ReminderTypesExclude )]
+
+    [BooleanField(
+        "Enable Color Pair Calculation",
+        Description = "If enabled, the associated foreground and background color of the reminder type will undergo calculations to ensure readability. This is initially based on the 'HighlightColor' of the reminder type.",
+        DefaultBooleanValue = true,
+        IsRequired = false,
+        Order = 4,
+        Key = AttributeKey.EnableColorPairCalculation )]
 
     #endregion
 
@@ -60,7 +88,30 @@ namespace Rock.Blocks.Types.Mobile.Reminders
         /// </summary>
         private static class AttributeKey
         {
+            /// <summary>
+            /// The reminder list page attribute key.
+            /// </summary>
             public const string ReminderListPage = "ReminderListPage";
+
+            /// <summary>
+            /// The reminder types include attribute key.
+            /// </summary>
+            public const string ReminderTypesInclude = "ReminderTypesInclude";
+
+            /// <summary>
+            /// The reminder types exclude attribute key.
+            /// </summary>
+            public const string ReminderTypesExclude = "ReminderTypesExclude";
+
+            /// <summary>
+            /// The edit reminder page attribute key.
+            /// </summary>
+            public const string ReminderEditPage = "EditReminderPage";
+
+            /// <summary>
+            /// The enable color pair calculation attribute key.
+            /// </summary>
+            public const string EnableColorPairCalculation = "EnableColorPairCalculation";
         }
 
         #endregion
@@ -78,7 +129,9 @@ namespace Rock.Blocks.Types.Mobile.Reminders
         {
             return new Rock.Common.Mobile.Blocks.Reminders.ReminderDashboard.Configuration
             {
-                ListPageGuid = GetAttributeValue( AttributeKey.ReminderListPage ).AsGuidOrNull()
+                ListPageGuid = GetAttributeValue( AttributeKey.ReminderListPage ).AsGuidOrNull(),
+                EditPageGuid = GetAttributeValue( AttributeKey.ReminderEditPage ).AsGuidOrNull(),
+                EnableColorPairCalculation = GetAttributeValue( AttributeKey.EnableColorPairCalculation ).AsBoolean()
             };
         }
 
@@ -98,22 +151,40 @@ namespace Rock.Blocks.Types.Mobile.Reminders
                 return null;
             }
 
-            var personAliasId = RequestContext.CurrentPerson.PrimaryAliasId.Value;
-
             var reminderTypeService = new ReminderTypeService( rockContext );
 
-            var reminderTypeInfoBags = reminderTypeService.GetTypesAndRemindersAssignedToPerson( personAliasId )
-                .Select( x => new ReminderTypeInfoBag
-                {
-                    TotalReminderCount = x.Count(),
-                    Guid = x.Key.Guid,
-                    HighlightColor = x.Key.HighlightColor,
-                    Name = x.Key.Name,
-                    EntityTypeName = x.Key.EntityType.FriendlyName,
-                } )
-                .ToList();
+            //
+            // Get the specific reminder type information (and the count of total reminders).
+            //
+            var personAliasId = RequestContext.CurrentPerson.PrimaryAliasId.Value;
 
-            return reminderTypeInfoBags;
+            var reminderTypesAndRemindersGrouping = reminderTypeService.GetTypesAndRemindersAssignedToPerson( personAliasId );
+
+            // If this block was specified to only include certain reminder types, limit to those.
+            var reminderTypeIncludeGuids = GetAttributeValue( AttributeKey.ReminderTypesInclude ).SplitDelimitedValues().AsGuidList();
+            if ( reminderTypeIncludeGuids.Any() )
+            {
+                reminderTypesAndRemindersGrouping = reminderTypesAndRemindersGrouping.Where( r => reminderTypeIncludeGuids.Contains( r.Key.Guid ) );
+            }
+
+            // If this block was specified to exclude certain reminder types, exclude those.
+            var reminderTypeExcludeGuids = GetAttributeValue( AttributeKey.ReminderTypesExclude ).SplitDelimitedValues().AsGuidList();
+            if ( reminderTypeExcludeGuids.Any() )
+            {
+                reminderTypesAndRemindersGrouping = reminderTypesAndRemindersGrouping.Where( r => !reminderTypeExcludeGuids.Contains( r.Key.Guid ) );
+            }
+
+            // Convert into bags.
+            var reminderTypeBags = reminderTypesAndRemindersGrouping.Select( group => new ReminderTypeInfoBag
+            {
+                TotalReminderCount = group.Count(), // The count of total reminders in the group.
+                Guid = group.Key.Guid,
+                HighlightColor = group.Key.HighlightColor,
+                Name = group.Key.Name,
+                EntityTypeName = group.Key.EntityType.FriendlyName,
+            } ).ToList();
+
+            return reminderTypeBags;
         }
 
         /// <summary>
@@ -125,6 +196,9 @@ namespace Rock.Blocks.Types.Mobile.Reminders
         /// <returns></returns>
         private List<FilteredReminderOptionBag> GetFilteredReminderOptionBags( RockContext rockContext )
         {
+            var reminders = new ReminderService( rockContext )
+                .GetReminders( RequestContext.CurrentPerson.Id, null, null, null );
+
             var filteredReminderOptionBag = new List<FilteredReminderOptionBag>
             {
                 //
@@ -135,11 +209,11 @@ namespace Rock.Blocks.Types.Mobile.Reminders
                     Name = "Due",
                     CssClass = "reminders-due",
                     IconClass = "fa fa-bell",
-                    TotalReminderCount = GetTotalRemindersForFilteredType( "due", rockContext ),
+                    TotalReminderCount = GetTotalRemindersForFilteredType( "due", reminders ),
                     Parameters = new Dictionary<string, string>
                     {
-                        ["CompletionFilter"] = ReminderListFilterBag.CompletionFilterValue.Active.ToString(),
-                        ["DueFilter"] = ReminderListFilterBag.DueFilterValue.Due.ToString()
+                        ["CompletionFilter"] = FilterBag.CompletionFilterValue.Active.ToString(),
+                        ["DueFilter"] = FilterBag.DueFilterValue.Due.ToString()
                     },
                     Order = 1
                 },
@@ -152,11 +226,11 @@ namespace Rock.Blocks.Types.Mobile.Reminders
                     Name = "Future",
                     CssClass = "reminders-future",
                     IconClass = "fa fa-calendar",
-                    TotalReminderCount = GetTotalRemindersForFilteredType( "future", rockContext ),
+                    TotalReminderCount = GetTotalRemindersForFilteredType( "future", reminders ),
                     Parameters = new Dictionary<string, string>
                     {
-                        ["CompletionFilter"] = ReminderListFilterBag.CompletionFilterValue.Active.ToString(),
-                        ["StartDate"] = RockDateTime.Now.ToString()
+                        ["CompletionFilter"] = FilterBag.CompletionFilterValue.Incomplete.ToString(),
+                        ["StartDateFilter"] = RockDateTime.Now.ToString()
                     },
                     Order = 2
                 },
@@ -169,7 +243,7 @@ namespace Rock.Blocks.Types.Mobile.Reminders
                     Name = "All",
                     CssClass = "reminders-all",
                     IconClass = "fa fa-inbox",
-                    TotalReminderCount = GetTotalRemindersForFilteredType( "", rockContext ),
+                    TotalReminderCount = GetTotalRemindersForFilteredType( "", reminders ),
                     Parameters = new Dictionary<string, string>
                     {
                         ["GroupByType"] = true.ToString(),
@@ -186,7 +260,11 @@ namespace Rock.Blocks.Types.Mobile.Reminders
                     Name = "Completed",
                     CssClass = "reminders-completed",
                     IconClass = "fa fa-check",
-                    TotalReminderCount = GetTotalRemindersForFilteredType( "completed", rockContext ),
+                    TotalReminderCount = GetTotalRemindersForFilteredType( "completed", reminders ),
+                    Parameters = new Dictionary<string, string>
+                    {
+                        ["CompletionFilter"] = FilterBag.CompletionFilterValue.Complete.ToString(),
+                    },
                     Order = 4
                 }
             };
@@ -198,13 +276,10 @@ namespace Rock.Blocks.Types.Mobile.Reminders
         /// Gets the total number of reminders depending on the filter passed in.
         /// </summary>
         /// <param name="filter"></param>
-        /// <param name="rockContext"></param>
+        /// <param name="reminders"></param>
         /// <returns>The # of reminders.</returns>
-        private int GetTotalRemindersForFilteredType( string filter, RockContext rockContext )
+        private int GetTotalRemindersForFilteredType( string filter, IQueryable<Reminder> reminders )
         {
-            var reminders = new ReminderService( rockContext )
-                .GetReminders( RequestContext.CurrentPerson.Id, null, null, null );
-
             // Get the reminders that are past due.
             if ( filter == "due" )
             {
@@ -214,7 +289,7 @@ namespace Rock.Blocks.Types.Mobile.Reminders
             // Get the reminders that are upcoming.
             else if ( filter == "future" )
             {
-                reminders = reminders.Where( r => r.ReminderDate > RockDateTime.Now );
+                reminders = reminders.Where( r => r.ReminderDate > RockDateTime.Now && !r.IsComplete );
             }
             // Get the reminders that are completed.
             else if ( filter == "completed" )
@@ -259,6 +334,5 @@ namespace Rock.Blocks.Types.Mobile.Reminders
         }
 
         #endregion
-
     }
 }

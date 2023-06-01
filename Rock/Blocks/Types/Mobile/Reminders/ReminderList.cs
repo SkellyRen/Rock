@@ -1,6 +1,5 @@
-﻿using Nest;
-
-using Rock.Attribute;
+﻿using Rock.Attribute;
+using Rock.Common.Mobile.Blocks.Reminders;
 using Rock.Common.Mobile.Blocks.Reminders.ReminderList;
 using Rock.Data;
 using Rock.Mobile;
@@ -21,7 +20,36 @@ namespace Rock.Blocks.Types.Mobile.Reminders
     [DisplayName( "Reminder List" )]
     [Category( "Reminders" )]
     [Description( "Allows management of the current person's reminders." )]
-    [IconCssClass( "fa fa-user-check" )]
+    [IconCssClass( "fa fa-list-alt" )]
+
+    [LinkedPage(
+        "Reminder Edit Page",
+        Description = "The page where a person can edit a reminder.",
+        IsRequired = false,
+        Order = 0,
+        Key = AttributeKey.ReminderEditPage )]
+
+    [ReminderTypesField(
+        "Reminder Types Include",
+        Description = "Select any specific reminder types to show in this block. Leave all unchecked to show all active reminder types ( except for excluded reminder types ).",
+        IsRequired = false,
+        Order = 1,
+        Key = AttributeKey.ReminderTypesInclude )]
+
+    [ReminderTypesField(
+        "Reminder Types Exclude",
+        Description = "Select group types to exclude from this block. Note that this setting is only effective if 'Reminder Types Include' has no specific group types selected.",
+        IsRequired = false,
+        Order = 2,
+        Key = AttributeKey.ReminderTypesExclude )]
+
+    [IntegerField(
+        "Completion Display Delay",
+        Description = "The amount of time after a reminder is marked complete to delay before removing it from the UI (in MS).",
+        IsRequired = false,
+        Order = 3,
+        Key = AttributeKey.CompletionDisplayDelay,
+        DefaultIntegerValue = 5000 )]
 
     [Rock.SystemGuid.EntityTypeGuid( Rock.SystemGuid.EntityType.MOBILE_REMINDERS_REMINDER_LIST )]
     [Rock.SystemGuid.BlockTypeGuid( Rock.SystemGuid.BlockType.MOBILE_REMINDERS_REMINDER_LIST )]
@@ -35,83 +63,227 @@ namespace Rock.Blocks.Types.Mobile.Reminders
         /// <inheritdoc />
         public override string MobileBlockType => "Rock.Mobile.Blocks.Reminders.ReminderList";
 
+        /// <inheritdoc />
+        public override object GetMobileConfigurationValues()
+        {
+            return new Rock.Common.Mobile.Blocks.Reminders.ReminderList.Configuration
+            {
+                EditPageGuid = GetAttributeValue( AttributeKey.ReminderEditPage ).AsGuidOrNull(),
+                CompletionDisplayDelay = GetAttributeValue( AttributeKey.CompletionDisplayDelay ).AsIntegerOrNull(),
+            };
+        }
+
         #endregion
 
-        private List<ReminderInfoBag> GetReminderBags( Guid personGuid, Guid? entityTypeGuid, Guid? entityGuid, Guid? reminderTypeGuid, int startIndex, int count, ReminderListFilterBag filter = null )
+        /// <summary>
+        /// Keys for Block Attributes.
+        /// </summary>
+        private static class AttributeKey
+        {
+            /// <summary>
+            /// The Edit Reminder Page.
+            /// </summary>
+            public const string ReminderEditPage = "ReminderEditPage";
+
+            /// <summary>
+            /// The Reminder Types to Include.
+            /// </summary>
+            public const string ReminderTypesInclude = "ReminderTypesInclude";
+
+            /// <summary>
+            /// The Reminder Types to Exclude.
+            /// </summary>
+            public const string ReminderTypesExclude = "ReminderTypesExclude";
+
+            /// <summary>
+            /// The completion display delay attribute key.
+            /// </summary>
+            public const string CompletionDisplayDelay = "CompletionDisplayDelay";
+        }
+
+        /// <summary>
+        /// Gets a number of reminder bags based on the start index and count.
+        /// </summary>
+        /// <param name="personGuid">The person unique identifier.</param>
+        /// <param name="entityTypeGuid">The entity type unique identifier.</param>
+        /// <param name="entityGuid">The entity unique identifier.</param>
+        /// <param name="reminderTypeGuid">The reminder type unique identifier.</param>
+        /// <param name="startIndex">The start index.</param>
+        /// <param name="count">The count.</param>
+        /// <param name="excludedReminderTypes"></param>
+        /// <param name="filter">The filter.</param>
+        /// <returns>List&lt;ReminderInfoBag&gt;.</returns>
+        private List<ReminderInfoBag> GetReminderBags( Guid personGuid, Guid? entityTypeGuid, Guid? entityGuid, Guid? reminderTypeGuid, int startIndex, int count, List<Guid> excludedReminderTypes, FilterBag filter = null )
         {
             using ( var rockContext = new RockContext() )
             {
                 var reminderService = new ReminderService( rockContext );
                 var personService = new PersonService( rockContext );
-
                 var reminders = reminderService.GetReminders( personGuid, entityTypeGuid, entityGuid, reminderTypeGuid );
 
-                reminders = FilterReminders( filter, reminders );
+                // If this block was specified to only include certain reminder types, limit to those.
+                var reminderTypeIncludeGuids = GetAttributeValue( AttributeKey.ReminderTypesInclude ).SplitDelimitedValues().AsGuidList();
+                if ( reminderTypeIncludeGuids.Any() )
+                {
+                    reminders = reminders.Where( r => reminderTypeIncludeGuids.Contains( r.ReminderType.Guid ) );
+                }
 
-                var reminderBags = reminders.Select( r => new ReminderInfoBag
+                // If this block was specified to exclude certain reminder types, exclude those.
+                var reminderTypeExcludeGuids = GetAttributeValue( AttributeKey.ReminderTypesExclude ).SplitDelimitedValues().AsGuidList();
+                reminderTypeExcludeGuids.AddRange( excludedReminderTypes );
+
+                if ( reminderTypeExcludeGuids.Any() )
+                {
+                    reminders = reminders.Where( r => !reminderTypeExcludeGuids.Contains( r.ReminderType.Guid ) );
+                }
+
+                // Filter our reminders based on the Filter Bag provided.
+                var filteredReminders = FilterRemindersFromFilterBagValues( filter, reminders )
+                    .ToList();
+
+                // Convert reminders into reminder bags.
+                var reminderBags = filteredReminders.Select( r => new ReminderInfoBag
                 {
                     Guid = r.Guid,
                     Note = r.Note,
                     ReminderTypeName = r.ReminderType.Name,
                     ReminderTypeGuid = r.ReminderType.Guid,
                     ReminderDate = r.ReminderDate,
-                    EntityId = r.EntityId,
-                    EntityTypeId = r.ReminderType.EntityTypeId,
-                    EntityTypeName = r.ReminderType.EntityType.Name,
+                    EntityTypeName = r.ReminderType.EntityType.FriendlyName,
+                    IsComplete = r.IsComplete,
+                    EntityTypeGuid = EntityTypeCache.GetGuid( r.ReminderType.EntityTypeId ).Value,
+                    EntityGuid = Reflection.GetEntityGuidForEntityType( r.ReminderType.EntityType.Id, r.EntityId.ToStringSafe(), true, rockContext ).Value
                 } )
-                    .OrderByDescending( r => r.EntityId )
-                    .Skip( startIndex )
-                    .Take( count )
-                    .ToList();
 
-                reminderBags.ForEach( ( bag ) => bag.PopulateAdditionalInformation( personService ) );
+                // We do this so we can support querying sequential data.
+                .Skip( startIndex )
+                .Take( count )
+                .ToList();
+
+                // We need some more data post query (such as a specific photo url generated based on the entity)
+                // so let's loop over our bags and populate those properties.
+                reminderBags.ForEach( ( bag ) => PopulateAdditionalPropertiesForReminderInfoBag( bag, personService ) );
 
                 return reminderBags;
             }
         }
 
-        private IQueryable<Reminder> FilterReminders( ReminderListFilterBag filter, IQueryable<Reminder> reminders )
+        /// <summary>
+        /// Populates the additional properties for reminder information bag.
+        /// </summary>
+        /// <param name="bag">The bag.</param>
+        /// <param name="personService">The person service.</param>
+        private void PopulateAdditionalPropertiesForReminderInfoBag( ReminderInfoBag bag, PersonService personService )
+        {
+            var entityType = EntityTypeCache.Get( bag.EntityTypeGuid );
+
+            string name = "", path;
+
+            // If this is a Person, use the Person properties.
+            if ( entityType != null && entityType.Guid == Rock.SystemGuid.EntityType.PERSON.AsGuid() )
+            {
+                var person = personService.Get( bag.EntityGuid );
+                path = person.PhotoUrl;
+                name = person.FullName;
+            }
+            // Otherwise, use the first letter of the entity type.
+            else
+            {
+                path = $"/GetAvatar.ashx?text={bag.EntityTypeName.SubstringSafe( 0, 1 )}";
+
+                if ( bag.EntityGuid != null )
+                {
+                    name = Reflection.GetIEntityForEntityType( entityType.GetEntityType(), bag.EntityGuid ).ToStringSafe();
+                }
+            }
+
+            bag.PhotoUrl = MobileHelper.BuildPublicApplicationRootUrl( path );
+            bag.Name = name;
+        }
+
+        /// <summary>
+        /// Filters the reminders from the filter bag values.
+        /// </summary>
+        /// <param name="filter">The filter.</param>
+        /// <param name="reminders">The reminders.</param>
+        /// <returns>IQueryable&lt;Reminder&gt;.</returns>
+        private IQueryable<Reminder> FilterRemindersFromFilterBagValues( FilterBag filter, IQueryable<Reminder> reminders )
         {
             if ( filter == null )
             {
                 return reminders;
             }
 
-            if ( filter.CompletionFilter != ReminderListFilterBag.CompletionFilterValue.None )
+            //
+            // The 'Completion' Filter.
+            // 
+            if ( filter.CompletionFilter != FilterBag.CompletionFilterValue.None )
             {
-                if ( filter.CompletionFilter == ReminderListFilterBag.CompletionFilterValue.Active )
+                // Filter by active reminders.
+                if ( filter.CompletionFilter == FilterBag.CompletionFilterValue.Active )
                 {
-                    reminders = reminders.Where( r => !r.IsComplete );
+                    reminders = reminders.Where( r => !r.IsComplete && r.ReminderDate <= RockDateTime.Now );
                 }
-
-                else if ( filter.CompletionFilter == ReminderListFilterBag.CompletionFilterValue.Complete )
+                // Filter by complete reminders.
+                else if ( filter.CompletionFilter == FilterBag.CompletionFilterValue.Complete )
                 {
                     reminders = reminders.Where( r => r.IsComplete );
                 }
+                else if( filter.CompletionFilter == FilterBag.CompletionFilterValue.Incomplete )
+                {
+                    reminders = reminders.Where( r => !r.IsComplete );
+                }
             }
 
-            if ( filter.DueFilter != ReminderListFilterBag.DueFilterValue.None )
+            //
+            // The 'Due' Filter.
+            //
+            if ( filter.DueFilter != FilterBag.DueFilterValue.None )
             {
-                if ( filter.DueFilter == ReminderListFilterBag.DueFilterValue.DueThisMonth )
+                // Reminders that are due this month.
+                if ( filter.DueFilter == FilterBag.DueFilterValue.DueThisMonth )
                 {
                     var startOfMonth = RockDateTime.Now.StartOfMonth();
                     var nextMonthDate = RockDateTime.Now.AddMonths( 1 );
                     var nextMonthStartDate = new DateTime( nextMonthDate.Year, nextMonthDate.Month, 1 );
                     reminders = reminders.Where( r => r.ReminderDate >= startOfMonth && r.ReminderDate < nextMonthStartDate );
                 }
-                else if ( filter.DueFilter == ReminderListFilterBag.DueFilterValue.DueThisWeek )
+                // Reminders that are due this week.
+                else if ( filter.DueFilter == FilterBag.DueFilterValue.DueThisWeek )
                 {
                     var nextWeekStartDate = RockDateTime.Now.EndOfWeek( RockDateTime.FirstDayOfWeek ).AddDays( 1 );
                     var startOfWeek = nextWeekStartDate.AddDays( -7 );
                     reminders = reminders.Where( r => r.ReminderDate >= startOfWeek && r.ReminderDate < nextWeekStartDate );
                 }
-                else if ( filter.DueFilter == ReminderListFilterBag.DueFilterValue.Due )
+                // Reminders that are past due.
+                else if ( filter.DueFilter == FilterBag.DueFilterValue.Due )
                 {
                     var currentDate = RockDateTime.Now;
                     reminders = reminders.Where( r => r.ReminderDate <= currentDate );
                 }
             }
 
+            //
+            // The 'Start Date' filter.
+            //
+            if ( filter.StartDate.HasValue )
+            {
+                var startDate = filter.StartDate.Value.DateTime;
+                reminders = reminders.Where( r => r.ReminderDate >= startDate );
+            }
+
+            //
+            // The 'End Date' filter.
+            //
+            if ( filter.EndDate.HasValue )
+            {
+                var endDate = filter.EndDate.Value.DateTime;
+                reminders = reminders.Where( r => r.ReminderDate < endDate );
+            }
+
+            //
+            // The 'Reminder Type' filter.
+            //
             if ( filter.ReminderType.HasValue )
             {
                 var reminderTypeId = new ReminderTypeService( new RockContext() ).GetId( filter.ReminderType.Value );
@@ -123,60 +295,53 @@ namespace Rock.Blocks.Types.Mobile.Reminders
 
         #region Block Actions
 
+        /// <summary>
+        /// Gets the reminders.
+        /// </summary>
+        /// <param name="requestBag"></param>
+        /// <returns>BlockActionResult.</returns>
         [BlockAction]
-        public BlockActionResult GetReminders( Guid personGuid, Guid? entityTypeGuid, Guid? entityGuid, Guid? reminderTypeGuid, int startIndex, int count, ReminderListFilterBag filter )
+        public BlockActionResult GetReminders( RequestBag requestBag )
         {
-            var reminders = GetReminderBags( personGuid, entityTypeGuid, entityGuid, reminderTypeGuid, startIndex, count, filter );
+            var reminders = GetReminderBags( requestBag.PersonGuid, requestBag.EntityTypeGuid, requestBag.EntityGuid, requestBag.ReminderTypeGuid, requestBag.StartIndex, requestBag.Count, requestBag.ExcludedReminderTypes, requestBag.Filter );
 
             return ActionOk( reminders );
         }
 
-        #endregion
-
-        public class ReminderListBag
-        {
-            public bool HasMore { get; set; }
-            public List<ReminderInfoBag> Reminders { get; set; }
-        }
-
         /// <summary>
-        /// Contains information about a reminder.
+        /// Sets the reminder as complete or incomplete based on the parameters provided.
         /// </summary>
-        public class ReminderInfoBag
+        /// <param name="reminderGuid">The reminder unique identifier.</param>
+        /// <param name="complete">if set to <c>true</c> [complete].</param>
+        /// <returns>BlockActionResult.</returns>
+        [BlockAction]
+        public BlockActionResult SetReminderCompletion( Guid reminderGuid, bool complete )
         {
-            public Guid Guid { get; set; }
-            public string EntityTypeName { get; set; }
-            public string ReminderTypeName { get; set; }
-            public Guid ReminderTypeGuid { get; set; }
-            public DateTimeOffset ReminderDate { get; set; }
-            public string Note { get; set; }
-            public int EntityTypeId { get; set; }
-            public int EntityId { get; set; }
-            public string PhotoUrl { get; private set; }
-            public string Name { get; set; }
-
-            public void PopulateAdditionalInformation( PersonService personService )
+            using ( var rockContext = new RockContext() )
             {
-                var entityType = EntityTypeCache.Get( EntityTypeId );
+                var reminderService = new ReminderService( rockContext );
+                var reminder = reminderService.Get( reminderGuid );
 
-                string path;
-                if ( entityType != null && entityType.Guid == Rock.SystemGuid.EntityType.PERSON.AsGuid() )
+                if ( reminder == null )
                 {
-                    path = personService.Get( EntityId ).PhotoUrl;
-                }
-                else
-                {
-                    path = $"/GetAvatar.ashx?text={EntityTypeName.SubstringSafe( 0, 1 )}";
+                    return ActionNotFound();
                 }
 
-                PhotoUrl = MobileHelper.BuildPublicApplicationRootUrl( path );
-
-                if ( entityType != null && EntityId != 0 )
+                if ( !reminder.IsComplete && complete )
                 {
-                    var entityDescription = Reflection.GetIEntityForEntityType( entityType.GetEntityType(), EntityId ).ToStringSafe();
-                    Name = entityDescription;
+                    reminder.CompleteReminder();
                 }
+                else if ( reminder.IsComplete && !complete )
+                {
+                    reminder.ResetCompletedReminder();
+                }
+
+                rockContext.SaveChanges();
             }
+
+            return ActionOk();
         }
+
+        #endregion
     }
 }

@@ -14,12 +14,14 @@
 // limitations under the License.
 // </copyright>
 //
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Dynamic.Core;
 
 using Rock.Attribute;
 using Rock.Data;
+using Rock.Web.Cache;
 
 namespace Rock.Model
 {
@@ -47,6 +49,18 @@ namespace Rock.Model
                 .ToList();
 
             return authorizedReminderTypes;
+        }
+
+        public List<ReminderType> GetReminderTypesForEntityType( Guid entityTypeGuid, Person authorizedPerson )
+        {
+            var entityTypeId = EntityTypeCache.GetId( entityTypeGuid );
+
+            if( entityTypeId == null )
+            {
+                return null;
+            }
+
+            return GetReminderTypesForEntityType( entityTypeId.Value, authorizedPerson );
         }
 
         /// <summary>

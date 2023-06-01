@@ -223,6 +223,19 @@ namespace Rock.Model
             return null;
         }
 
+        public IEntity GetEntity( Guid entityTypeGuid, Guid entityGuid )
+        {
+            var entityTypeId = EntityTypeCache.GetId( entityTypeGuid );
+            var entityId = Reflection.GetEntityIdForEntityType( entityTypeGuid, entityGuid );
+
+            if(  entityTypeId == null || entityId == null )
+            {
+                return null;
+            }
+
+            return GetEntity( entityTypeId.Value, entityId.Value );
+        }
+
         /// <summary>
         /// Gets an Entity by type and entity Id, without loading the entity into EF ChangeTracking
         /// </summary>
