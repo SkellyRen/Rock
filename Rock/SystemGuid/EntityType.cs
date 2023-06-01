@@ -566,6 +566,11 @@ namespace Rock.SystemGuid
         public const string MOBILE_REMINDERS_REMINDER_DASHBOARD = "AD29BE7E-00B2-4AE3-8DA4-756C348E7AFA";
 
         /// <summary>
+        /// The GUID for the entity <see cref="Rock.Blocks.Types.Mobile.Crm.PersonProfile"/>.
+        /// </summary>
+        public const string MOBILE_CRM_PERSON_PROFILE = "A1EEA3BD-7B40-47A9-82D4-7187290C917C";
+
+        /// <summary>
         /// The GUID for the entity <see cref="Rock.Blocks.Types.Mobile.Reminders.ReminderEdit"/>.
         /// </summary>
         public const string MOBILE_REMINDERS_REMINDER_EDIT = "A07DA3CE-4598-4177-AD47-B0D1EBFB1E7A";

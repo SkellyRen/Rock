@@ -359,6 +359,11 @@ namespace Rock.SystemGuid
         /// </summary>
         public const string MOBILE_REMINDERS_REMINDER_EDIT = "BA26C29E-660C-470D-9FEA-5830DB15E935";
 
+        /// <summary>
+        /// The GUID for the entity <see cref="Rock.Blocks.Types.Mobile.Crm.PersonProfile"/>.
+        /// </summary>
+        public const string MOBILE_CRM_PERSON_PROFILE = "F97E2359-BB2D-4534-821D-870F853CA5CC";
+
         #endregion
 
         #region Obsidian Block Types

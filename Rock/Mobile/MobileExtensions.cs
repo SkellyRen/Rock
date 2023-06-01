@@ -92,6 +92,33 @@ namespace Rock.Mobile
         }
 
         #endregion
+
+        #region Communication Type
+
+        /// <summary>
+        /// Converts the communication type enum to mobile.
+        /// </summary>
+        /// <param name="communicationType">Type of the communication.</param>
+        /// <returns>Rock.Common.Mobile.Enums.CommunicationType.</returns>
+        public static Rock.Common.Mobile.Enums.CommunicationType ToMobile( this Rock.Model.CommunicationType communicationType )
+        {
+            switch ( communicationType )
+            {
+                case Model.CommunicationType.PushNotification:
+                    return CommunicationType.PushNotification;
+
+                case Model.CommunicationType.SMS:
+                    return CommunicationType.Sms;
+
+                case Model.CommunicationType.Email:
+                    return CommunicationType.Email;
+
+                default:
+                    return CommunicationType.RecipientPreference;
+            }
+        }
+
+        #endregion
     }
 
     /// <summary>
