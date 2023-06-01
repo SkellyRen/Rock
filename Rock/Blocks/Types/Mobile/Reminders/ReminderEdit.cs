@@ -24,7 +24,6 @@ using System.ComponentModel;
 using Rock.Common.Mobile.Blocks.Reminders;
 using Rock.Common.Mobile.Blocks.Reminders.ReminderEdit;
 using Rock.Web.Cache;
-using Rock.Mobile;
 using Rock.Common.Mobile.ViewModel;
 
 namespace Rock.Blocks.Types.Mobile.Reminders
@@ -44,6 +43,7 @@ namespace Rock.Blocks.Types.Mobile.Reminders
         IsRequired = false,
         EditorMode = Rock.Web.UI.Controls.CodeEditorMode.Xml,
         Key = AttributeKey.HeaderTemplate,
+        DefaultValue = _defaultHeaderXaml,
         Order = 0 )]
 
     [MobileNavigationActionField( "Save Navigation Action",
@@ -76,6 +76,85 @@ namespace Rock.Blocks.Types.Mobile.Reminders
             /// </summary>
             public const string SaveNavigationAction = "SaveNavigationAction";
         }
+
+        #endregion
+
+        #region Constants
+
+        /// <summary>
+        /// The default header XAML.
+        /// </summary>
+        private const string _defaultHeaderXaml = @"<StackLayout>
+    <StackLayout.Resources>
+        <Rock:AllTrueMultiValueConverter x:Key=""AllTrueConverter"" /> 
+    </StackLayout.Resources>
+
+    <!-- If this is a person entity and no entity is selected -->
+    <Grid RowDefinitions=""*""
+        ColumnDefinitions=""64, *"">
+        <Grid.IsVisible>
+            <MultiBinding Converter=""{StaticResource AllTrueConverter}"">
+                <Binding Path=""Reminder.IsPersonEntityType"" />
+                <Binding Path=""Reminder.IsEntitySelected""
+                    Converter=""{Rock:InverseBooleanConverter}"" />
+            </MultiBinding>
+        </Grid.IsVisible>
+
+        <!-- The add icon -->
+        <Frame WidthRequest=""64""
+            HeightRequest=""64""
+            CornerRadius=""32""
+            HasShadow=""false""
+            StyleClass=""bg-light, p-0""
+            Grid.Column=""0"">
+            <Rock:Icon IconClass=""fa-plus""
+                IconFamily=""FontAwesomeSolid""
+                FontSize=""24""
+                VerticalTextAlignment=""Center""
+                HorizontalTextAlignment=""Center"" />
+        </Frame>
+
+        <!-- Our select individual label -->
+        <Label Text=""Select Individual""
+            Grid.Column=""1""
+            VerticalOptions=""Center""
+            StyleClass=""title"" />
+
+        <Grid.GestureRecognizers>
+            <TapGestureRecognizer Command=""{Binding ShowPersonSearch}"" />
+        </Grid.GestureRecognizers>
+    </Grid>
+
+    <!-- If an entity is selected -->
+    <Grid RowDefinitions=""*""
+        ColumnDefinitions=""64, *""
+        IsVisible=""{Binding Reminder.IsEntitySelected}"">
+
+        <!-- The bell icon -->
+        <Frame WidthRequest=""64""
+            HeightRequest=""64""
+            CornerRadius=""32""
+            HasShadow=""false""
+            StyleClass=""bg-light, p-0""
+            Grid.Column=""0"">
+            <Rock:Icon IconClass=""fa-bell""
+                IconFamily=""FontAwesomeSolid""
+                FontSize=""24""
+                VerticalTextAlignment=""Center""
+                HorizontalTextAlignment=""Center"" />
+        </Frame>
+
+        <!-- The person information -->
+        <StackLayout Grid.Column=""1"" 
+            Spacing=""0""
+            VerticalOptions=""Center"">
+            <Label Text=""New Reminder""
+                StyleClass=""text-gray-600, text-sm"" />
+            <Label Text=""{Binding Reminder.Name}""
+                StyleClass=""title"" />
+        </StackLayout>
+    </Grid>
+</StackLayout>";
 
         #endregion
 

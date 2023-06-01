@@ -141,6 +141,13 @@ namespace Rock.Blocks.Types.Mobile.Reminders
                 var filteredReminders = FilterRemindersFromFilterBagValues( filter, reminders )
                     .ToList();
 
+                // Order by modified date time if we're limiting to complete reminders.
+                if( filter.CompletionFilter == FilterBag.CompletionFilterValue.Complete )
+                {
+                    filteredReminders = filteredReminders.OrderByDescending( r => r.ModifiedDateTime )
+                        .ToList();
+                }
+
                 // Convert reminders into reminder bags.
                 var reminderBags = filteredReminders.Select( r => new ReminderInfoBag
                 {
@@ -216,7 +223,7 @@ namespace Rock.Blocks.Types.Mobile.Reminders
 
             //
             // The 'Completion' Filter.
-            // 
+            //
             if ( filter.CompletionFilter != FilterBag.CompletionFilterValue.None )
             {
                 // Filter by active reminders.

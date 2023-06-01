@@ -152,12 +152,11 @@ namespace Rock.Blocks.Types.Mobile.Reminders
             }
 
             var reminderTypeService = new ReminderTypeService( rockContext );
+            var personAliasId = RequestContext.CurrentPerson.PrimaryAliasId.Value;
 
             //
             // Get the specific reminder type information (and the count of total reminders).
             //
-            var personAliasId = RequestContext.CurrentPerson.PrimaryAliasId.Value;
-
             var reminderTypesAndRemindersGrouping = reminderTypeService.GetTypesAndRemindersAssignedToPerson( personAliasId );
 
             // If this block was specified to only include certain reminder types, limit to those.
