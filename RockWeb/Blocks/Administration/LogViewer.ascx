@@ -1,4 +1,15 @@
 ﻿<%@ Control Language="C#" AutoEventWireup="true" CodeFile="LogViewer.ascx.cs" Inherits="RockWeb.Blocks.Administration.LogViewer" %>
+
+<style>
+    table {
+      table-layout:fixed;
+    }
+
+    td {
+        word-wrap:break-word;
+    }
+</style>
+
 <asp:UpdatePanel runat="server">
     <ContentTemplate>
         <asp:Panel runat="server" ID="pnlLogs">
