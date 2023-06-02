@@ -14,13 +14,17 @@
             </div>
         </div>
 
-        <TextBox v-model="description"
-                 label="Description"
-                 textMode="multiline" />
+        <div class="row">
+            <div class="col-md-12">
+                <TextBox v-model="description"
+                        label="Description"
+                        textMode="multiline" />
+            </div>
+        </div>
 
         <div class="row">
             <div class="col-md-6">
-                 <ComponentPicker label="Event Type"
+                <ComponentPicker label="Event Type"
                     rules="required"
                     v-model="entityType"
                     :containerType="containerType" />

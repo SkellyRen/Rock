@@ -1,4 +1,4 @@
-// <copyright>
+﻿// <copyright>
 // Copyright by the Spark Development Network
 //
 // Licensed under the Rock Community License (the "License");
@@ -21,6 +21,9 @@ using Rock.ViewModels.Utility;
 
 namespace Rock.ViewModels.Blocks.Core.FollowingEventTypeDetail
 {
+    /// <summary>
+    /// Following Event Type View Model
+    /// </summary>
     public class FollowingEventTypeBag : EntityBagBase
     {
         /// <summary>
