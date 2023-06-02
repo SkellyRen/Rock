@@ -114,7 +114,7 @@
     // #endregion
 
     // #region Computed Values
-    const sendOnWeekends = computed(() => !sendOnFriday);
+
 
     // #endregion
 
@@ -134,7 +134,7 @@
         updateRefValue(isActive, props.modelValue.isActive ?? false);
         updateRefValue(name, props.modelValue.name ?? "");
         updateRefValue(isNoticeRequired, props.modelValue.isNoticeRequired);
-        updateRefValue(sendOnWeekends, props.modelValue.sendOnWeekends);
+        updateRefValue(sendOnFriday, !props.modelValue.sendOnWeekends);
         updateRefValue(entityType, props.modelValue.entityType);
         updateRefValue(entityNotificationFormatLava, props.modelValue?.entityNotificationFormatLava ?? "");
         updateRefValue(includeNonPublicRequests, props.modelValue?.includeNonPublicRequests);
