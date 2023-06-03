@@ -140,6 +140,28 @@ namespace Rock.Field.Types
         #endregion
 
         #region Formatting
+
+        /// <summary>
+        /// Gets the text value.
+        /// </summary>
+        /// <param name="privateValue">The private value.</param>
+        /// <param name="privateConfigurationValues">The private configuration values.</param>
+        /// <returns>System.String.</returns>
+        /// <inheritdoc />
+        public override string GetTextValue( string privateValue, Dictionary<string, string> privateConfigurationValues )
+        {
+            if ( !string.IsNullOrWhiteSpace( privateValue ) )
+            {
+                var noteType = NoteTypeCache.Get( privateValue.AsGuid() );
+                if ( noteType != null )
+                {
+                    return noteType.Name;
+                }
+            }
+
+            return privateValue;
+        }
+
         #endregion
 
         #region Edit Control

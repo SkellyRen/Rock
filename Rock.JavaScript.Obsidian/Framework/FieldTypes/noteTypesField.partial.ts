@@ -45,7 +45,6 @@ const configurationComponent = defineAsyncComponent(async () => {
  */
 export class NoteTypesField extends FieldTypeBase {
     public override getTextValue(value: string, configurationValues: Record<string, string>): string {
-        console.log(value);
         if (value === "") {
             return "";
         }
@@ -54,7 +53,6 @@ export class NoteTypesField extends FieldTypeBase {
             const values = JSON.parse(configurationValues[ConfigurationValueKey.Values] ?? "[]") as ListItemBag[];
             const userValues = value.split(",");
             const selectedValues = values.filter(v => userValues.includes(v.value ?? ""));
-            console.log(selectedValues);
             return selectedValues.map(v => v.text)
                 .map(v => v?.split(":").pop()) // just get the name of the note type
                 .join(", ");

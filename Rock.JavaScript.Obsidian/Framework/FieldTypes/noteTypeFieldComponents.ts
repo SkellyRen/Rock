@@ -63,6 +63,12 @@ export const EditComponent = defineComponent({
     watch: {
         internalValue() {
             this.$emit("update:modelValue", this.internalValue);
+        },
+        modelValue: {
+            immediate: true,
+            handler() {
+                this.internalValue = this.modelValue || "";
+            }
         }
     },
 
