@@ -199,7 +199,7 @@
     watch([attributeValues, ...propRefs], () => {
         // set the value of structure entity id to null if the structure type changes
         if(props.modelValue?.structureType?.toString() != structureType.value){
-            structureEntity.value = null;
+            structureEntity.value = {};
         }
 
         const newValue: StreakTypeBag = {

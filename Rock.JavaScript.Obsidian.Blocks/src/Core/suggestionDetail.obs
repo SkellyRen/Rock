@@ -1,0 +1,193 @@
+<!-- Copyright by the Spark Development Network; Licensed under the Rock Community License -->
+<template>
+    <Panel :isDrawerOpen="false" :title="panelName" :hasCollapse="false" :hasFullscreen="true">
+
+        <NotificationBox v-if="blockError" alertType="warning">{{ blockError }}</NotificationBox>
+
+        <NotificationBox v-if="errorMessage" alertType="danger">{{ errorMessage }}</NotificationBox>
+
+        <div v-if="!blockError">
+            <div class="row" v-if="!config.isEditable">
+                <div class="col-md-6">
+                    <ValueDetailList :modelValue="readonlyValues" />
+                </div>
+            </div>
+
+            <EditPanel v-else v-model="suggestionDetailEditBag" @propertyChanged="onPropertyChanged" />
+
+        </div>
+
+        <template #footerActions v-if="!blockError && config.isEditable">
+            <RockButton :btnSize="BtnSize.Default" :btnType="BtnType.Primary" @click="onSave">
+                Save
+            </RockButton>
+            <RockButton :btnSize="BtnSize.Default" :btnType="BtnType.Link" @click="onCancelEdit">
+                Cancel
+            </RockButton>
+        </template>
+
+    </Panel>
+</template>
+
+<script setup lang="ts">
+    import { computed, ref } from "vue";
+    import NotificationBox from "@Obsidian/Controls/notificationBox.obs";
+    import RockButton from "@Obsidian/Controls/rockButton";
+    import { BtnType } from "@Obsidian/Enums/Controls/btnType";
+    import { BtnSize } from "@Obsidian/Enums/Controls/btnSize";
+    import EditPanel from "./SuggestionDetail/editPanel.partial.obs";
+    import Panel from "@Obsidian/Controls/panel";
+    import ValueDetailList from "@Obsidian/Controls/valueDetailList";
+    import { ValueDetailListItemBuilder } from "@Obsidian/Core/Controls/valueDetailListItemBuilder";
+    import { ValueDetailListItem } from "@Obsidian/Types/Controls/valueDetailListItem";
+    import { getSecurityGrant, provideSecurityGrant, useConfigurationValues, useInvokeBlockAction } from "@Obsidian/Utility/block";
+    import { debounce } from "@Obsidian/Utility/util";
+    import { NavigationUrlKey } from "./SuggestionDetail/types.partial";
+    import { SuggestionDetailBag } from "@Obsidian/ViewModels/Blocks/Core/SuggestionDetail/suggestionDetailBag";
+    import { SuggestionDetailBox } from "@Obsidian/ViewModels/Blocks/Core/SuggestionDetail/suggestionDetailBox";
+    import { makeUrlRedirectSafe } from "@Obsidian/Utility/url";
+
+    const config = useConfigurationValues<SuggestionDetailBox>();
+    const invokeBlockAction = useInvokeBlockAction();
+    const securityGrant = getSecurityGrant(config.securityGrantToken);
+
+    // #region Values
+
+    const blockError = ref("");
+    const errorMessage = ref("");
+
+    const suggestionDetailEditBag = ref<SuggestionDetailBag>(config.entity as SuggestionDetailBag);
+
+    const refreshAttributesDebounce = debounce(async () => {
+
+        const data: SuggestionDetailBox = {
+            entity: suggestionDetailEditBag.value,
+            isEditable: true,
+        };
+
+        const result = await invokeBlockAction<SuggestionDetailBox>("RefreshAttributes", {
+            box: data
+        });
+
+        if (result.isSuccess) {
+            if (result.statusCode === 200 && result.data && suggestionDetailEditBag.value) {
+                const newBag: SuggestionDetailBag = {
+                    ...suggestionDetailEditBag.value,
+                    attributes: result.data.entity?.attributes,
+                    attributeValues: result.data.entity?.attributeValues
+                };
+
+                suggestionDetailEditBag.value = newBag;
+            }
+        }
+    }, undefined, true);
+
+    // #endregion
+
+    // #region Computed Values
+
+    /**
+     * The entity name to display in the block panel.
+     */
+    const panelName = computed((): string => {
+        return suggestionDetailEditBag.value?.name ?? "";
+    });
+
+    /** The values to display if suggestion is not editable */
+    const readonlyValues = computed((): ValueDetailListItem[] => {
+        const valueBuilder = new ValueDetailListItemBuilder();
+
+        if (suggestionDetailEditBag.value.description) {
+            valueBuilder.addTextValue("", suggestionDetailEditBag.value.description);
+        }
+
+        if (suggestionDetailEditBag.value.entityType?.text) {
+            valueBuilder.addTextValue("Suggestion Type", suggestionDetailEditBag.value.entityType?.text);
+        }
+
+        if (suggestionDetailEditBag.value.reasonNote) {
+            valueBuilder.addTextValue("Reason Note", suggestionDetailEditBag.value.reasonNote);
+        }
+
+        return valueBuilder.build();
+    });
+
+    // #endregion
+
+    // #region Functions
+
+    // #endregion
+
+    // #region Event Handlers
+
+    /**
+     * Event handler for the Cancel button being clicked while in Edit mode.
+     * Handles redirect to parent page if creating a new entity.
+     *
+     * @returns true if the panel should leave edit mode; false if it should stay in edit mode; or a string containing a redirect URL.
+     */
+    async function onCancelEdit(): Promise<void> {
+        if (config.navigationUrls?.[NavigationUrlKey.ParentPage]) {
+            window.location.href = makeUrlRedirectSafe(config.navigationUrls[NavigationUrlKey.ParentPage]);
+        }
+    }
+
+    /**
+     * Event handler for when a value has changed that has an associated
+     * C# property name. This is used to detect changes to values that
+     * might cause qualified attributes to either show up or not show up.
+     *
+     * @param propertyName The name of the C# property that was changed.
+     */
+    function onPropertyChanged(propertyName: string): void {
+        // If we don't have any qualified attribute properties or this property
+        // is not one of them then do nothing.
+        if (!config.qualifiedAttributeProperties || !config.qualifiedAttributeProperties.some(n => n.toLowerCase() === propertyName.toLowerCase())) {
+            return;
+        }
+
+        refreshAttributesDebounce();
+    }
+
+    /**
+     * Event handler for the panel's Save event. Send the data to the server
+     * to be saved and then leave edit mode or redirect to target page.
+     *
+     * @returns true if the panel should leave edit mode; false if it should stay in edit mode; or a string containing a redirect URL.
+     */
+    async function onSave(): Promise<void> {
+        errorMessage.value = "";
+
+        const data: SuggestionDetailBox = {
+            entity: suggestionDetailEditBag.value,
+            isEditable: true
+        };
+
+        const result = await invokeBlockAction<string>("Save", {
+            box: data
+        });
+
+        if (result.isSuccess && result.data) {
+            window.location.href = makeUrlRedirectSafe(result.data);
+        }
+        else {
+            errorMessage.value = result.errorMessage ?? "Unknown error while trying to save following suggestion type.";
+        }
+
+    }
+
+    // #endregion
+
+    provideSecurityGrant(securityGrant);
+
+    // Handle any initial error conditions or the need to go into edit mode.
+    if (config.errorMessage) {
+        blockError.value = config.errorMessage;
+    }
+    else if (!config.entity) {
+        blockError.value = "The specified following suggestion type could not be viewed.";
+    }
+    else if (!config.entity.idKey) {
+        suggestionDetailEditBag.value = config.entity;
+    }
+</script>

@@ -178,7 +178,9 @@
     <Folder Include="Framework\ViewModels\Blocks\Core\AssetStorageProviderDetail\" />
     <Folder Include="Framework\ViewModels\Blocks\Core\CampusDetail\" />
     <Folder Include="Framework\ViewModels\Blocks\Core\CategoryDetail\" />
+    <Folder Include="Framework\ViewModels\Blocks\Core\FollowingSuggestionTypeDetail\" />
     <Folder Include="Framework\ViewModels\Blocks\Core\ScheduleDetail\" />
+    <Folder Include="Framework\ViewModels\Blocks\Core\SuggestionDetail\" />
     <Folder Include="Framework\ViewModels\Blocks\Crm\AssessmentList\" />
     <Folder Include="Framework\ViewModels\Blocks\Crm\DocumentTypeDetail\" />
     <Folder Include="Framework\ViewModels\Blocks\Core\NoteTypeDetail\" />
@@ -703,7 +705,14 @@
     <TypeScriptCompile Include="Framework\ViewModels\Blocks\Core\CategoryDetail\categoryDetailOptionsBag.d.ts" />
     <TypeScriptCompile Include="Framework\ViewModels\Blocks\Core\CategoryDetail\customSettingsBag.d.ts" />
     <TypeScriptCompile Include="Framework\ViewModels\Blocks\Core\CategoryDetail\customSettingsOptionsBag.d.ts" />
+    <TypeScriptCompile Include="Framework\ViewModels\Blocks\Core\FollowingSuggestionTypeDetail\suggestionDetailBag.d.ts" />
+    <TypeScriptCompile Include="Framework\ViewModels\Blocks\Core\FollowingSuggestionTypeDetail\suggestionDetailOptionsBag.d.ts" />
     <TypeScriptCompile Include="Framework\ViewModels\Blocks\Core\ScheduleDetail\scheduleBag.d.ts" />
+    <TypeScriptCompile Include="Framework\ViewModels\Blocks\Core\SuggestionDetail\suggestionDetailBag.d.ts" />
+    <TypeScriptCompile Include="Framework\ViewModels\Blocks\Core\SuggestionDetail\suggestionDetailBox.d.ts" />
+    <TypeScriptCompile Include="Framework\ViewModels\Blocks\Core\SuggestionDetail\suggestionDetailGridRowItemBag.d.ts" />
+    <TypeScriptCompile Include="Framework\ViewModels\Blocks\Core\SuggestionDetail\suggestionDetailOptionsBag.d.ts" />
+    <TypeScriptCompile Include="Framework\ViewModels\Blocks\Core\SuggestionDetail\suggestionGridRowItemBag.d.ts" />
     <TypeScriptCompile Include="Framework\ViewModels\Blocks\Crm\AssessmentList\assessmentListBag.d.ts" />
     <TypeScriptCompile Include="Framework\ViewModels\Blocks\Crm\DocumentTypeDetail\documentTypeBag.d.ts" />
     <TypeScriptCompile Include="Framework\ViewModels\Blocks\Crm\DocumentTypeDetail\documentTypeDetailOptionsBag.d.ts" />
