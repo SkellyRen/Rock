@@ -40,6 +40,16 @@ namespace RockWeb
 
         private int rssItemLimit = 10;
 
+        private const string CacheKeyPrefix = "Rock:GetChannelFeed:";
+        private const string TemplateId = "TemplateId";
+        private const string ChannelId = "ChannelId";
+        private const string Template = "Template";
+        private const string LastModified = "Last-Modified";
+        private const string MimeType = "MimeType";
+        private const string Head = "HEAD";
+        private const string Get = "GET";
+        private const string Count = "Count";
+
         public IAsyncResult BeginProcessRequest( HttpContext context, AsyncCallback cb, object extraData )
         {
             _delegate = new AsyncProcessorDelegate( ProcessRequest );
@@ -57,10 +67,40 @@ namespace RockWeb
             request = context.Request;
             response = context.Response;
 
-            string cacheKey = "Rock:GetChannelFeed:" + request.RawUrl;
+            string cacheKey = CacheKeyPrefix + request.RawUrl;
+
+            DefinedValueCache dvRssTemplate = null;
+
+            if ( request.QueryString[TemplateId] != null )
+            {
+                int? templateDefinedValueId = request.QueryString[TemplateId].AsIntegerOrNull();
+
+                if ( templateDefinedValueId == null )
+                {
+                    response.TrySkipIisCustomErrors = true;
+                    response.StatusCode = 400;
+                    response.Write( "Invalid template id." );
+                    return;
+                }
+
+                dvRssTemplate = DefinedValueCache.Get( templateDefinedValueId.Value );
+            }
+
+            if ( dvRssTemplate == null )
+            {
+                dvRssTemplate = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.DEFAULT_RSS_CHANNEL );
+            }
+
+            var cacheDuration = dvRssTemplate.GetAttributeValue( "CacheDuration" ).AsInteger();
             var contentCache = RockCache.Get( cacheKey );
-            var mimeTypeCache = RockCache.Get( cacheKey + ":MimeType" );
-            if ( mimeTypeCache != null && contentCache != null )
+
+            if ( cacheDuration == 0 && contentCache != null )
+            {
+                RockCache.Remove( cacheKey );
+            }
+
+            var mimeTypeCache = RockCache.Get( $"{cacheKey}:{MimeType}" );
+            if (  mimeTypeCache != null && contentCache != null  && cacheDuration > 0 )
             {
                 response.ContentType = ( string ) mimeTypeCache;
                 response.Write( ( string ) contentCache );
@@ -68,16 +108,16 @@ namespace RockWeb
                 return;
             }
 
-            if ( request.HttpMethod != "GET" && request.HttpMethod != "HEAD" )
+            if ( request.HttpMethod != Get && request.HttpMethod != Head )
             {
                 response.TrySkipIisCustomErrors = true;
                 response.StatusCode = 405;
-                response.Headers.Add( "Allow", "GET" );
+                response.Headers.Add( "Allow", Get );
                 response.Write( "Invalid request method." );
                 return;
             }
 
-            if ( request.QueryString["ChannelId"] == null )
+            if ( request.QueryString[ChannelId] == null )
             {
                 response.TrySkipIisCustomErrors = true;
                 response.StatusCode = 400;
@@ -85,7 +125,7 @@ namespace RockWeb
                 return;
             }
 
-            int? channelId = request.QueryString["ChannelId"].AsIntegerOrNull();
+            int? channelId = request.QueryString[ChannelId].AsIntegerOrNull();
 
             if ( channelId == null )
             {
@@ -113,28 +153,6 @@ namespace RockWeb
                 return;
             }
 
-            DefinedValueCache dvRssTemplate = null;
-
-            if ( request.QueryString["TemplateId"] != null )
-            {
-                int? templateDefinedValueId = request.QueryString["TemplateId"].AsIntegerOrNull();
-
-                if ( templateDefinedValueId == null )
-                {
-                    response.TrySkipIisCustomErrors = true;
-                    response.StatusCode = 400;
-                    response.Write( "Invalid template id." );
-                    return;
-                }
-
-                dvRssTemplate = DefinedValueCache.Get( templateDefinedValueId.Value );
-            }
-
-            if ( dvRssTemplate == null )
-            {
-                dvRssTemplate = DefinedValueCache.Get( Rock.SystemGuid.DefinedValue.DEFAULT_RSS_CHANNEL );
-            }
-
             if ( dvRssTemplate.DefinedType.Guid != new Guid( Rock.SystemGuid.DefinedType.LAVA_TEMPLATES ) )
             {
                 response.TrySkipIisCustomErrors = true;
@@ -143,20 +161,25 @@ namespace RockWeb
                 return;
             }
 
-            string rssTemplate = dvRssTemplate.GetAttributeValue( "Template" );
+            string rssTemplate = dvRssTemplate.GetAttributeValue( Template );
 
-            if ( string.IsNullOrWhiteSpace( dvRssTemplate.GetAttributeValue( "MimeType" ) ) )
+            if ( string.IsNullOrWhiteSpace( dvRssTemplate.GetAttributeValue( MimeType ) ) )
             {
                 response.ContentType = "application/rss+xml";
             }
             else
             {
-                response.ContentType = dvRssTemplate.GetAttributeValue( "MimeType" );
+                response.ContentType = dvRssTemplate.GetAttributeValue( MimeType );
             }
 
-            if ( request.HttpMethod == "HEAD" )
+            if ( request.HttpMethod == Head )
             {
                 response.StatusCode = 200;
+                var lastModifiedDateTime = RockCache.Get( $"{cacheKey}:{LastModified}" );
+                if ( lastModifiedDateTime != null )
+                {
+                    response.Headers.Add( LastModified, ( string ) lastModifiedDateTime );
+                }
                 return;
             }
 
@@ -179,9 +202,9 @@ namespace RockWeb
             mergeFields.Add( "Request", requestObjects );
 
             // check for new rss item limit
-            if ( request.QueryString["Count"] != null )
+            if ( request.QueryString[Count] != null )
             {
-                int.TryParse( request.QueryString["Count"], out rssItemLimit );
+                int.TryParse( request.QueryString[Count], out rssItemLimit );
             }
 
             // get channel items
@@ -245,13 +268,22 @@ namespace RockWeb
             var outputContent = rssTemplate.ResolveMergeFields( mergeFields );
             response.Write( outputContent );
 
-            var cacheDuration = dvRssTemplate.GetAttributeValue( "CacheDuration" ).AsInteger();
+            var lastModifiedItem = contentItems.Where( c => c.ModifiedDateTime.HasValue )
+                .OrderByDescending( c => c.ModifiedDateTime )
+                .Select( c => c.ModifiedDateTime )
+                .FirstOrDefault();
+
+            if ( lastModifiedItem.HasValue )
+            {
+                RockCache.AddOrUpdate( $"{cacheKey}:{LastModified}", lastModifiedItem.ToString() );
+            }
+
             if ( cacheDuration > 0 )
             {
                 var expiration = RockDateTime.Now.AddMinutes( cacheDuration );
                 if ( expiration > RockDateTime.Now )
                 {
-                    RockCache.AddOrUpdate( cacheKey + ":MimeType", null, response.ContentType, expiration );
+                    RockCache.AddOrUpdate( $"{cacheKey}:{MimeType}", null, response.ContentType, expiration );
                     RockCache.AddOrUpdate( cacheKey, null, outputContent, expiration );
                 }
             }
